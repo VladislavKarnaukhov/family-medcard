@@ -6,6 +6,7 @@ import { db, tx, UPLOAD_DIR } from './db.js'
 import { all, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
 import { buildState, canWrite, consentOk, familyAccess, isOwner, profileAllowed } from './state.js'
 import { mountConsent, recordConsent } from './consent.js'
+import { aiEnabled, recognizeWithClaude } from './recognize.js'
 import { ensureStaff } from './seed.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -686,6 +687,27 @@ app.patch('/api/staff/documents/:id', needStaff, (req, res) => {
   const status = ['ready', 'requested', 'processing'].includes(req.body.status) ? req.body.status : d.status
   run('UPDATE documents SET status = ? WHERE id = ?', status, d.id)
   res.json({ ok: true })
+})
+
+app.get('/api/features', needUser, (req, res) => res.json({ aiRecognition: aiEnabled() }))
+
+// Распознавание бланка через Claude. Выключено по умолчанию; требует отдельного согласия на каждую отправку.
+app.post('/api/recognize', needUser, express.raw({ type: () => true, limit: '25mb' }), async (req, res) => {
+  if (!aiEnabled()) return fail(res, 501, 'Распознавание ИИ выключено')
+  if (req.get('x-consent-ai') !== '1') return fail(res, 400, 'Нужно согласие на передачу бланка ИИ-сервису')
+  const c = ctxProfile(req, res, String(req.query.profileId || ''), 'write')
+  if (!c) return
+  const mime = String(req.get('content-type') || '').split(';')[0].trim().toLowerCase()
+  if (!MIME.has(mime) || mime === 'image/heic') return fail(res, 415, 'Для распознавания подходят JPG, PNG, WebP и PDF')
+  if (!Buffer.isBuffer(req.body) || !req.body.length) return fail(res, 400, 'Пустой файл')
+  recordConsent(req, { userId: req.user.id, familyId: c.p.family_id, profileId: c.p.id, docId: 'consent_ai', method: 'attestation' })
+  log(c.p.family_id, req.user, c.p.id, 'Бланк отправлен на распознавание ИИ-сервису')
+  try {
+    res.json(await recognizeWithClaude(req.body, mime))
+  } catch (e) {
+    console.error('recognize:', e.message)
+    fail(res, 502, 'Не удалось распознать бланк. Внесите показатели вручную или отправьте бланк помощнику.')
+  }
 })
 
 mountConsent(app, { needUser, needStaff, fail, ctxProfile, removeFiles, wipeFamily })

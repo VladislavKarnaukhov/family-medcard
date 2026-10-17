@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, Empty, Field, go } from '../components/ui'
 import { actions, can } from '../lib/store'
-import { recognize, IS_MOCK } from '../lib/recognize'
+import { recognize, getFeatures } from '../lib/recognize'
+import { DocLink } from './Legal'
 import { findIndicator } from '../lib/indicators'
 import { parseNum, localISO } from '../lib/format'
 
@@ -77,6 +78,13 @@ export default function AddResult({ state, profile }) {
   const [error, setError] = useState('')
   const [cur, setCur] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [features, setFeatures] = useState({ aiRecognition: false })
+  const [ai, setAi] = useState(false)
+  const [usedAi, setUsedAi] = useState(false)
+  const [warnings, setWarnings] = useState([])
+  useEffect(() => {
+    getFeatures().then(setFeatures)
+  }, [])
   const cam = useRef(null)
   const pick = useRef(null)
 
@@ -113,7 +121,9 @@ export default function AddResult({ state, profile }) {
     setBusy(true)
     setError('')
     try {
-      const res = await recognize(files)
+      const res = await recognize(files, { ai: ai && features.aiRecognition, profileId: profile.id })
+      setUsedAi(res.some((r) => r.ai))
+      setWarnings(res.flatMap((r) => r.warnings || []))
       setDrafts(res.map(toDraft))
       setCur(0)
     } catch {
@@ -164,6 +174,14 @@ export default function AddResult({ state, profile }) {
         )}
 
         {error && <p className="rounded-xl bg-alert-soft p-3 text-alert">{error}</p>}
+        {features.aiRecognition && (
+          <label className="flex items-start gap-3 rounded-xl bg-paper p-3">
+            <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
+            <span className="text-sm">
+              Разрешаю передать бланк ИИ-сервису за пределы РФ для автоматического распознавания. <DocLink id="consent_ai">Документ</DocLink> Без этого показатели внесёт заглушка или помощник.
+            </span>
+          </label>
+        )}
         <Button big disabled={!files.length || busy || saving} onClick={run}>
           {busy ? 'Распознаём…' : `Распознать сами${files.length ? ` (${files.length})` : ''}`}
         </Button>
@@ -216,7 +234,18 @@ export default function AddResult({ state, profile }) {
   return (
     <div className="space-y-4 py-4">
       <h1 className="text-2xl font-semibold">Проверьте данные</h1>
-      {IS_MOCK && (
+      {usedAi && (
+        <p className="rounded-xl bg-accent-soft p-3 text-sm">
+          Бланк распознан ИИ-сервисом. Он может ошибаться: сверьте каждое значение, единицу и референс с бланком. Строки с низкой уверенностью помечены «(проверьте)».
+          {warnings.length > 0 && (
+            <>
+              <br />
+              Замечания: {warnings.join('; ')}.
+            </>
+          )}
+        </p>
+      )}
+      {!usedAi && (
         <p className="rounded-xl bg-accent-soft p-3 text-sm">
           Распознавание в демо-версии — заглушка: показатели ниже — пример бланка, а не данные из вашего файла. Исправьте любое
           поле перед сохранением.

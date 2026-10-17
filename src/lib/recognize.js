@@ -1,11 +1,14 @@
 // Распознавание бланка вынесено в одну функцию.
-// Чтобы подключить настоящий ИИ, добавьте провайдер в PROVIDERS и укажите его в ACTIVE_PROVIDER.
 //
-// Контракт провайдера: async (file: File, ctx: { index: number }) =>
-//   { date: 'YYYY-MM-DD', labName: string,
-//     rows: [{ name, value, unit, refLow, refHigh }] }
+// Два провайдера:
+//  - mock: заглушка с примером бланка (по умолчанию);
+//  - server: запрос к серверу, который вызывает Claude (промпт: server/prompts.js). Включается на сервере
+//    переменными ANTHROPIC_API_KEY и AI_RECOGNITION=1 и только при явном согласии пользователя на каждую отправку.
+//
+// Результат одинаковый: { date: 'ГГГГ-ММ-ДД', labName, rows: [{ name, value, unit, refLow, refHigh }], sourceFile, ai }
 
 import { localISO } from './format'
+import { ApiError, api } from './api'
 
 const daysAgo = (n) => {
   const d = new Date()
@@ -46,26 +49,51 @@ const SAMPLE_BIOCHEMISTRY = () => ({
   ],
 })
 
-// Заглушка: не читает файл, возвращает пример бланка.
-// Чётные файлы — общий анализ крови, нечётные — биохимия.
+// Заглушка: не читает файл, возвращает пример бланка. Чётные файлы — общий анализ крови, нечётные — биохимия.
 const mockProvider = async (file, { index }) => {
   await new Promise((r) => setTimeout(r, 900))
-  return index % 2 === 0 ? SAMPLE_BLOOD_COUNT() : SAMPLE_BIOCHEMISTRY()
+  return { ...(index % 2 === 0 ? SAMPLE_BLOOD_COUNT() : SAMPLE_BIOCHEMISTRY()), ai: false }
 }
 
-export const PROVIDERS = {
-  mock: mockProvider,
-  // claude: async (file) => { /* отправить файл на ваш сервер, который вызывает ИИ */ },
+const MIME_BY_EXT = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', pdf: 'application/pdf' }
+
+// Реальное распознавание на сервере. Строки с низкой уверенностью получают пометку в названии, чтобы их проверили.
+const serverProvider = async (file, { profileId }) => {
+  const type = file.type || MIME_BY_EXT[file.name.split('.').pop().toLowerCase()] || 'application/octet-stream'
+  const res = await fetch(`/api/recognize?profileId=${encodeURIComponent(profileId)}`, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'x-app': '1', 'x-consent-ai': '1', 'content-type': type },
+    body: file,
+  })
+  const data = await res.json().catch(() => null)
+  if (!res.ok) throw new ApiError(data?.error || 'Не удалось распознать бланк', res.status)
+  if (!data.isLabForm) throw new ApiError(data.warnings?.[0] || 'Это не похоже на бланк анализа', 422)
+  return {
+    date: data.date || localISO(),
+    labName: data.labName || '',
+    rows: data.rows.map((r) => ({ ...r, name: r.confidence === 'low' ? `${r.name} (проверьте)` : r.name })),
+    warnings: data.warnings,
+    ai: true,
+  }
 }
 
-export const ACTIVE_PROVIDER = 'mock'
-export const IS_MOCK = ACTIVE_PROVIDER === 'mock'
+export const PROVIDERS = { mock: mockProvider, server: serverProvider }
 
-export async function recognize(files) {
-  const provider = PROVIDERS[ACTIVE_PROVIDER]
+export async function getFeatures() {
+  try {
+    return await api('GET', '/api/features')
+  } catch {
+    return { aiRecognition: false }
+  }
+}
+
+// opts.ai — пользователь дал согласие на отправку бланка ИИ-сервису; opts.profileId нужен серверу для проверки прав.
+export async function recognize(files, opts = {}) {
+  const provider = opts.ai ? PROVIDERS.server : PROVIDERS.mock
   const out = []
   for (let i = 0; i < files.length; i++) {
-    const r = await provider(files[i], { index: i })
+    const r = await provider(files[i], { index: i, profileId: opts.profileId })
     out.push({ ...r, sourceFile: files[i].name })
   }
   return out
