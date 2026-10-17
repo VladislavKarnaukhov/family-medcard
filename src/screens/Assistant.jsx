@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button, Card, H } from '../components/ui'
-import { actions, ASSISTANT } from '../lib/store'
+import { actions, can } from '../lib/store'
 import { fmtDate, fmtDateTime } from '../lib/format'
 
 const QUICK = [
@@ -17,14 +17,14 @@ const STEPS = [
   ['done', 'Готово'],
 ]
 
-export function Avatar({ size = 44 }) {
+export function Avatar({ size = 44, name = 'П' }) {
   return (
     <span
       className="inline-flex shrink-0 items-center justify-center rounded-full bg-accent-soft font-semibold text-accent-dark"
       style={{ width: size, height: size }}
       aria-hidden
     >
-      {ASSISTANT.name[0]}
+      {name[0]}
     </span>
   )
 }
@@ -45,6 +45,7 @@ function Steps({ status }) {
 }
 
 export default function Assistant({ state, profile }) {
+  const assistant = state.assistant?.name || 'Помощник'
   const [text, setText] = useState('')
   const end = useRef(null)
   const count = state.messages.length
@@ -69,16 +70,16 @@ export default function Assistant({ state, profile }) {
   return (
     <div className="py-4">
       <div className="flex items-center gap-3">
-        <Avatar size={52} />
+        <Avatar size={52} name={assistant} />
         <div>
-          <h1 className="text-2xl font-semibold leading-tight">{ASSISTANT.name}</h1>
-          <p className="text-muted">{ASSISTANT.title} · отвечает в течение рабочего дня</p>
+          <h1 className="text-2xl font-semibold leading-tight">{assistant}</h1>
+          <p className="text-muted">Ваш помощник по здоровью · отвечает в течение рабочего дня</p>
         </div>
       </div>
 
       <p className="mt-3 rounded-xl bg-accent-soft p-3 text-sm">
         Помощник собирает и упорядочивает документы, записывает на приём, готовит материалы к визитам. Он не оценивает результаты
-        и не даёт медицинских рекомендаций. В демо-версии ответы помощника имитируются.
+        и не даёт медицинских рекомендаций.
       </p>
 
       <H>Поручить</H>
@@ -138,7 +139,8 @@ export default function Assistant({ state, profile }) {
         {state.messages.map((m) => (
           <li key={m.id} className={`flex ${m.from === 'client' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-2xl px-4 py-2 ${m.from === 'client' ? 'bg-accent text-white' : 'border border-line bg-card'}`}>
-              <p>{m.text}</p>
+              {m.from === 'assistant' && <p className="mb-0.5 text-sm font-medium text-accent-dark">{m.author}</p>}
+              <p className="whitespace-pre-wrap">{m.text}</p>
               <p className={`mt-1 text-xs ${m.from === 'client' ? 'text-white/80' : 'text-muted'}`}>{fmtDateTime(m.at)}</p>
             </div>
           </li>
@@ -147,7 +149,7 @@ export default function Assistant({ state, profile }) {
       </ul>
 
       <form onSubmit={send} className="mt-3 flex gap-2">
-        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Написать помощнику" aria-label="Сообщение помощнику" />
+        <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Написать помощнику" aria-label="Сообщение помощнику" maxLength={4000} />
         <Button type="submit" className="shrink-0" disabled={!text.trim()}>
           Отправить
         </Button>

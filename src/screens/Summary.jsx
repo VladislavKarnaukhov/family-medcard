@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Empty, Field } from '../components/ui'
-import { actions } from '../lib/store'
+import { actions, can } from '../lib/store'
 import { latestPoints, isOut } from '../lib/data'
 import { vitalsSince } from './Vitals'
 import { ageText, fmtDate, fmtDateTime, fmtNum, localISO, refText, SEX } from '../lib/format'
@@ -28,7 +28,7 @@ function Th({ children, right }) {
   return <th className={`border-b border-line py-1 pr-2 text-xs font-medium text-muted ${right ? 'text-right' : 'text-left'}`}>{children}</th>
 }
 
-export default function Summary({ state, profile }) {
+export default function Summary({ state, profile, readOnly = false }) {
   const [days, setDays] = useState(Number(new URLSearchParams(location.search).get('days')) || 180)
   const [hint, setHint] = useState(false)
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
@@ -40,6 +40,7 @@ export default function Summary({ state, profile }) {
   const vit = vitalsSince(state, profile.id, days)
   const questions = state.questions[profile.id] || ''
   const sexText = SEX[profile.sex || '']
+  const editable = !readOnly && can(state).write
 
   const print = () => window.print()
   const pdf = () => {
@@ -185,13 +186,15 @@ export default function Summary({ state, profile }) {
 
         <section className="keep mt-3">
           <h3 className="font-semibold">Мои вопросы врачу</h3>
-          <textarea
-            className="no-print mt-1"
-            value={questions}
-            onChange={(e) => actions.setQuestions(profile.id, e.target.value)}
-            placeholder="Запишите вопросы, чтобы не забыть на приёме"
-          />
-          <div className="print-only mt-1 whitespace-pre-wrap text-sm">
+          {editable && (
+            <textarea
+              className="no-print mt-1"
+              value={questions}
+              onChange={(e) => actions.setQuestions(profile.id, e.target.value)}
+              placeholder="Запишите вопросы, чтобы не забыть на приёме"
+            />
+          )}
+          <div className={`${editable ? 'print-only' : ''} mt-1 whitespace-pre-wrap text-sm`}>
             {questions.trim() ? (
               questions
             ) : (

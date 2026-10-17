@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Card, Empty, Field, go } from '../components/ui'
-import { actions } from '../lib/store'
+import { actions, can } from '../lib/store'
 import { recognize, IS_MOCK } from '../lib/recognize'
 import { findIndicator } from '../lib/indicators'
 import { parseNum, localISO } from '../lib/format'
@@ -25,7 +25,7 @@ function Preview({ file }) {
   )
 }
 
-function RowEditor({ row, onChange, onDelete }) {
+export function RowEditor({ row, onChange, onDelete }) {
   const set = (k) => (e) => onChange({ ...row, [k]: e.target.value })
   const known = findIndicator(row.name)
   const bad = row.value.trim() === '' || parseNum(row.value) == null
@@ -57,7 +57,7 @@ function RowEditor({ row, onChange, onDelete }) {
   )
 }
 
-const toDraft = (r) => ({
+export const toDraft = (r) => ({
   sourceFile: r.sourceFile,
   date: r.date,
   labName: r.labName,
@@ -70,12 +70,13 @@ const toDraft = (r) => ({
   })),
 })
 
-export default function AddResult({ profile }) {
+export default function AddResult({ state, profile }) {
   const [files, setFiles] = useState([])
   const [drafts, setDrafts] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [cur, setCur] = useState(0)
+  const [saving, setSaving] = useState(false)
   const cam = useRef(null)
   const pick = useRef(null)
 
@@ -90,7 +91,23 @@ export default function AddResult({ profile }) {
     )
   }
 
+  if (!can(state).write) return <Empty>У вас доступ только для просмотра.</Empty>
+
   const addFiles = (list) => setFiles((f) => [...f, ...Array.from(list)])
+
+  const sendToAssistant = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      for (const file of files) {
+        await actions.addDocument({ profileId: profile.id, type: 'analysis', title: `Бланк анализа — ${file.name}`, date: localISO(), file })
+      }
+      go('dossier')
+    } catch (e) {
+      setError(e.message)
+      setSaving(false)
+    }
+  }
 
   const run = async () => {
     setBusy(true)
@@ -147,9 +164,14 @@ export default function AddResult({ profile }) {
         )}
 
         {error && <p className="rounded-xl bg-alert-soft p-3 text-alert">{error}</p>}
-        <Button big disabled={!files.length || busy} onClick={run}>
-          {busy ? 'Распознаём…' : `Распознать${files.length ? ` (${files.length})` : ''}`}
+        <Button big disabled={!files.length || busy || saving} onClick={run}>
+          {busy ? 'Распознаём…' : `Распознать сами${files.length ? ` (${files.length})` : ''}`}
         </Button>
+        {can(state).owner && (
+          <Button big variant="soft" disabled={!files.length || busy || saving} onClick={sendToAssistant}>
+            {saving ? 'Отправляем…' : 'Отправить помощнику на внесение'}
+          </Button>
+        )}
         <button onClick={manual} className="block min-h-12 w-full text-center text-accent-dark underline underline-offset-2">
           Ввести показатели вручную
         </button>
@@ -164,13 +186,17 @@ export default function AddResult({ profile }) {
   const issues = drafts.map((x) => !x.date || !x.labName.trim() || !x.rows.length || x.rows.some((r) => !r.name.trim() || parseNum(r.value) == null))
   const canSave = issues.every((b) => !b)
 
-  const save = () => {
-    actions.saveLabResults(
+  const save = async () => {
+    setSaving(true)
+    setError('')
+    try {
+      await actions.saveLabResults(
       profile.id,
-      drafts.map((x) => ({
+      drafts.map((x, i) => ({
         date: x.date,
         labName: x.labName,
         sourceFile: x.sourceFile,
+        file: files[i],
         rows: x.rows.map((r) => ({
           name: r.name,
           value: parseNum(r.value),
@@ -179,8 +205,12 @@ export default function AddResult({ profile }) {
           refHigh: r.refHigh.trim() === '' ? null : parseNum(r.refHigh),
         })),
       })),
-    )
-    go('')
+      )
+      go('')
+    } catch (e) {
+      setError(e.message)
+      setSaving(false)
+    }
   }
 
   return (
@@ -232,8 +262,9 @@ export default function AddResult({ profile }) {
       </Button>
 
       {!canSave && <p className="text-sm text-alert">Заполните дату, лабораторию и числовое значение в каждой строке — они подсвечены.</p>}
-      <Button big disabled={!canSave} onClick={save}>
-        Сохранить {drafts.length > 1 ? `(${drafts.length})` : ''}
+      {error && <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">{error}</p>}
+      <Button big disabled={!canSave || saving} onClick={save}>
+        {saving ? 'Сохраняем…' : `Сохранить ${drafts.length > 1 ? `(${drafts.length})` : ''}`}
       </Button>
       <Button variant="ghost" className="w-full" onClick={() => setDrafts(null)}>
         Назад

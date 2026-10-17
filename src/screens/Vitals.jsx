@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Button, Card, Empty, Field, H } from '../components/ui'
-import { actions } from '../lib/store'
+import { actions, can } from '../lib/store'
 import { fmtDateTime, fmtShort, localISO, pad } from '../lib/format'
 
 const DAY = 86400000
@@ -26,6 +26,8 @@ export default function Vitals({ state, profile }) {
   const [bp, setBp] = useState('')
   const [pulse, setPulse] = useState('')
   const [touched, setTouched] = useState(false)
+  const [err, setErr] = useState('')
+  const { write } = can(state)
 
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
 
@@ -34,20 +36,25 @@ export default function Vitals({ state, profile }) {
   const pulseBad = pl != null && !(Number.isInteger(pl) && pl >= 30 && pl <= 220)
   const items = vitalsSince(state, profile.id, 30)
 
-  const add = () => {
+  const add = async () => {
     setTouched(true)
     if (!p || pulseBad || pl == null) return
     const now = new Date()
-    actions.addVital({
-      profileId: profile.id,
-      datetime: `${localISO(now)}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
-      systolic: p.sys,
-      diastolic: p.dia,
-      pulse: pl,
-    })
-    setBp('')
-    setPulse('')
-    setTouched(false)
+    try {
+      await actions.addVital({
+        profileId: profile.id,
+        datetime: `${localISO(now)}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
+        systolic: p.sys,
+        diastolic: p.dia,
+        pulse: pl,
+      })
+      setBp('')
+      setPulse('')
+      setTouched(false)
+      setErr('')
+    } catch (e) {
+      setErr(e.message)
+    }
   }
 
   return (
@@ -55,17 +62,18 @@ export default function Vitals({ state, profile }) {
       <h1 className="text-2xl font-semibold">Замеры</h1>
       <p className="text-muted">Давление и пульс для профиля «{profile.name}». Дата и время подставятся автоматически.</p>
 
-      <Card className="mt-4 space-y-3">
+      {write && <Card className="mt-4 space-y-3">
         <Field label="Давление (верхнее/нижнее)" hint={touched && !p ? 'Введите, например, 120/80' : undefined}>
           <input inputMode="numeric" placeholder="120/80" value={bp} onChange={(e) => setBp(e.target.value)} className="!text-2xl" />
         </Field>
         <Field label="Пульс, ударов в минуту" hint={touched && (pl == null || pulseBad) ? 'Введите число, например, 72' : undefined}>
           <input inputMode="numeric" placeholder="72" value={pulse} onChange={(e) => setPulse(e.target.value)} className="!text-2xl" />
         </Field>
+        {err && <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">{err}</p>}
         <Button big onClick={add}>
           Записать
         </Button>
-      </Card>
+      </Card>}
 
       <H>Давление за 30 дней</H>
       {items.length === 0 ? (
@@ -109,12 +117,11 @@ export default function Vitals({ state, profile }) {
               </div>
               <div className="text-sm text-muted">{fmtDateTime(v.datetime)}</div>
             </div>
-            <button
-              className="min-h-10 px-2 text-sm text-muted underline underline-offset-2"
-              onClick={() => confirm('Удалить запись?') && actions.deleteVital(v.id)}
-            >
-              Удалить
-            </button>
+            {write && (
+              <button className="min-h-10 px-2 text-sm text-muted underline underline-offset-2" onClick={() => confirm('Удалить запись?') && actions.deleteVital(v.id)}>
+                Удалить
+              </button>
+            )}
           </li>
         ))}
       </ul>

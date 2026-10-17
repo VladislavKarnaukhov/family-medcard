@@ -41,8 +41,8 @@ export default function ProfileForm({ profile, isNew }) {
       <Button
         big
         disabled={!valid}
-        onClick={() => {
-          actions.saveProfile({ id: editing?.id, ...f, birthYear: year })
+        onClick={async () => {
+          await actions.saveProfile({ id: editing?.id, ...f, birthYear: year })
           go('')
         }}
       >
@@ -52,9 +52,9 @@ export default function ProfileForm({ profile, isNew }) {
         <Button
           variant="danger"
           className="w-full"
-          onClick={() => {
+          onClick={async () => {
             if (confirm(`Удалить профиль «${editing.name}» вместе с анализами и замерами?`)) {
-              actions.deleteProfile(editing.id)
+              await actions.deleteProfile(editing.id)
               go('')
             }
           }}

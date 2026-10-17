@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, Card, Empty, Field, H, go } from '../components/ui'
-import { actions } from '../lib/store'
+import { actions, can } from '../lib/store'
 import { fmtDate, localISO } from '../lib/format'
 
 export const DOC_TYPES = {
@@ -22,13 +22,16 @@ const STATUS = {
 export default function Dossier({ state, profile }) {
   const [filter, setFilter] = useState('all')
   const [adding, setAdding] = useState(false)
-  const [f, setF] = useState({ type: 'extract', title: '', date: localISO(), file: '' })
+  const [f, setF] = useState({ type: 'extract', title: '', date: localISO(), file: null })
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+  const { write, owner } = can(state)
 
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
 
   const items = [
     ...state.documents
-      .filter((d) => d.profileId === profile.id)
+      .filter((d) => d.profileId === profile.id && !(d.type === 'analysis' && d.labResultId))
       .map((d) => ({ ...d, kind: 'doc' })),
     ...state.labResults
       .filter((r) => r.profileId === profile.id)
@@ -39,6 +42,7 @@ export default function Dossier({ state, profile }) {
         title: `Анализы, ${r.labName}`,
         date: r.date,
         status: 'ready',
+        fileUrl: state.documents.find((d) => d.labResultId === r.id)?.fileUrl || null,
         count: state.measurements.filter((m) => m.labResultId === r.id).length,
       })),
   ].sort((a, b) => b.date.localeCompare(a.date))
@@ -46,11 +50,19 @@ export default function Dossier({ state, profile }) {
   const shown = filter === 'all' ? items : items.filter((i) => i.type === filter)
   const typesPresent = Object.keys(DOC_TYPES).filter((t) => items.some((i) => i.type === t))
 
-  const submit = () => {
+  const submit = async () => {
     if (!f.title.trim()) return
-    actions.addDocument({ profileId: profile.id, type: f.type, title: f.title.trim(), date: f.date, note: f.file ? `Файл: ${f.file}` : '' })
-    setF({ type: 'extract', title: '', date: localISO(), file: '' })
-    setAdding(false)
+    setBusy(true)
+    setErr('')
+    try {
+      await actions.addDocument({ profileId: profile.id, type: f.type, title: f.title.trim(), date: f.date, file: f.file })
+      setF({ type: 'extract', title: '', date: localISO(), file: null })
+      setAdding(false)
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -58,16 +70,18 @@ export default function Dossier({ state, profile }) {
       <h1 className="text-2xl font-semibold">Досье</h1>
       <p className="text-muted">Все документы профиля «{profile.name}» в одном месте: {items.length}.</p>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <Button big onClick={() => go('add')}>
-          ＋ Добавить анализ
-        </Button>
-        <Button big variant="soft" onClick={() => setAdding(!adding)}>
-          {adding ? 'Свернуть' : '＋ Другой документ'}
-        </Button>
-      </div>
+      {write && (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <Button big onClick={() => go('add')}>
+            ＋ Добавить анализ
+          </Button>
+          <Button big variant="soft" onClick={() => setAdding(!adding)}>
+            {adding ? 'Свернуть' : '＋ Другой документ'}
+          </Button>
+        </div>
+      )}
 
-      {adding && (
+      {write && adding && (
         <Card className="mt-3 space-y-3">
           <Field label="Тип документа">
             <select value={f.type} onChange={(e) => setF({ ...f, type: e.target.value })}>
@@ -84,11 +98,12 @@ export default function Dossier({ state, profile }) {
           <Field label="Дата документа">
             <input type="date" value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
           </Field>
-          <Field label="Файл или фото" hint="В демо-версии файл не загружается, сохраняется только название.">
-            <input type="file" accept="image/*,application/pdf" onChange={(e) => setF({ ...f, file: e.target.files[0]?.name || '' })} />
+          <Field label="Файл или фото" hint="JPG, PNG, HEIC или PDF, до 25 МБ.">
+            <input type="file" accept="image/*,application/pdf" onChange={(e) => setF({ ...f, file: e.target.files[0] || null })} />
           </Field>
-          <Button className="w-full" disabled={!f.title.trim()} onClick={submit}>
-            Передать помощнику
+          {err && <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">{err}</p>}
+          <Button className="w-full" disabled={!f.title.trim() || busy} onClick={submit}>
+            {busy ? 'Загружаем…' : owner ? 'Передать помощнику' : 'Добавить в досье'}
           </Button>
         </Card>
       )}
@@ -119,6 +134,7 @@ export default function Dossier({ state, profile }) {
               {DOC_TYPES[d.type]}
               {d.kind === 'lab' && ` · показателей: ${d.count}`}
               {d.kind === 'doc' && d.addedBy === 'assistant' && ' · добавлено помощником'}
+              {d.kind === 'doc' && d.addedBy === 'client' && ' · добавлено вами или близким'}
             </div>
             {STATUS[d.status] && <div className="mt-1 text-sm font-medium text-accent-dark">⏳ {STATUS[d.status]}</div>}
             <div className="mt-1 flex gap-4">
@@ -127,7 +143,12 @@ export default function Dossier({ state, profile }) {
                   Показатели
                 </a>
               )}
-              {d.kind === 'doc' && d.addedBy === 'client' && (
+              {d.fileUrl && (
+                <a className="min-h-10 py-2 text-accent-dark underline underline-offset-2" href={d.fileUrl} target="_blank" rel="noreferrer">
+                  Открыть файл
+                </a>
+              )}
+              {write && d.kind === 'doc' && d.addedBy === 'client' && (
                 <button className="min-h-10 text-sm text-muted underline underline-offset-2" onClick={() => confirm('Удалить документ?') && actions.deleteDocument(d.id)}>
                   Удалить
                 </button>
@@ -137,8 +158,8 @@ export default function Dossier({ state, profile }) {
         ))}
       </ul>
 
-      <H>Паспорт здоровья</H>
-      <Card>
+      {owner && <H>Паспорт здоровья</H>}
+      {owner && <Card>
         <p>Краткое досье «{profile.name}» на русском и английском: профиль, лекарства, показатели, документы. Пригодится для лечения за границей или второго мнения.</p>
         <Button
           className="mt-3 w-full"
@@ -150,7 +171,7 @@ export default function Dossier({ state, profile }) {
         >
           Поручить помощнику
         </Button>
-      </Card>
+      </Card>}
     </div>
   )
 }

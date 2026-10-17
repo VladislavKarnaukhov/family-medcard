@@ -1,0 +1,127 @@
+// Сбор состояния семьи для клиента с учётом прав доступа.
+import { all, get, inList, safeJson, today } from './util.js'
+
+export function familyAccess(user, familyId) {
+  if (!user) return null
+  if (user.role === 'staff') return { access: 'staff', profileIds: null }
+  const g = get('SELECT * FROM grants WHERE family_id = ? AND user_id = ?', familyId, user.id)
+  if (!g) return null
+  if (g.expires_at && g.expires_at < today()) return null
+  return { access: g.access, profileIds: safeJson(g.profile_ids), grant: g }
+}
+
+export const profileAllowed = (a, pid) => a.profileIds == null || a.profileIds.includes(pid)
+export const canWrite = (a) => ['owner', 'add', 'staff'].includes(a.access)
+export const isOwner = (a) => a.access === 'owner'
+
+export function buildState(familyId, a) {
+  const staff = a.access === 'staff'
+  const owner = a.access === 'owner'
+  const family = get('SELECT * FROM families WHERE id = ?', familyId)
+  const profiles = all('SELECT * FROM profiles WHERE family_id = ? ORDER BY rowid', familyId).filter((p) => profileAllowed(a, p.id))
+  const pids = profiles.map((p) => p.id)
+  const inP = inList(pids)
+
+  const labRows = all(`SELECT * FROM lab_results WHERE profile_id IN ${inP} ORDER BY date`, ...pids)
+  const lids = labRows.map((l) => l.id)
+
+  const state = {
+    family: { id: family.id, name: family.name },
+    me: { access: a.access },
+    assistant: { name: family.staff_id ? get('SELECT name FROM users WHERE id = ?', family.staff_id)?.name : null },
+    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes })),
+    questions: Object.fromEntries(profiles.map((p) => [p.id, p.questions])),
+    labResults: labRows.map((l) => ({ id: l.id, profileId: l.profile_id, date: l.date, labName: l.lab_name, sourceFile: l.source_file })),
+    measurements: all(`SELECT * FROM measurements WHERE lab_result_id IN ${inList(lids)}`, ...lids).map((m) => ({
+      id: m.id,
+      labResultId: m.lab_result_id,
+      name: m.name,
+      value: m.value,
+      unit: m.unit,
+      refLow: m.ref_low,
+      refHigh: m.ref_high,
+      normalizedValue: m.normalized_value,
+      normalizedUnit: m.normalized_unit,
+      indicatorKey: m.indicator_key,
+    })),
+    vitals: all(`SELECT * FROM vitals WHERE profile_id IN ${inP} ORDER BY datetime`, ...pids).map((v) => ({
+      id: v.id,
+      profileId: v.profile_id,
+      datetime: v.datetime,
+      systolic: v.systolic,
+      diastolic: v.diastolic,
+      pulse: v.pulse,
+    })),
+    documents: all(`SELECT * FROM documents WHERE profile_id IN ${inP} ORDER BY date DESC`, ...pids).map((d) => ({
+      id: d.id,
+      profileId: d.profile_id,
+      type: d.type,
+      title: d.title,
+      date: d.date,
+      status: d.status,
+      addedBy: d.added_by_kind,
+      labResultId: d.lab_result_id,
+      fileUrl: d.file_path ? `/api/documents/${d.id}/file` : null,
+      fileName: d.file_name,
+      note: d.note,
+    })),
+    requests: [],
+    messages: [],
+    members: [],
+    accessLog: [],
+  }
+
+  if (owner || staff) {
+    state.requests = all('SELECT r.*, (SELECT name FROM users WHERE id = r.assignee_id) assignee FROM requests r WHERE family_id = ? ORDER BY created_at DESC', familyId).map((r) => ({
+      id: r.id,
+      profileId: r.profile_id,
+      title: r.title,
+      status: r.status,
+      createdAt: r.created_at,
+      due: r.due,
+      assignee: r.assignee,
+    }))
+    state.messages = all(`SELECT * FROM messages WHERE family_id = ? ${staff ? '' : 'AND internal = 0'} ORDER BY created_at`, familyId).map((m) => ({
+      id: m.id,
+      from: m.author_kind === 'staff' ? 'assistant' : 'client',
+      author: m.author_name,
+      text: m.text,
+      at: m.created_at,
+      internal: !!m.internal,
+    }))
+  }
+
+  if (owner) {
+    const allIds = all('SELECT id FROM profiles WHERE family_id = ?', familyId).map((p) => p.id)
+    state.members = all(
+      'SELECT g.*, u.name, u.email FROM grants g JOIN users u ON u.id = g.user_id WHERE g.family_id = ? ORDER BY g.created_at',
+      familyId,
+    ).map((g) => ({
+      id: g.id,
+      userId: g.user_id,
+      name: g.name,
+      email: g.email,
+      role: g.role_label,
+      access: g.access,
+      profileIds: safeJson(g.profile_ids) ?? allIds,
+      expires: g.expires_at,
+    }))
+    state.invites = all('SELECT * FROM invites WHERE family_id = ? AND accepted_at IS NULL AND expires_at > ? ORDER BY expires_at', familyId, new Date().toISOString()).map((i) => ({
+      token: i.token,
+      role: i.role_label,
+      access: i.access,
+      profileIds: safeJson(i.profile_ids) ?? allIds,
+      accessDays: i.access_days,
+      expiresAt: i.expires_at,
+    }))
+    state.accessLog = all('SELECT * FROM access_log WHERE family_id = ? ORDER BY at DESC LIMIT 60', familyId).map((l) => ({
+      id: l.id,
+      at: l.at,
+      who: l.who,
+      action: l.action,
+      profileId: l.profile_id,
+    }))
+  }
+
+  return state
+}
