@@ -11,7 +11,8 @@
     "server": "node --env-file-if-exists=.env server/index.js",
     "start": "vite build && NODE_ENV=production node --env-file-if-exists=.env server/index.js",
     "seed": "node --env-file-if-exists=.env server/seed.js",
-    "backup": "node server/backup.js"
+    "backup": "node server/backup.js",
+    "share": "node scripts/share.mjs"
   },
   "keywords": [],
   "author": "",
