@@ -43,31 +43,56 @@ if (build.status !== 0) process.exit(build.status || 1)
 let publicUrl = null
 if (!noTunnel) {
   say('Открываю туннель…')
-  const t = spawn('cloudflared', ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${PORT}`], { stdio: ['ignore', 'ignore', 'pipe'] })
+  const t = spawn('cloudflared', ['tunnel', '--no-autoupdate', '--protocol', process.env.TUNNEL_PROTOCOL || 'http2', '--url', `http://127.0.0.1:${PORT}`], { stdio: ['ignore', 'ignore', 'pipe'] })
   children.push(t)
   t.on('exit', () => {
     console.error('Туннель остановился.')
     stop(1)
   })
-  publicUrl = await new Promise((resolve) => {
-    let buf = ''
-    const timer = setTimeout(() => resolve(null), 40000)
-    t.stderr.on('data', (d) => {
-      buf += d
-      const m = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(buf)
-      if (m) (clearTimeout(timer), resolve(m[0]))
+  let log = ''
+  const waitFor = (re, ms) =>
+    new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), ms)
+      const check = () => {
+        const m = re.exec(log)
+        if (m) (clearTimeout(timer), resolve(m[0]))
+      }
+      t.stderr.on('data', (d) => ((log += d), check()))
+      check()
     })
-  })
-  if (!publicUrl) {
-    console.error('Не удалось получить адрес туннеля за 40 секунд. Проверьте интернет и повторите.')
+  publicUrl = await waitFor(/https:\/\/[a-z0-9-]+\.trycloudflare\.com/, 40000)
+  // Адрес выдаётся сразу, но работает только после соединения с сетью Cloudflare.
+  const connected = publicUrl && (await waitFor(/Registered tunnel connection/, 40000))
+  if (!publicUrl || !connected) {
+    console.error('Туннель не смог соединиться с Cloudflare. Последние строки журнала:\n' + log.split('\n').slice(-8).join('\n'))
+    console.error('\nПроверьте интернет или попробуйте другой протокол: TUNNEL_PROTOCOL=quic npm run share')
     stop(1)
   }
 }
 
-const smtp = existsSync('.env') && /^SMTP_HOST=.+/m.test(readFileSync('.env', 'utf8'))
+const envText = existsSync('.env') ? readFileSync('.env', 'utf8') : ''
+const envVar = (k) => new RegExp(`^${k}=(.*)$`, 'm').exec(envText)?.[1]?.trim().replace(/^["']|["']$/g, '')
+const reachable = (host, port) =>
+  new Promise((resolve) => {
+    const s = createConnection({ host, port, timeout: 6000 })
+    s.on('connect', () => (s.destroy(), resolve(true)))
+    s.on('timeout', () => (s.destroy(), resolve(false)))
+    s.on('error', () => resolve(false))
+  })
+
 const env = { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', TRUST_PROXY: '1' }
 if (publicUrl) env.APP_URL = publicUrl
-// Строгий режим включаем, только если настроена почта: иначе коды подтверждения негде показать.
+
+// Почта: если сервер SMTP из этой сети недоступен, письма не уйдут, а клиент не сможет подписать согласие.
+// Тогда запускаем без почты: код подтверждения показывается на экране (только для тестовых данных).
+let smtp = !!envVar('SMTP_HOST')
+let mailNote = ''
+if (smtp && !(await reachable(envVar('SMTP_HOST'), Number(envVar('SMTP_PORT')) || 587))) {
+  smtp = false
+  Object.assign(env, { SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '' })
+  mailNote = 'Почтовый сервер из этой сети недоступен: письма не уйдут, коды подтверждения показываются на экране.'
+}
+// Строгий режим включаем, только если почта работает: иначе коды подтверждения негде показать.
 if (smtp) env.NODE_ENV = 'production'
 
 const server = spawn(process.execPath, ['--env-file-if-exists=.env', 'server/index.js'], { stdio: 'inherit', env })
@@ -80,5 +105,5 @@ if (process.platform === 'darwin') children.push(spawn('caffeinate', ['-i', '-w'
 await new Promise((r) => setTimeout(r, 1500))
 const base = publicUrl || `http://localhost:${PORT}`
 say(`Сайт открыт:\n  Клиенты:     ${base}/\n  Сотрудники:  ${base}/staff/`)
-if (!smtp) say('Почта не настроена: коды подтверждения показываются на экране. Выставляйте только тестовые данные.')
+if (!smtp) say(`${mailNote || 'Почта не настроена: коды подтверждения показываются на экране.'} Выставляйте только тестовые данные.`)
 say('Остановить: Ctrl+C. Данные лежат в server/data.')
