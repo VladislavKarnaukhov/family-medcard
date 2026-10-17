@@ -50,8 +50,9 @@ export default function Layout({ route, state, children }) {
 
       <header className="no-print flex items-center justify-between py-4">
         <a href="#/" className="text-xl font-semibold text-accent-dark">
-          Семейная медкарта
+          Близкие
         </a>
+        <span className="text-sm tracking-widest text-muted">KIN</span>
       </header>
 
       {state.profiles.length > 0 && route[0] !== 'profile' && <ProfileSwitcher state={state} />}
