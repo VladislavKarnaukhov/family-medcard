@@ -3,9 +3,9 @@ import { go } from './ui'
 
 const TABS = [
   ['', 'Главная', '⌂'],
-  ['add', 'Анализ', '＋'],
+  ['dossier', 'Досье', '▦'],
   ['indicators', 'Показатели', '◔'],
-  ['vitals', 'Замеры', '♡'],
+  ['assistant', 'Помощник', '✉'],
   ['summary', 'Сводка', '▤'],
 ]
 
@@ -39,7 +39,9 @@ export function ProfileSwitcher({ state }) {
 }
 
 export default function Layout({ route, state, children }) {
-  const active = TABS.find(([r]) => r === route[0]) ? route[0] : route[0] === 'indicator' ? 'indicators' : route[0] ?? ''
+  const ALIAS = { add: 'dossier', indicator: 'indicators', vitals: 'indicators' }
+  const key = route[0] ?? ''
+  const active = ALIAS[key] ?? key
   return (
     <div className="mx-auto flex min-h-screen max-w-2xl flex-col px-4 pb-24 print:pb-0">
       <div className="no-print -mx-4 bg-alert-soft px-4 py-2 text-center text-sm text-ink">

@@ -1,6 +1,6 @@
 // Вымышленные демо-данные: семья из трёх человек, анализы за два года из разных лабораторий.
 import { getIndicator, normalizeRow } from './indicators'
-import { localISO, pad } from './format'
+import { localISO, pad, ago, plusDaysISO } from './format'
 
 // Референсы лаборатории в основных единицах: [нижняя, верхняя] для взрослого м / ж / ребёнка.
 const REFS = {
@@ -131,5 +131,46 @@ export function buildDemo() {
     }
   }
 
-  return { profiles, labResults, measurements, vitals, activeProfileId: profiles[1].id }
+  const pid = Object.fromEntries(profiles.map((p) => [p.name, p.id]))
+  const doc = (name, type, title, date, status = 'ready', addedBy = 'assistant') => ({ id: id('d'), profileId: pid[name], type, title, date, status, addedBy })
+  const documents = [
+    doc('Мама', 'extract', 'Выписка из стационара, кардиологическое отделение', '2025-03-14'),
+    doc('Мама', 'extract', 'Выписка из поликлиники за 2025 год', plusDaysISO(0), 'requested'),
+    doc('Мама', 'imaging', 'ЭКГ с расшифровкой', '2026-02-02'),
+    doc('Мама', 'imaging', 'МРТ позвоночника — заключение', '2025-09-10'),
+    doc('Мама', 'prescription', 'Рецепт на эналаприл', '2026-08-30'),
+    doc('Мама', 'vaccine', 'Вакцинация от гриппа', '2025-10-05'),
+    doc('Мама', 'insurance', 'Полис ДМС', '2026-01-01'),
+    doc('Сын', 'vaccine', 'Прививочный сертификат', '2024-06-12'),
+    doc('Сын', 'imaging', 'УЗИ брюшной полости — заключение', '2025-09-03'),
+    doc('Я', 'imaging', 'МРТ колена — заключение', '2025-11-19', 'ready', 'client'),
+    doc('Я', 'insurance', 'Полис ДМС', '2026-01-01'),
+  ]
+  const req = (name, title, status, daysAgo, due) => ({ id: id('q'), profileId: pid[name], title, status, createdAt: ago(daysAgo, 10, 40), due })
+  const requests = [
+    req('Мама', 'Запросить выписку из поликлиники за 2025 год', 'working', 3, plusDaysISO(2)),
+    req('Я', 'Перевести документы на английский: паспорт здоровья', 'accepted', 0, plusDaysISO(3)),
+    req('Мама', 'Подготовить к визиту к кардиологу 28 октября', 'done', 1, plusDaysISO(-1)),
+  ]
+  const msg = (from, text, d, h, m) => ({ id: id('s'), from, text, at: ago(d, h, m) })
+  const messages = [
+    msg('assistant', 'Добрый день! Получила бланк от 22 сентября из ЛабДиагностики, внесла показатели и сверила их со скан-копией. Всё уже в досье мамы.', 3, 10, 12),
+    msg('client', 'Спасибо. Нужна выписка из поликлиники за 2025 год, перед визитом к кардиологу.', 3, 10, 40),
+    msg('assistant', 'Запросила в поликлинике, обычно это 3–5 рабочих дней. Сообщу, как только получу.', 3, 10, 42),
+    msg('assistant', 'Подготовила сводку к визиту 28 октября: анализы за полгода и замеры давления. Добавьте свои вопросы врачу в сводке или напишите мне здесь.', 1, 17, 5),
+  ]
+  const members = [
+    { id: id('c'), name: 'Сергей', role: 'Брат', access: 'add', profileIds: [pid['Мама']], expires: null },
+    { id: id('c'), name: 'Ирина Петровна', role: 'Сиделка', access: 'view', profileIds: [pid['Мама']], expires: plusDaysISO(30) },
+    { id: id('c'), name: 'Доктор Морозов', role: 'Врач', access: 'view', profileIds: [pid['Мама']], expires: plusDaysISO(7) },
+  ]
+  const accessLog = [
+    { id: id('l'), at: ago(0, 8, 15), who: 'Сергей (брат)', action: 'Открыл замеры давления', profileId: pid['Мама'] },
+    { id: id('l'), at: ago(1, 21, 14), who: 'Доктор Морозов', action: 'Открыл сводку для врача по ссылке', profileId: pid['Мама'] },
+    { id: id('l'), at: ago(2, 9, 30), who: 'Ирина Петровна (сиделка)', action: 'Открыла замеры давления', profileId: pid['Мама'] },
+    { id: id('l'), at: ago(3, 11, 2), who: 'Анна (помощник)', action: 'Добавила анализ от 22 сентября', profileId: pid['Мама'] },
+    { id: id('l'), at: ago(6, 19, 47), who: 'Вы', action: 'Создана ссылка для врача на 7 дн.', profileId: pid['Мама'] },
+  ]
+
+  return { profiles, labResults, measurements, vitals, documents, requests, messages, members, accessLog, activeProfileId: profiles[1].id }
 }

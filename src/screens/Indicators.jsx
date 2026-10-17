@@ -6,7 +6,15 @@ import { fmtDate, fmtNum } from '../lib/format'
 export default function Indicators({ state, profile }) {
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
   const all = latestPoints(state, profile.id)
-  if (!all.length) return <Empty>Пока нет показателей. Добавьте первый анализ.</Empty>
+  if (!all.length)
+    return (
+      <div className="space-y-3 py-4">
+        <Empty>Пока нет показателей. Добавьте первый анализ.</Empty>
+        <a href="#/vitals" className="block text-center text-accent-dark underline underline-offset-2">
+          Давление и пульс →
+        </a>
+      </div>
+    )
 
   const groupOf = (l) => getIndicator(l.key)?.group || 'Другие показатели'
   const groups = [...GROUPS, 'Другие показатели']
@@ -15,6 +23,10 @@ export default function Indicators({ state, profile }) {
     <div className="py-4">
       <h1 className="mb-1 text-2xl font-semibold">Показатели</h1>
       <p className="mb-4 text-muted">Последнее значение каждого показателя. Нажмите, чтобы увидеть динамику.</p>
+      <a href="#/vitals" className="mb-6 flex min-h-14 items-center justify-between rounded-2xl border border-line bg-card px-4">
+        <span className="font-medium">Давление и пульс</span>
+        <span className="text-accent-dark">Замеры →</span>
+      </a>
       {groups.map((g) => {
         const items = all.filter((l) => groupOf(l) === g)
         if (!items.length) return null

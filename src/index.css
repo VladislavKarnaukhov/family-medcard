@@ -17,6 +17,12 @@
 html { font-size: 17px; -webkit-text-size-adjust: 100%; }
 body { background: var(--color-paper); color: var(--color-ink); font-family: var(--font-sans); }
 
+h1, h2 {
+  font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
 input, select, textarea {
   width: 100%;
   min-height: 48px;

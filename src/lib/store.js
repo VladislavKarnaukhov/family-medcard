@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { normalizeRow } from './indicators'
 import { buildDemo } from './demo'
+import { nowISO, plusDaysISO } from './format'
 
 const KEY = 'family-medcard-v1'
 
@@ -11,7 +12,15 @@ const EMPTY = {
   vitals: [], // VitalSign: id, profileId, datetime, systolic, diastolic, pulse
   activeProfileId: null,
   questions: {}, // profileId -> «Мои вопросы врачу»
+  // Консьерж-слой
+  documents: [], // id, profileId, type, title, date, status ('ready' | 'requested' | 'processing'), addedBy, note
+  requests: [], // id, profileId, title, status ('accepted' | 'working' | 'done'), createdAt, due
+  messages: [], // id, from ('client' | 'assistant'), text, at
+  members: [], // id, name, role, access ('view' | 'add'), profileIds, expires
+  accessLog: [], // id, at, who, action, profileId
 }
+
+export const ASSISTANT = { name: 'Анна', title: 'Ваш помощник по здоровью' }
 
 const load = () => {
   try {
@@ -118,6 +127,75 @@ export const actions = {
 
   setQuestions(profileId, text) {
     commit({ ...state, questions: { ...state.questions, [profileId]: text } })
+  },
+
+  addDocument(d) {
+    commit({ ...state, documents: [...state.documents, { id: uid(), status: 'processing', addedBy: 'client', ...d }] })
+  },
+
+  deleteDocument(id) {
+    commit({ ...state, documents: state.documents.filter((d) => d.id !== id) })
+  },
+
+  // Ответы помощника в демо имитируются.
+  sendMessage(text) {
+    commit({ ...state, messages: [...state.messages, { id: uid(), from: 'client', text, at: nowISO() }] })
+    setTimeout(() => {
+      commit({
+        ...state,
+        messages: [
+          ...state.messages,
+          { id: uid(), from: 'assistant', at: nowISO(), text: 'Спасибо, увидела ваше сообщение и вернусь с ответом в течение рабочего дня.' },
+        ],
+      })
+    }, 1500)
+  },
+
+  createRequest(profileId, title) {
+    const name = state.profiles.find((p) => p.id === profileId)?.name
+    const request = { id: uid(), profileId, title, status: 'accepted', createdAt: nowISO(), due: plusDaysISO(1) }
+    commit({
+      ...state,
+      requests: [request, ...state.requests],
+      messages: [...state.messages, { id: uid(), from: 'client', at: nowISO(), text: `${title}${name ? ` — ${name}` : ''}` }],
+    })
+    setTimeout(() => {
+      commit({
+        ...state,
+        requests: state.requests.map((r) => (r.id === request.id ? { ...r, status: 'working' } : r)),
+        messages: [
+          ...state.messages,
+          { id: uid(), from: 'assistant', at: nowISO(), text: 'Приняла и беру в работу. Сообщу результат здесь; если понадобится уточнение, напишу.' },
+        ],
+      })
+    }, 1500)
+  },
+
+  addMember(m) {
+    const member = { id: uid(), expires: null, ...m }
+    commit({
+      ...state,
+      members: [...state.members, member],
+      accessLog: [{ id: uid(), at: nowISO(), who: 'Вы', action: `Открыт доступ: ${member.name} (${member.role})`, profileId: member.profileIds[0] }, ...state.accessLog],
+    })
+  },
+
+  removeMember(id) {
+    const m = state.members.find((x) => x.id === id)
+    commit({
+      ...state,
+      members: state.members.filter((x) => x.id !== id),
+      accessLog: [{ id: uid(), at: nowISO(), who: 'Вы', action: `Доступ закрыт: ${m?.name}`, profileId: m?.profileIds[0] }, ...state.accessLog],
+    })
+  },
+
+  createShareLink(profileId, days) {
+    const token = Math.random().toString(36).slice(2, 10)
+    commit({
+      ...state,
+      accessLog: [{ id: uid(), at: nowISO(), who: 'Вы', action: `Создана ссылка для врача на ${days} дн.`, profileId }, ...state.accessLog],
+    })
+    return `https://medcard.example/share/${token}`
   },
 
   loadDemo() {

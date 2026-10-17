@@ -8,6 +8,9 @@ import Indicator from './screens/Indicator'
 import Vitals from './screens/Vitals'
 import Summary from './screens/Summary'
 import ProfileForm from './screens/ProfileForm'
+import Assistant from './screens/Assistant'
+import Dossier from './screens/Dossier'
+import Circle from './screens/Circle'
 
 export default function App() {
   const state = useStore()
@@ -28,6 +31,15 @@ export default function App() {
       break
     case 'indicator':
       screen = <Indicator {...props} keyName={decodeURIComponent(route[1] || '')} />
+      break
+    case 'assistant':
+      screen = <Assistant {...props} />
+      break
+    case 'dossier':
+      screen = <Dossier {...props} />
+      break
+    case 'circle':
+      screen = <Circle {...props} />
       break
     case 'vitals':
       screen = <Vitals {...props} />

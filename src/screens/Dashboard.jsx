@@ -1,15 +1,16 @@
 import { Button, Card, Empty, H, StatusBadge, go } from '../components/ui'
-import { actions } from '../lib/store'
+import { Avatar } from './Assistant'
+import { actions, ASSISTANT } from '../lib/store'
 import { latestPoints, isOut } from '../lib/data'
 import { fmtDate, fmtNum, refText, ageText, SEX } from '../lib/format'
 
 function Welcome() {
   return (
     <div className="space-y-4 py-6">
-      <h1 className="text-2xl font-semibold leading-tight">Все анализы семьи — в одном месте</h1>
+      <h1 className="text-2xl font-semibold leading-tight">Личный помощник по здоровью вашей семьи</h1>
       <p className="text-muted">
-        Загрузите фото или PDF бланка, и показатели разложатся по полочкам. Вы увидите, как они менялись со временем, а перед
-        визитом к врачу сможете распечатать сводку на одну страницу.
+        Помощник собирает документы из клиник и лабораторий, ведёт семейное досье и готовит материалы к визитам к врачу. Вы
+        видите динамику показателей и решаете, кому из близких открыть доступ.
       </p>
       <Button big onClick={() => go('profile/new')}>
         Создать профиль
@@ -29,6 +30,9 @@ export default function Dashboard({ state, profile }) {
     .sort((a, b) => b.date.localeCompare(a.date))
   const latest = latestPoints(state, profile.id)
   const out = latest.filter((l) => isOut(l.last))
+  const openReq = state.requests.filter((r) => r.status !== 'done').length
+  const lastMsg = state.messages[state.messages.length - 1]
+  const circleCount = state.members.filter((m) => m.profileIds.includes(profile.id)).length
 
   return (
     <div>
@@ -41,9 +45,32 @@ export default function Dashboard({ state, profile }) {
         </a>
       </div>
 
-      <Button big onClick={() => go('add')}>
-        ＋ Добавить анализ
-      </Button>
+      <a href="#/assistant" className="block rounded-2xl border border-line bg-card p-4">
+        <div className="flex items-center gap-3">
+          <Avatar />
+          <div>
+            <div className="font-semibold">{ASSISTANT.name}</div>
+            <div className="text-sm text-muted">{ASSISTANT.title}</div>
+          </div>
+          {openReq > 0 && <span className="ml-auto shrink-0 whitespace-nowrap rounded-full bg-accent-soft px-3 py-1 text-sm font-medium text-accent-dark">{openReq} в работе</span>}
+        </div>
+        {lastMsg && (
+          <p className="mt-3 line-clamp-2 text-muted">
+            {lastMsg.from === 'assistant' ? '' : 'Вы: '}
+            {lastMsg.text}
+          </p>
+        )}
+        <span className="mt-2 block text-accent-dark underline underline-offset-2">Написать помощнику →</span>
+      </a>
+
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <Button variant="soft" onClick={() => go('add')}>
+          ＋ Анализ
+        </Button>
+        <Button variant="ghost" onClick={() => go('circle')}>
+          Круг заботы{circleCount ? ` · ${circleCount}` : ''}
+        </Button>
+      </div>
 
       <H>Вне диапазона лаборатории</H>
       {out.length === 0 ? (

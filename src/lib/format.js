@@ -51,3 +51,18 @@ export function ageText(birthYear) {
 }
 
 export const SEX = { f: 'женский', m: 'мужской', '': 'не указан' }
+
+export const nowISO = (d = new Date()) => `${localISO(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+
+export const plusDaysISO = (n) => {
+  const d = new Date()
+  d.setDate(d.getDate() + n)
+  return localISO(d)
+}
+
+export const ago = (days, hh = 12, mm = 0) => {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  d.setHours(hh, mm, 0, 0)
+  return nowISO(d)
+}
