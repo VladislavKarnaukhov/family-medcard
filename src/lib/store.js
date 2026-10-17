@@ -6,6 +6,7 @@ import { buildDemo } from './demo'
 
 const EMPTY_DATA = {
   family: null,
+  consent: { ok: false, stopped: false, deleteAfter: null },
   me: { access: null },
   assistant: { name: null },
   profiles: [],
@@ -144,7 +145,7 @@ export const actions = {
   },
 
   saveProfile: async (p) => {
-    const body = { name: p.name, birthYear: p.birthYear, sex: p.sex, notes: p.notes }
+    const body = { name: p.name, birthYear: p.birthYear, sex: p.sex, notes: p.notes, basis: p.basis, attest: p.attest }
     let id = p.id
     if (id) await api('PUT', `/api/profiles/${id}`, body)
     else id = (await api('POST', `/api/families/${state.familyId}/profiles`, body)).id
@@ -195,7 +196,7 @@ export const actions = {
   createRequest: act((profileId, title) => api('POST', `/api/families/${state.familyId}/requests`, { profileId, title })),
 
   async inviteMember(m) {
-    const { token } = await api('POST', `/api/families/${state.familyId}/invites`, m)
+    const { token } = await api('POST', `/api/families/${state.familyId}/invites`, { ...m, consentConfirmed: true })
     await refresh()
     return `${location.origin}/#/invite/${token}`
   },
@@ -203,14 +204,15 @@ export const actions = {
   removeMember: act((id) => api('DELETE', `/api/families/${state.familyId}/members/${id}`)),
 
   async createShareLink(profileId, days) {
-    const { token } = await api('POST', `/api/profiles/${profileId}/share`, { days })
+    const { token } = await api('POST', `/api/profiles/${profileId}/share`, { days, consentConfirmed: true })
     await refresh()
     return `${location.origin}/#/share/${token}`
   },
 
   async loadDemo() {
     const b = buildDemo()
-    const bundle = { profiles: b.profiles, labResults: b.labResults, measurements: b.measurements, vitals: b.vitals, documents: b.documents, requests: b.requests, messages: b.messages }
+    const basisByName = { Я: 'self', Мама: 'adult', Сын: 'guardian_child' }
+    const bundle = { profiles: b.profiles.map((p) => ({ ...p, basis: basisByName[p.name] || 'self' })), labResults: b.labResults, measurements: b.measurements, vitals: b.vitals, documents: b.documents, requests: b.requests, messages: b.messages }
     const r = await api('POST', `/api/families/${state.familyId}/demo-import`, { bundle })
     if (r.activeProfileId) ls.set(`blizkie-active:${state.familyId}`, r.activeProfileId)
     commit({ activeProfileId: r.activeProfileId })
@@ -218,4 +220,14 @@ export const actions = {
   },
 
   clearAll: act(() => api('DELETE', `/api/families/${state.familyId}/data`)),
+
+  async deleteAccount(password) {
+    await api('DELETE', '/api/me/account', { password })
+    commit({ ...EMPTY_DATA, user: null, families: [], familyId: null, activeProfileId: null })
+  },
+
+  async subjectLink(profileId) {
+    const { token } = await api('POST', `/api/profiles/${profileId}/subject-link`, {})
+    return `${location.origin}/#/consent/${token}`
+  },
 }

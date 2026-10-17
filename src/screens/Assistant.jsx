@@ -82,6 +82,12 @@ export default function Assistant({ state, profile }) {
         и не даёт медицинских рекомендаций.
       </p>
 
+      <p className="mt-3 rounded-xl border border-line p-3 text-sm">
+        <strong>Запросы в клиниках.</strong> Клиника выдаёт документы пациенту или его законному представителю. Чтобы помощник мог запросить их за вас, пациент оформляет согласие и полномочие: возьмите{' '}
+        <a className="text-accent-dark underline underline-offset-2" href="#/legal/authorization" target="_blank" rel="noreferrer">шаблон</a>, уточните требования клиники и загрузите подписанный документ в{' '}
+        <a className="text-accent-dark underline underline-offset-2" href="#/dossier">досье</a> (тип «Согласия и доверенности»).
+      </p>
+
       <H>Поручить</H>
       <p className="mb-2 text-sm text-muted">Для профиля «{profile?.name ?? '—'}»</p>
       <div className="flex flex-wrap gap-2">

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button, Card, Field } from '../components/ui'
 import { api } from '../lib/api'
 import { actions } from '../lib/store'
+import { DocLink } from './Legal'
 
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
@@ -10,6 +11,8 @@ export function AuthForm({ invite, onDone, startMode }) {
   const [f, setF] = useState({ name: '', email: '', password: '' })
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [terms, setTerms] = useState(false)
+  const [pd, setPd] = useState(false)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
   const submit = async (e) => {
@@ -21,7 +24,7 @@ export function AuthForm({ invite, onDone, startMode }) {
         await actions.login(f.email, f.password)
         if (invite) await actions.acceptInvite(invite)
       } else {
-        await actions.register({ ...f, inviteToken: invite || undefined })
+        await actions.register({ ...f, inviteToken: invite || undefined, consents: { terms, consent_pd: pd } })
       }
       onDone?.()
     } catch (e2) {
@@ -61,12 +64,29 @@ export function AuthForm({ invite, onDone, startMode }) {
       <Field label="Пароль" hint={mode === 'register' ? 'Не короче 8 символов' : undefined}>
         <input type="password" value={f.password} onChange={set('password')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'register' ? 8 : undefined} />
       </Field>
+      {mode === 'register' && (
+        <div className="space-y-3 rounded-xl bg-paper p-3">
+          <label className="flex items-start gap-3">
+            <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
+            <span className="text-sm">
+              Принимаю <DocLink id="terms">пользовательское соглашение</DocLink> и ознакомился(лась) с <DocLink id="privacy">политикой обработки персональных данных</DocLink>
+            </span>
+          </label>
+          <label className="flex items-start gap-3">
+            <input type="checkbox" checked={pd} onChange={(e) => setPd(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
+            <span className="text-sm">
+              Даю <DocLink id="consent_pd">согласие на обработку моих персональных данных</DocLink> (имя, email, технические данные) для работы аккаунта
+            </span>
+          </label>
+          <p className="text-xs text-muted">Согласие на обработку данных о здоровье вы подпишете отдельно, после регистрации.</p>
+        </div>
+      )}
       {err && (
         <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">
           {err}
         </p>
       )}
-      <Button type="submit" big disabled={busy}>
+      <Button type="submit" big disabled={busy || (mode === 'register' && !(terms && pd))}>
         {busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
       </Button>
     </form>

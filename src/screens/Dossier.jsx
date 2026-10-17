@@ -10,6 +10,7 @@ export const DOC_TYPES = {
   prescription: 'Рецепты',
   vaccine: 'Прививки',
   insurance: 'Полисы и страховка',
+  authorization: 'Согласия и доверенности',
 }
 const ADDABLE = Object.entries(DOC_TYPES).filter(([k]) => k !== 'analysis')
 

@@ -10,6 +10,17 @@ export function familyAccess(user, familyId) {
   return { access: g.access, profileIds: safeJson(g.profile_ids), grant: g }
 }
 
+// Действует ли подписанное согласие владельца семьи на обработку данных о здоровье.
+export function consentOk(familyId) {
+  const f = get('SELECT processing_stopped FROM families WHERE id = ?', familyId)
+  if (!f || f.processing_stopped) return false
+  return !!get(
+    `SELECT 1 FROM consents c JOIN grants g ON g.user_id = c.user_id AND g.family_id = ? AND g.access = 'owner'
+     WHERE c.doc_id = 'consent_health' AND c.method = 'otp' AND c.revoked_at IS NULL LIMIT 1`,
+    familyId,
+  )
+}
+
 export const profileAllowed = (a, pid) => a.profileIds == null || a.profileIds.includes(pid)
 export const canWrite = (a) => ['owner', 'add', 'staff'].includes(a.access)
 export const isOwner = (a) => a.access === 'owner'
@@ -29,7 +40,8 @@ export function buildState(familyId, a) {
     family: { id: family.id, name: family.name },
     me: { access: a.access },
     assistant: { name: family.staff_id ? get('SELECT name FROM users WHERE id = ?', family.staff_id)?.name : null },
-    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes })),
+    consent: { ok: consentOk(familyId), stopped: !!family.processing_stopped, deleteAfter: family.delete_after },
+    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes, basis: p.basis, consentStatus: p.consent_status })),
     questions: Object.fromEntries(profiles.map((p) => [p.id, p.questions])),
     labResults: labRows.map((l) => ({ id: l.id, profileId: l.profile_id, date: l.date, labName: l.lab_name, sourceFile: l.source_file })),
     measurements: all(`SELECT * FROM measurements WHERE lab_result_id IN ${inList(lids)}`, ...lids).map((m) => ({

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, Empty, Field, H } from '../components/ui'
 import { actions } from '../lib/store'
+import { DocLink } from './Legal'
 import { fmtDate, fmtDateTime } from '../lib/format'
 
 const ROLES = ['Брат или сестра', 'Супруг(а)', 'Сиделка', 'Врач', 'Другое']
@@ -35,6 +36,8 @@ export default function Circle({ state, profile }) {
   const [days, setDays] = useState(7)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
+  const [okInvite, setOkInvite] = useState(false)
+  const [okShare, setOkShare] = useState(false)
 
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
 
@@ -167,7 +170,13 @@ export default function Circle({ state, profile }) {
               })}
             </div>
           </fieldset>
-          <Button className="w-full" disabled={busy || !selected.length} onClick={createInvite}>
+          <label className="flex items-start gap-3">
+            <input type="checkbox" checked={okInvite} onChange={(e) => setOkInvite(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
+            <span className="text-sm">
+              Подтверждаю, что владелец данных (или его законный представитель) согласен на этот доступ. <DocLink id="consent_circle">Документ</DocLink>
+            </span>
+          </label>
+          <Button className="w-full" disabled={busy || !selected.length || !okInvite} onClick={createInvite}>
             Создать ссылку-приглашение
           </Button>
         </Card>
@@ -193,7 +202,13 @@ export default function Circle({ state, profile }) {
             <option value={30}>30 дней</option>
           </select>
         </Field>
-        <Button className="w-full" disabled={busy} onClick={() => run(async () => setLink(await actions.createShareLink(profile.id, days)))}>
+        <label className="flex items-start gap-3">
+          <input type="checkbox" checked={okShare} onChange={(e) => setOkShare(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
+          <span className="text-sm">
+            Человек, чьи данные открываются (или его законный представитель), согласен на передачу сводки врачу по ссылке. <DocLink id="consent_doctor">Документ</DocLink>
+          </span>
+        </label>
+        <Button className="w-full" disabled={busy || !okShare} onClick={() => run(async () => setLink(await actions.createShareLink(profile.id, days)))}>
           Создать ссылку
         </Button>
         {link && <CopyLink link={link} />}

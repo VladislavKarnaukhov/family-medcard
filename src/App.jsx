@@ -14,6 +14,10 @@ import ProfileForm from './screens/ProfileForm'
 import Assistant from './screens/Assistant'
 import Dossier from './screens/Dossier'
 import Circle from './screens/Circle'
+import Legal from './screens/Legal'
+import ConsentGate from './screens/ConsentGate'
+import Privacy, { Stopped } from './screens/Privacy'
+import SubjectConsent from './screens/SubjectConsent'
 
 const Note = ({ title, children }) => (
   <div className="space-y-3 py-8">
@@ -34,6 +38,18 @@ export default function App() {
     return (
       <Layout bare>
         <ShareView token={route[1]} />
+      </Layout>
+    )
+  if (route[0] === 'legal')
+    return (
+      <Layout bare>
+        <Legal id={route[1]} />
+      </Layout>
+    )
+  if (route[0] === 'consent')
+    return (
+      <Layout bare>
+        <SubjectConsent token={route[1]} />
       </Layout>
     )
   if (!state.ready) return <Layout bare><p className="py-8 text-muted">Загрузка…</p></Layout>
@@ -69,6 +85,15 @@ export default function App() {
   const profile = state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0] || null
   const props = { state, profile }
   const { owner } = can(state)
+
+  if (route[0] === 'privacy')
+    return (
+      <Layout route={route} state={state}>
+        <Privacy state={state} />
+      </Layout>
+    )
+  if (owner && state.consent.stopped) return <Layout bare><Stopped state={state} /></Layout>
+  if (owner && !state.consent.ok) return <Layout bare><ConsentGate /></Layout>
 
   let screen
   switch (route[0]) {

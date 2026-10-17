@@ -4,7 +4,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, tx, UPLOAD_DIR } from './db.js'
 import { all, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
-import { buildState, canWrite, familyAccess, isOwner, profileAllowed } from './state.js'
+import { buildState, canWrite, consentOk, familyAccess, isOwner, profileAllowed } from './state.js'
+import { mountConsent, recordConsent } from './consent.js'
 import { ensureStaff } from './seed.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -125,12 +126,16 @@ app.post('/api/auth/register', (req, res) => {
   const password = typeof req.body.password === 'string' ? req.body.password : ''
   if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return fail(res, 400, 'Проверьте имя и email')
   if (password.length < 8) return fail(res, 400, 'Пароль должен быть не короче 8 символов')
+  const given = req.body.consents || {}
+  if (given.terms !== true || given.consent_pd !== true) return fail(res, 400, 'Примите пользовательское соглашение и дайте согласие на обработку персональных данных')
   if (get('SELECT id FROM users WHERE email = ?', email)) return fail(res, 409, 'Этот email уже зарегистрирован')
   try {
     const user = tx(() => {
       const id = uuid()
       run('INSERT INTO users (id, email, name, password, role, created_at) VALUES (?,?,?,?,?,?)', id, email, name, hashPassword(password), 'user', nowIso())
       const u = { id, email, name, role: 'user' }
+      recordConsent(req, { userId: id, docId: 'terms', method: 'checkbox' })
+      recordConsent(req, { userId: id, docId: 'consent_pd', method: 'checkbox' })
       if (req.body.inviteToken) acceptInvite(u, str(req.body.inviteToken, 100))
       else createFamily(u)
       return u
@@ -186,11 +191,23 @@ app.post('/api/invites/:token/accept', needUser, (req, res) => {
   }
 })
 
-function ctxFamily(req, res, need = 'read') {
+// Любая запись данных требует действующего согласия владельца на обработку данных о здоровье.
+function gate(req, res, familyId, need, opts) {
+  if (need === 'read' || req.method === 'DELETE' || opts?.consent === false) return true
+  if (!consentOk(familyId)) {
+    const stopped = get('SELECT processing_stopped s FROM families WHERE id = ?', familyId)?.s
+    res.status(stopped ? 423 : 403).json({ error: stopped ? 'Обработка остановлена: согласие отозвано' : 'Сначала подпишите согласие на обработку данных о здоровье', code: stopped ? 'stopped' : 'consent_required' })
+    return false
+  }
+  return true
+}
+
+function ctxFamily(req, res, need = 'read', opts) {
   const a = familyAccess(req.user, req.params.fid)
   if (!a) return fail(res, 404, 'not_found'), null
   if (need === 'write' && !canWrite(a)) return fail(res, 403, 'forbidden'), null
   if (need === 'owner' && !isOwner(a)) return fail(res, 403, 'forbidden'), null
+  if (!gate(req, res, req.params.fid, need, opts)) return null
   return a
 }
 
@@ -205,6 +222,9 @@ app.post('/api/families/:fid/invites', needUser, (req, res) => {
     if (ok !== ids.length) return fail(res, 400, 'Неверные профили')
   }
   const days = [7, 30, 90].includes(Number(req.body.accessDays)) ? Number(req.body.accessDays) : null
+  if (req.body.consentConfirmed !== true) return fail(res, 400, 'Подтвердите согласие на предоставление доступа')
+  const covered = ids || all('SELECT id FROM profiles WHERE family_id = ?', req.params.fid).map((p) => p.id)
+  for (const pid of covered) recordConsent(req, { userId: req.user.id, familyId: req.params.fid, profileId: pid, docId: 'consent_circle', method: 'attestation', subjectContact: role })
   const tok = token(18)
   run(
     'INSERT INTO invites (token, family_id, created_by, role_label, access, profile_ids, access_days, expires_at) VALUES (?,?,?,?,?,?,?,?)',
@@ -253,12 +273,13 @@ app.get('/api/families/:fid/state', needUser, (req, res) => {
   res.json(buildState(req.params.fid, a))
 })
 
-function ctxProfile(req, res, pid, need = 'read') {
+function ctxProfile(req, res, pid, need = 'read', opts) {
   const p = get('SELECT * FROM profiles WHERE id = ?', pid)
   const a = p && familyAccess(req.user, p.family_id)
   if (!p || !a || !profileAllowed(a, p.id)) return fail(res, 404, 'not_found'), null
   if (need === 'write' && !canWrite(a)) return fail(res, 403, 'forbidden'), null
   if (need === 'owner' && !isOwner(a)) return fail(res, 403, 'forbidden'), null
+  if (!gate(req, res, p.family_id, need, opts)) return null
   return { p, a }
 }
 
@@ -272,8 +293,17 @@ app.post('/api/families/:fid/profiles', needUser, (req, res) => {
   if (!ctxFamily(req, res, 'owner')) return
   const name = str(req.body.name, 80)
   if (!name) return fail(res, 400, 'Укажите имя')
+  const basis = ['self', 'adult', 'guardian_child', 'guardian_ward'].includes(req.body.basis) ? req.body.basis : null
+  if (!basis) return fail(res, 400, 'Укажите, чьи это данные')
+  const by = year(req.body.birthYear)
+  if (by && by > new Date().getFullYear() - 18 && basis !== 'guardian_child') return fail(res, 400, 'Данные несовершеннолетнего вносит законный представитель')
+  if (basis !== 'self' && req.body.attest !== true) return fail(res, 400, 'Подтвердите согласие или полномочия')
   const id = uuid()
-  run('INSERT INTO profiles (id, family_id, name, birth_year, sex, notes) VALUES (?,?,?,?,?,?)', id, req.params.fid, name, year(req.body.birthYear), sex(req.body.sex), str(req.body.notes, 4000))
+  tx(() => {
+    run('INSERT INTO profiles (id, family_id, name, birth_year, sex, notes, basis, consent_status) VALUES (?,?,?,?,?,?,?,?)', id, req.params.fid, name, by, sex(req.body.sex), str(req.body.notes, 4000), basis, basis === 'self' ? 'self' : 'attested')
+    if (basis !== 'self') recordConsent(req, { userId: req.user.id, familyId: req.params.fid, profileId: id, docId: basis === 'adult' ? 'consent_adult' : 'consent_guardian', method: 'attestation', subjectName: name })
+  })
+  log(req.params.fid, req.user, id, `Создан профиль «${name}»`)
   res.json({ id })
 })
 
@@ -282,6 +312,8 @@ app.put('/api/profiles/:id', needUser, (req, res) => {
   if (!c) return
   const name = str(req.body.name, 80)
   if (!name) return fail(res, 400, 'Укажите имя')
+  const nby = year(req.body.birthYear)
+  if (nby && nby > new Date().getFullYear() - 18 && c.p.basis !== 'guardian_child') return fail(res, 400, 'Данные несовершеннолетнего вносит законный представитель')
   run('UPDATE profiles SET name = ?, birth_year = ?, sex = ?, notes = ? WHERE id = ?', name, year(req.body.birthYear), sex(req.body.sex), str(req.body.notes, 4000), c.p.id)
   res.json({ ok: true })
 })
@@ -376,7 +408,7 @@ app.delete('/api/vitals/:id', needUser, (req, res) => {
 })
 
 // ---------- документы и файлы ----------
-const TYPES = ['analysis', 'extract', 'imaging', 'prescription', 'vaccine', 'insurance']
+const TYPES = ['analysis', 'extract', 'imaging', 'prescription', 'vaccine', 'insurance', 'authorization']
 const MIME = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'application/pdf'])
 
 app.post('/api/profiles/:id/documents', needUser, (req, res) => {
@@ -443,7 +475,7 @@ app.delete('/api/documents/:id', needUser, (req, res) => {
 
 // ---------- переписка и поручения ----------
 app.post('/api/families/:fid/messages', needUser, (req, res) => {
-  const a = ctxFamily(req, res, 'owner')
+  const a = ctxFamily(req, res, 'owner', { consent: false })
   if (!a) return
   const text = str(req.body.text, 4000)
   if (!text) return fail(res, 400, 'Пустое сообщение')
@@ -470,6 +502,8 @@ app.post('/api/profiles/:id/share', needUser, (req, res) => {
   const c = ctxProfile(req, res, req.params.id, 'owner')
   if (!c) return
   const days = [1, 7, 30].includes(Number(req.body.days)) ? Number(req.body.days) : 7
+  if (req.body.consentConfirmed !== true) return fail(res, 400, 'Подтвердите согласие на передачу сводки врачу')
+  recordConsent(req, { userId: req.user.id, familyId: c.p.family_id, profileId: c.p.id, docId: 'consent_doctor', method: 'attestation' })
   const t = token(18)
   run('INSERT INTO share_links (token, profile_id, family_id, expires_at, created_at) VALUES (?,?,?,?,?)', t, c.p.id, c.p.family_id, new Date(Date.now() + days * 86400000).toISOString(), nowIso())
   log(c.p.family_id, req.user, c.p.id, `Создана ссылка для врача на ${days} дн.`)
@@ -511,7 +545,10 @@ app.post('/api/families/:fid/demo-import', needUser, (req, res) => {
   const staff = f?.staff_id ? get('SELECT id, name FROM users WHERE id = ?', f.staff_id) : null
   tx(() => {
     wipeFamily(fid)
-    for (const p of b.profiles || []) run('INSERT INTO profiles (id, family_id, name, birth_year, sex, notes) VALUES (?,?,?,?,?,?)', idOf(p.id), fid, str(p.name, 80), year(p.birthYear), sex(p.sex), str(p.notes, 4000))
+    for (const p of b.profiles || []) {
+      const basis = ['self', 'adult', 'guardian_child'].includes(p.basis) ? p.basis : 'self'
+      run('INSERT INTO profiles (id, family_id, name, birth_year, sex, notes, basis, consent_status) VALUES (?,?,?,?,?,?,?,?)', idOf(p.id), fid, str(p.name, 80), year(p.birthYear), sex(p.sex), str(p.notes, 4000), basis, basis === 'self' ? 'self' : 'attested')
+    }
     for (const l of b.labResults || []) run('INSERT INTO lab_results (id, profile_id, date, lab_name, source_file) VALUES (?,?,?,?,?)', idOf(l.id), idOf(l.profileId), l.date, str(l.labName, 120), '')
     for (const m of b.measurements || []) {
       run('INSERT INTO measurements (id, lab_result_id, name, value, unit, ref_low, ref_high, normalized_value, normalized_unit, indicator_key) VALUES (?,?,?,?,?,?,?,?,?,?)', uuid(), idOf(m.labResultId), str(m.name, 160), Number(m.value), str(m.unit, 30), numOrNull(m.refLow), numOrNull(m.refHigh), numOrNull(m.normalizedValue), str(m.normalizedUnit, 30), str(m.indicatorKey, 200))
@@ -553,6 +590,7 @@ app.get('/api/staff/inbox', needStaff, (req, res) => {
       openRequests: get("SELECT COUNT(*) c FROM requests WHERE family_id = ? AND status != 'done'", f.id).c,
       pendingDocs: get("SELECT COUNT(*) c FROM documents d JOIN profiles p ON p.id = d.profile_id WHERE p.family_id = ? AND d.status = 'processing'", f.id).c,
       profiles: all('SELECT name FROM profiles WHERE family_id = ?', f.id).map((p) => p.name),
+      consent: consentOk(f.id),
     }
   })
   rows.sort((a, b) => Number(b.unread) - Number(a.unread) || (b.last?.at || '').localeCompare(a.last?.at || ''))
@@ -564,6 +602,7 @@ app.get('/api/staff/staff-list', needStaff, (req, res) => res.json(all("SELECT i
 app.get('/api/staff/families/:fid', needStaff, (req, res) => {
   const f = get('SELECT * FROM families WHERE id = ?', req.params.fid)
   if (!f) return fail(res, 404, 'not_found')
+  if (!consentOk(f.id)) return res.status(423).json({ error: 'У клиента нет действующего согласия на обработку данных о здоровье. Работа с данными невозможна.', code: 'no_consent' })
   const owner = get("SELECT u.name, u.email FROM grants g JOIN users u ON u.id = g.user_id WHERE g.family_id = ? AND g.access = 'owner'", f.id)
   const state = buildState(f.id, { access: 'staff', profileIds: null })
   // Прозрачность: клиент видит в журнале, что помощник открывал данные (не чаще раза в 30 минут).
@@ -630,6 +669,7 @@ app.get('/api/staff/documents', needStaff, (req, res) => {
 app.post('/api/staff/documents/:id/process', needStaff, (req, res) => {
   const d = get('SELECT d.*, p.family_id fid, p.name pname FROM documents d JOIN profiles p ON p.id = d.profile_id WHERE d.id = ?', req.params.id)
   if (!d) return fail(res, 404, 'not_found')
+  if (!consentOk(d.fid)) return fail(res, 423, 'У клиента нет действующего согласия на обработку данных о здоровье')
   const labId = insertLabResult(d.profile_id, { ...req.body, sourceFile: d.file_name || '' })
   if (!labId) return fail(res, 400, 'Проверьте дату, лабораторию и показатели')
   run("UPDATE documents SET status = 'ready', lab_result_id = ?, type = 'analysis' WHERE id = ?", labId, d.id)
@@ -647,6 +687,8 @@ app.patch('/api/staff/documents/:id', needStaff, (req, res) => {
   run('UPDATE documents SET status = ? WHERE id = ?', status, d.id)
   res.json({ ok: true })
 })
+
+mountConsent(app, { needUser, needStaff, fail, ctxProfile, removeFiles, wipeFamily })
 
 // ---------- статика (собранное приложение) ----------
 const dist = join(here, '..', 'dist')

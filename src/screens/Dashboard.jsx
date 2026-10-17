@@ -3,6 +3,7 @@ import { Avatar } from './Assistant'
 import { actions, can } from '../lib/store'
 import { latestPoints, isOut } from '../lib/data'
 import { fmtDate, fmtNum, refText, ageText, SEX } from '../lib/format'
+import { CONSENT_LABEL } from './ProfileForm'
 
 function Welcome({ owner }) {
   return (
@@ -41,7 +42,12 @@ export default function Dashboard({ state, profile }) {
   return (
     <div>
       <div className="flex items-center justify-between gap-3 py-3">
-        <p className="text-muted">{[ageText(profile.birthYear), SEX[profile.sex] !== 'не указан' ? SEX[profile.sex] : ''].filter(Boolean).join(' · ')}</p>
+        <p className="text-muted">
+          {[ageText(profile.birthYear), SEX[profile.sex] !== 'не указан' ? SEX[profile.sex] : ''].filter(Boolean).join(' · ')}
+          {profile.consentStatus && profile.consentStatus !== 'self' && (
+            <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${profile.consentStatus === 'confirmed' ? 'bg-accent-soft text-accent-dark' : 'bg-alert-soft text-alert'}`}>{CONSENT_LABEL[profile.consentStatus]}</span>
+          )}
+        </p>
         {owner && (
           <a href="#/profile" className="text-accent-dark underline underline-offset-2">
             Профиль

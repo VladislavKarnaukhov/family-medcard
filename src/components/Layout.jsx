@@ -54,6 +54,9 @@ function UserMenu({ state }) {
           </label>
         )}
         <p className="text-sm text-muted">{state.user.email}</p>
+        <a href="#/privacy" className="flex min-h-11 items-center text-accent-dark underline underline-offset-2">
+          Мои данные и согласия
+        </a>
         <button onClick={actions.logout} className="min-h-11 w-full rounded-xl border border-line text-alert">
           Выйти
         </button>
@@ -86,7 +89,14 @@ export default function Layout({ route = [], state, bare, children }) {
 
       <main className="flex-1 pt-2">{children}</main>
 
-      <footer className="mt-10 border-t border-line py-4 text-center text-sm text-muted">Сервис не заменяет консультацию врача</footer>
+      <footer className="mt-10 border-t border-line py-4 text-center text-sm text-muted">
+        <p>Сервис не заменяет консультацию врача</p>
+        <p className="no-print mt-1 flex flex-wrap justify-center gap-x-4">
+          <a className="underline underline-offset-2" href="#/legal/privacy" target="_blank" rel="noreferrer">Политика</a>
+          <a className="underline underline-offset-2" href="#/legal/terms" target="_blank" rel="noreferrer">Соглашение</a>
+          <a className="underline underline-offset-2" href="#/legal">Все документы</a>
+        </p>
+      </footer>
 
       {!bare && (
         <nav className="no-print fixed inset-x-0 bottom-0 z-10 border-t border-line bg-card/95 backdrop-blur" aria-label="Основная навигация">

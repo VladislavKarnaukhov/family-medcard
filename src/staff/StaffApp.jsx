@@ -7,7 +7,7 @@ import { normalizeRow } from '../lib/indicators'
 import { recognize } from '../lib/recognize'
 import { RowEditor, toDraft } from '../screens/AddResult'
 
-const DOC_TYPES = { analysis: 'Анализы', extract: 'Выписки', imaging: 'Исследования и снимки', prescription: 'Рецепты', vaccine: 'Прививки', insurance: 'Полисы и страховка' }
+const DOC_TYPES = { analysis: 'Анализы', extract: 'Выписки', imaging: 'Исследования и снимки', prescription: 'Рецепты', vaccine: 'Прививки', insurance: 'Полисы и страховка', authorization: 'Согласия и доверенности' }
 const REQ_STATUS = [
   ['accepted', 'Принято'],
   ['working', 'В работе'],
@@ -108,6 +108,7 @@ function InboxList({ rows, fid, me }) {
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   {r.openRequests > 0 && <Badge>{r.openRequests} поруч.</Badge>}
                   {r.pendingDocs > 0 && <Badge tone="alert">{r.pendingDocs} док. на внесение</Badge>}
+                  {!r.consent && <Badge tone="alert">нет согласия</Badge>}
                   <span className="text-xs text-muted">{r.assignee ? `отв.: ${r.assignee}` : 'без ответственного'}</span>
                 </div>
               </a>
@@ -350,14 +351,26 @@ function ProfilesInfo({ data }) {
 
 function Conversation({ fid, staff }) {
   const [tab, setTab] = useState('chat')
-  const [data, reload] = usePoll(() => api('GET', `/api/staff/families/${fid}`), 4000, [fid])
-  const n = data?.messages.length
+  const [data, reload] = usePoll(
+    () => api('GET', `/api/staff/families/${fid}`).catch((e) => (e.status === 423 ? { blocked: e.message } : Promise.reject(e))),
+    4000,
+    [fid],
+  )
+  const n = data?.messages?.length
 
   useEffect(() => {
-    if (data) api('POST', `/api/staff/families/${fid}/read`, {}).catch(() => {})
+    if (data && !data.blocked) api('POST', `/api/staff/families/${fid}/read`, {}).catch(() => {})
   }, [fid, n]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!data) return <p className="text-muted">Загрузка…</p>
+  if (data.blocked)
+    return (
+      <div className="rounded-2xl border border-alert/40 bg-alert-soft p-4">
+        <p className="font-medium text-alert">Доступ к данным закрыт</p>
+        <p className="mt-1">{data.blocked}</p>
+        <p className="mt-1 text-sm text-muted">Сообщения клиенту можно отправлять только после того, как он подпишет согласие. Данные и документы не открываются.</p>
+      </div>
+    )
   const pending = data.documents.filter((d) => d.status === 'processing').length
   const open = data.requests.filter((r) => r.status !== 'done').length
 
@@ -485,6 +498,50 @@ function Board({ me, staff }) {
           )
         })}
       </div>
+    </div>
+  )
+}
+
+// ---------------- запросы субъектов данных ----------------
+const REQ_TYPES = { access: 'Получить сведения', correction: 'Уточнить данные', deletion: 'Удалить данные', revoke: 'Отозвать согласие', other: 'Другое' }
+
+function DataRequests() {
+  const [rows, reload] = usePoll(() => api('GET', '/api/staff/data-requests'), 15000, [])
+  if (!rows) return <p className="text-muted">Загрузка…</p>
+  const today = new Date().toISOString()
+  return (
+    <div>
+      <h1 className="mb-1 text-2xl font-semibold">Запросы по персональным данным</h1>
+      <p className="mb-4 text-muted">Срок ответа — 10 рабочих дней (ст. 14, 20 152-ФЗ). Просроченные выделены.</p>
+      {rows.length === 0 ? (
+        <Empty>Запросов нет.</Empty>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((r) => (
+            <li key={r.id} className={`rounded-2xl border p-3 ${r.status === 'new' && r.dueAt < today ? 'border-alert bg-alert-soft' : 'border-line bg-card'}`}>
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="font-medium">{REQ_TYPES[r.type]}</span>
+                <span className="text-sm text-muted">{r.status === 'done' ? `выполнено ${fmtDate(r.resolvedAt.slice(0, 10))}` : `ответить до ${fmtDate(r.dueAt.slice(0, 10))}`}</span>
+              </div>
+              <div className="text-sm text-muted">
+                {r.name} · {r.email} · {fmtDateTime(r.createdAt)}
+              </div>
+              {r.text && <p className="mt-1 whitespace-pre-wrap">{r.text}</p>}
+              {r.status === 'new' && (
+                <button
+                  className="mt-2 min-h-10 rounded-full border border-line px-4 text-sm"
+                  onClick={async () => {
+                    await api('PATCH', `/api/staff/data-requests/${r.id}`, {})
+                    reload()
+                  }}
+                >
+                  Отметить выполненным
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
@@ -656,6 +713,7 @@ export default function StaffApp() {
             {tab('', 'Входящие', unread)}
             {tab('requests', 'Поручения')}
             {tab('docs', 'Документы', pending)}
+            {tab('data', 'Запросы по данным')}
           </nav>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-white/80">{user.name}</span>
@@ -668,6 +726,8 @@ export default function StaffApp() {
       <main className="mx-auto max-w-6xl px-4 py-6">
         {view === 'requests' ? (
           <Board me={user} staff={staff || []} />
+        ) : view === 'data' ? (
+          <DataRequests />
         ) : view === 'docs' ? (
           <DocQueue />
         ) : view === 'process' ? (

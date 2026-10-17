@@ -149,6 +149,62 @@ CREATE INDEX IF NOT EXISTS idx_messages_family ON messages(family_id, created_at
 CREATE INDEX IF NOT EXISTS idx_profiles_family ON profiles(family_id);
 `)
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS consents (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  family_id TEXT,
+  profile_id TEXT,
+  doc_id TEXT NOT NULL,
+  doc_version TEXT NOT NULL,
+  text_hash TEXT NOT NULL,
+  method TEXT NOT NULL,                        -- checkbox | otp | attestation
+  subject_name TEXT,
+  subject_contact TEXT,
+  given_at TEXT NOT NULL,
+  revoked_at TEXT,
+  ip TEXT,
+  ua TEXT
+);
+CREATE TABLE IF NOT EXISTS otps (
+  id TEXT PRIMARY KEY,
+  scope TEXT NOT NULL,
+  target TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  attempts INTEGER NOT NULL DEFAULT 0,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS subject_links (
+  token TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL,
+  used_at TEXT
+);
+CREATE TABLE IF NOT EXISTS data_requests (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  name TEXT,
+  email TEXT,
+  type TEXT NOT NULL,
+  text TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'new',          -- new | done
+  created_at TEXT NOT NULL,
+  due_at TEXT NOT NULL,
+  resolved_at TEXT
+);
+`)
+
+function addColumn(table, column, ddl) {
+  const has = db.prepare(`PRAGMA table_info(${table})`).all().some((c) => c.name === column)
+  if (!has) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`)
+}
+addColumn('profiles', 'basis', "TEXT NOT NULL DEFAULT 'self'")             // self | adult | guardian_child | guardian_ward
+addColumn('profiles', 'consent_status', "TEXT NOT NULL DEFAULT 'self'")    // self | attested | confirmed
+addColumn('families', 'processing_stopped', 'INTEGER NOT NULL DEFAULT 0')
+addColumn('families', 'delete_after', 'TEXT')
+
 export const tx = (fn) => {
   db.exec('BEGIN')
   try {
