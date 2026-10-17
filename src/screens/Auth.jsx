@@ -1,15 +1,59 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Field } from '../components/ui'
+import { Button, Card, ErrorText, Field, Notice, Toggle } from '../components/ui'
+import { Footer, Wordmark } from '../components/Layout'
 import { api } from '../lib/api'
 import { actions } from '../lib/store'
 import { DocLink } from './Legal'
 
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
+const THREAD = 'M330 120 C 330 220, 372 262, 352 330 S 322 450, 352 530 S 382 640, 342 720 S 322 820, 342 900'
+
+// Вход и регистрация: на компьютере слева индиго-панель с нитью-стёжкой, справа форма.
+export function AuthShell({ children, wide = false, headline = 'Здоровье близких: всё под рукой и под присмотром', sentence = 'Анализы, документы и замеры семьи в одном месте. Помощник берёт рутину на себя, а доступ остаётся у вас.', brand = '' }) {
+  return (
+    <div className="flex min-h-screen flex-col">
+      <div className="flex flex-1 flex-col lg:flex-row">
+        <section className="linen-rail relative overflow-hidden px-6 pb-8 pt-6 text-white lg:flex lg:w-[44%] lg:max-w-[560px] lg:flex-col lg:px-14 lg:py-12">
+          <svg className="draw-v pointer-events-none absolute inset-0 hidden h-full w-full lg:block" viewBox="0 0 400 1000" preserveAspectRatio="xMidYMid slice" aria-hidden>
+            <path d={THREAD} fill="none" stroke="#ffffff" strokeOpacity="0.38" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="11 10" />
+            {[[352, 330], [352, 530], [342, 720]].map(([x, y]) => (
+              <g key={y}>
+                <circle cx={x} cy={y} r="13" fill="#1c2755" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2" />
+                <circle cx={x} cy={y} r="4.5" fill="#ffffff" fillOpacity="0.8" />
+              </g>
+            ))}
+          </svg>
+          <div className="relative flex items-center gap-3">
+            <Wordmark light />
+            {brand && <span className="rounded-full bg-white/10 px-3 py-0.5 text-xs font-medium text-white/80">{brand}</span>}
+          </div>
+          <div className="relative mt-auto hidden max-w-[22rem] lg:block">
+            <h2 className="text-[2.1rem] leading-[1.15] text-white">{headline}</h2>
+            <p className="mt-4 text-[1.05rem] text-white/75">{sentence}</p>
+          </div>
+          <p className="relative mt-6 text-lg font-medium text-white/90 lg:hidden">{headline}</p>
+        </section>
+        <section className="flex flex-1 items-start justify-center px-4 py-8 lg:items-center lg:px-12">
+          <div className={`w-full ${wide ? 'max-w-[560px]' : 'max-w-[440px]'}`}>{children}</div>
+        </section>
+      </div>
+      <Footer />
+    </div>
+  )
+}
+
+export const STAFF_SHELL = {
+  headline: 'Рабочее место помощников',
+  sentence: 'Очередь диалогов, внесение показателей из бланков и поручения клиентов. Каждое открытие семьи записывается в журнал владельца.',
+  brand: 'Сотрудники',
+}
+
 export function AuthForm({ invite, onDone, startMode }) {
   const [mode, setMode] = useState(startMode || 'login')
   const [f, setF] = useState({ name: '', email: '', password: '' })
   const [err, setErr] = useState('')
+  const [info, setInfo] = useState('')
   const [busy, setBusy] = useState(false)
   const [terms, setTerms] = useState(false)
   const [pd, setPd] = useState(false)
@@ -18,15 +62,20 @@ export function AuthForm({ invite, onDone, startMode }) {
   const submit = async (e) => {
     e.preventDefault()
     setErr('')
+    setInfo('')
     setBusy(true)
     try {
-      if (mode === 'login') {
+      if (mode === 'forgot') {
+        await api('POST', '/api/auth/forgot', { email: f.email })
+        setInfo('Если такой адрес зарегистрирован, мы отправили на него письмо со ссылкой для нового пароля.')
+      } else if (mode === 'login') {
         await actions.login(f.email, f.password)
         if (invite) await actions.acceptInvite(invite)
+        onDone?.()
       } else {
         await actions.register({ ...f, inviteToken: invite || undefined, consents: { terms, consent_pd: pd } })
+        onDone?.()
       }
-      onDone?.()
     } catch (e2) {
       setErr(e2.message)
     } finally {
@@ -35,24 +84,32 @@ export function AuthForm({ invite, onDone, startMode }) {
   }
 
   return (
-    <form onSubmit={submit} className="space-y-3">
-      <div className="grid grid-cols-2 gap-2" role="tablist">
-        {[
-          ['login', 'Войти'],
-          ['register', 'Создать аккаунт'],
-        ].map(([k, l]) => (
-          <button
-            key={k}
-            type="button"
-            role="tab"
-            aria-selected={mode === k}
-            onClick={() => setMode(k)}
-            className={`min-h-12 rounded-xl ${mode === k ? 'bg-accent text-white' : 'border border-line bg-card'}`}
-          >
-            {l}
-          </button>
-        ))}
-      </div>
+    <form onSubmit={submit} className="space-y-4">
+      {mode !== 'forgot' && (
+        <div className="grid grid-cols-2 gap-1 rounded-xl bg-paper p-1" role="tablist">
+          {[
+            ['login', 'Войти'],
+            ['register', 'Создать аккаунт'],
+          ].map(([k, l]) => (
+            <button
+              key={k}
+              type="button"
+              role="tab"
+              aria-selected={mode === k}
+              onClick={() => setMode(k)}
+              className={`min-h-11 rounded-lg text-[0.95rem] font-medium transition-colors ${mode === k ? 'bg-white text-accent-dark shadow-sm' : 'text-muted'}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      )}
+      {mode === 'forgot' && (
+        <div>
+          <h2 className="text-xl">Восстановление пароля</h2>
+          <p className="mt-1 text-muted">Укажите почту аккаунта, мы пришлём ссылку для нового пароля.</p>
+        </div>
+      )}
       {mode === 'register' && (
         <Field label="Как вас зовут">
           <input value={f.name} onChange={set('name')} autoComplete="name" required />
@@ -61,50 +118,91 @@ export function AuthForm({ invite, onDone, startMode }) {
       <Field label="Email">
         <input type="email" value={f.email} onChange={set('email')} autoComplete="email" required />
       </Field>
-      <Field label="Пароль" hint={mode === 'register' ? 'Не короче 8 символов' : undefined}>
-        <input type="password" value={f.password} onChange={set('password')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'register' ? 8 : undefined} />
-      </Field>
+      {mode !== 'forgot' && (
+        <Field label="Пароль" hint={mode === 'register' ? 'Не короче 8 символов' : undefined}>
+          <input type="password" value={f.password} onChange={set('password')} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'register' ? 8 : undefined} />
+        </Field>
+      )}
       {mode === 'register' && (
-        <div className="space-y-3 rounded-xl bg-paper p-3">
-          <label className="flex items-start gap-3">
-            <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
-            <span className="text-sm">
-              Принимаю <DocLink id="terms">пользовательское соглашение</DocLink> и ознакомился(лась) с <DocLink id="privacy">политикой обработки персональных данных</DocLink>
-            </span>
-          </label>
-          <label className="flex items-start gap-3">
-            <input type="checkbox" checked={pd} onChange={(e) => setPd(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
-            <span className="text-sm">
-              Даю <DocLink id="consent_pd">согласие на обработку моих персональных данных</DocLink> (имя, email, технические данные) для работы аккаунта
-            </span>
-          </label>
-          <p className="text-xs text-muted">Согласие на обработку данных о здоровье вы подпишете отдельно, после регистрации.</p>
+        <div className="space-y-3 rounded-xl bg-paper p-4">
+          <Toggle checked={terms} onChange={setTerms}>
+            Принимаю <DocLink id="terms">пользовательское соглашение</DocLink> и ознакомился(лась) с <DocLink id="privacy">политикой обработки персональных данных</DocLink>
+          </Toggle>
+          <Toggle checked={pd} onChange={setPd}>
+            Даю <DocLink id="consent_pd">согласие на обработку моих персональных данных</DocLink> (имя, email, технические данные) для работы аккаунта
+          </Toggle>
+          <p className="text-sm text-muted">Согласие на обработку данных о здоровье вы подпишете отдельно, после регистрации.</p>
         </div>
       )}
-      {err && (
-        <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">
-          {err}
-        </p>
-      )}
+      <ErrorText>{err}</ErrorText>
+      {info && <Notice>{info}</Notice>}
       <Button type="submit" big disabled={busy || (mode === 'register' && !(terms && pd))}>
-        {busy ? 'Подождите…' : mode === 'login' ? 'Войти' : 'Создать аккаунт'}
+        {busy ? 'Подождите…' : mode === 'login' ? 'Войти' : mode === 'register' ? 'Создать аккаунт' : 'Отправить ссылку'}
       </Button>
+      {mode === 'login' && (
+        <button type="button" onClick={() => setMode('forgot')} className="block min-h-11 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
+          Забыли пароль?
+        </button>
+      )}
+      {mode === 'forgot' && (
+        <button type="button" onClick={() => setMode('login')} className="block min-h-11 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
+          Вернуться ко входу
+        </button>
+      )}
     </form>
   )
 }
 
 export default function AuthScreen() {
   return (
-    <div className="space-y-4 py-6">
-      <h1 className="text-2xl font-semibold leading-tight">Личный помощник по здоровью вашей семьи</h1>
-      <p className="text-muted">
-        Помощник собирает документы из клиник и лабораторий, ведёт семейное досье и готовит материалы к визитам к врачу. Вы
-        решаете, кому из близких открыть доступ.
-      </p>
-      <Card>
+    <AuthShell>
+      <h1 className="mb-1 text-[1.75rem]">Добро пожаловать</h1>
+      <p className="mb-6 text-muted">Войдите или создайте аккаунт, чтобы вести досье семьи.</p>
+      <Card className="!p-6">
         <AuthForm />
       </Card>
-    </div>
+    </AuthShell>
+  )
+}
+
+export function ResetScreen({ token, staff = false }) {
+  const [pw, setPw] = useState('')
+  const [err, setErr] = useState('')
+  const [done, setDone] = useState(false)
+  const submit = async (e) => {
+    e.preventDefault()
+    setErr('')
+    try {
+      await api('POST', '/api/auth/reset', { token, password: pw })
+      setDone(true)
+    } catch (e2) {
+      setErr(e2.message)
+    }
+  }
+  return (
+    <AuthShell {...(staff ? STAFF_SHELL : {})}>
+      <h1 className="mb-1 text-[1.75rem]">Новый пароль</h1>
+      {done ? (
+        <div className="mt-4 space-y-4">
+          <Notice>Пароль сохранён. Теперь можно войти.</Notice>
+          <a className="inline-flex min-h-12 items-center rounded-xl bg-accent px-5 font-medium text-white" href={staff ? '/staff/#/' : '#/'} onClick={() => staff && window.location.reload()}>
+            Перейти ко входу
+          </a>
+        </div>
+      ) : (
+        <Card className="mt-4 !p-6">
+          <form onSubmit={submit} className="space-y-4">
+            <Field label="Новый пароль" hint="Не короче 8 символов">
+              <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="new-password" minLength={8} required />
+            </Field>
+            <ErrorText>{err}</ErrorText>
+            <Button type="submit" big disabled={pw.length < 8}>
+              Сохранить пароль
+            </Button>
+          </form>
+        </Card>
+      )}
+    </AuthShell>
   )
 }
 
@@ -130,45 +228,47 @@ export function InviteScreen({ token, user }) {
 
   if (err && !info)
     return (
-      <div className="space-y-3 py-6">
-        <h1 className="text-2xl font-semibold">Приглашение недействительно</h1>
+      <AuthShell>
+        <h1 className="mb-2 text-[1.75rem]">Приглашение недействительно</h1>
         <p className="text-muted">{err}. Попросите человека, который вас пригласил, создать новую ссылку.</p>
-        <a className="text-accent-dark underline underline-offset-2" href="#/">
+        <a className="mt-4 inline-flex min-h-11 items-center font-medium text-accent-dark hover:underline" href="#/">
           На главную
         </a>
-      </div>
+      </AuthShell>
     )
-  if (!info) return <p className="py-6 text-muted">Загружаем приглашение…</p>
+  if (!info)
+    return (
+      <AuthShell>
+        <p className="text-muted">Загружаем приглашение…</p>
+      </AuthShell>
+    )
 
   return (
-    <div className="space-y-4 py-6">
-      <h1 className="text-2xl font-semibold leading-tight">{info.inviter} приглашает вас в круг заботы</h1>
-      <Card className="space-y-1">
-        <div>
+    <AuthShell wide>
+      <h1 className="mb-4 text-[1.75rem]">{info.inviter} приглашает вас в круг заботы</h1>
+      <Card className="mb-5 space-y-2">
+        <p>
           Ваша роль: <strong>{info.role}</strong>
-        </div>
-        <div>
+        </p>
+        <p>
           Доступ: {ACCESS_TEXT[info.access]}
           {info.accessDays ? `, на ${info.accessDays} дн.` : ', без срока'}
-        </div>
-        <div>Профили: {info.profiles.join(', ') || '—'}</div>
-        <p className="pt-2 text-sm text-muted">Владелец видит в журнале, когда вы открываете данные, и может в любой момент закрыть доступ.</p>
-      </Card>
-      {err && (
-        <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">
-          {err}
         </p>
-      )}
+        <p>Профили: {info.profiles.join(', ') || '—'}</p>
+        <div className="stitch-h" aria-hidden />
+        <p className="text-sm text-muted">Владелец видит в журнале, когда вы открываете данные, и может в любой момент закрыть доступ.</p>
+      </Card>
+      <ErrorText>{err}</ErrorText>
       {user ? (
         <Button big disabled={busy} onClick={accept}>
           Принять приглашение как {user.name}
         </Button>
       ) : (
-        <Card>
-          <p className="mb-3 text-muted">Войдите или создайте аккаунт, чтобы принять приглашение.</p>
+        <Card className="!p-6">
+          <p className="mb-4 text-muted">Войдите или создайте аккаунт, чтобы принять приглашение.</p>
           <AuthForm invite={token} startMode="register" onDone={() => (window.location.hash = '#/')} />
         </Card>
       )}
-    </div>
+    </AuthShell>
   )
 }

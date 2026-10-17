@@ -3,15 +3,18 @@ import { createReadStream, existsSync, unlinkSync, writeFileSync } from 'node:fs
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, tx, UPLOAD_DIR } from './db.js'
-import { all, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
+import { ruDate, all, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
 import { buildState, canWrite, consentOk, familyAccess, isOwner, profileAllowed } from './state.js'
 import { mountConsent, recordConsent } from './consent.js'
 import { aiEnabled, recognizeWithClaude } from './recognize.js'
 import { ensureStaff } from './seed.js'
+import { appUrl, isProd, layout, sendMailSoon } from './mailer.js'
+import { mountAccount } from './account.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const app = express()
 app.disable('x-powered-by')
+if (process.env.TRUST_PROXY) app.set('trust proxy', 1)
 app.use(express.json({ limit: '6mb' }))
 
 // ---------- общие заголовки и защита ----------
@@ -20,6 +23,10 @@ app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY')
   res.setHeader('Referrer-Policy', 'no-referrer')
   res.setHeader('Cache-Control', 'no-store')
+  if (isProd()) {
+    res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self'; object-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'")
+    res.setHeader('Strict-Transport-Security', 'max-age=15552000')
+  }
   // Простая защита от CSRF: изменяющие запросы должны нести собственный заголовок.
   if (req.method !== 'GET' && req.path.startsWith('/api/') && req.get('x-app') !== '1') {
     return res.status(400).json({ error: 'bad_request' })
@@ -37,7 +44,7 @@ app.use((req, res, next) => {
   const t = cookieOf(req, 'sid')
   if (t) {
     const s = get('SELECT * FROM sessions WHERE token = ?', t)
-    if (s && s.expires_at > nowIso()) req.user = get('SELECT id, email, name, role FROM users WHERE id = ?', s.user_id)
+    if (s && s.expires_at > nowIso()) req.user = get('SELECT id, email, name, role, is_admin FROM users WHERE id = ? AND disabled = 0', s.user_id)
   }
   next()
 })
@@ -53,7 +60,7 @@ const fail = (res, code, error) => res.status(code).json({ error })
 function startSession(res, userId) {
   const t = token(32)
   run('INSERT INTO sessions (token, user_id, expires_at) VALUES (?,?,?)', t, userId, new Date(Date.now() + 30 * 86400000).toISOString())
-  res.setHeader('Set-Cookie', `sid=${t}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${30 * 86400}`)
+  res.setHeader('Set-Cookie', `sid=${t}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${30 * 86400}${isProd() ? '; Secure' : ''}`)
 }
 
 function mePayload(user) {
@@ -63,7 +70,7 @@ function mePayload(user) {
       : all('SELECT g.*, f.name FROM grants g JOIN families f ON f.id = g.family_id WHERE g.user_id = ? ORDER BY g.created_at', user.id)
           .filter((g) => !g.expires_at || g.expires_at >= today())
           .map((g) => ({ id: g.family_id, name: g.name, access: g.access, roleLabel: g.role_label, expiresAt: g.expires_at }))
-  return { user: { id: user.id, name: user.name, email: user.email, role: user.role }, families }
+  return { user: { id: user.id, name: user.name, email: user.email, role: user.role, isAdmin: !!user.is_admin }, families }
 }
 
 // ---------- авторизация ----------
@@ -121,7 +128,11 @@ function acceptInvite(user, tok) {
   return inv.family_id
 }
 
+const regHits = new Map()
 app.post('/api/auth/register', (req, res) => {
+  const recent = (regHits.get(req.ip) || []).filter((t) => Date.now() - t < 3600000)
+  if (recent.length >= 10) return fail(res, 429, 'Слишком много регистраций с этого адреса. Попробуйте позже.')
+  regHits.set(req.ip, [...recent, Date.now()])
   const name = str(req.body.name, 80)
   const email = str(req.body.email, 200).toLowerCase()
   const password = typeof req.body.password === 'string' ? req.body.password : ''
@@ -153,7 +164,7 @@ app.post('/api/auth/login', (req, res) => {
   const email = str(req.body.email, 200).toLowerCase()
   const key = `${email}|${req.ip}`
   if (tooMany(key)) return fail(res, 429, 'Слишком много попыток. Подождите 15 минут.')
-  const u = get('SELECT * FROM users WHERE email = ?', email)
+  const u = get('SELECT * FROM users WHERE email = ? AND disabled = 0', email)
   const ok = u && checkPassword(String(req.body.password || ''), u.password)
   bump(key, !!ok)
   if (!ok) return fail(res, 401, 'Неверный email или пароль')
@@ -239,7 +250,19 @@ app.post('/api/families/:fid/invites', needUser, (req, res) => {
     new Date(Date.now() + 14 * 86400000).toISOString(),
   )
   log(req.params.fid, req.user, null, `Создано приглашение: ${role}`)
-  res.json({ token: tok })
+  const to = str(req.body.email, 200).toLowerCase()
+  let emailed = false
+  if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
+    const url = `${appUrl()}/#/invite/${tok}`
+    sendMailSoon({
+      to,
+      subject: `${req.user.name} приглашает вас в «Близкие»`,
+      text: `${req.user.name} открывает вам доступ (${role}). Приглашение действует 14 дней: ${url}`,
+      html: layout({ title: `${req.user.name} приглашает вас в круг заботы`, lines: [`Ваша роль: ${role}.`, access === 'add' ? 'Вы сможете просматривать данные и добавлять документы.' : 'Вы сможете просматривать данные.', 'Приглашение действует 14 дней.'], cta: { label: 'Принять приглашение', url } }),
+    })
+    emailed = true
+  }
+  res.json({ token: tok, emailed })
 })
 
 app.delete('/api/invites/:token', needUser, (req, res) => {
@@ -346,26 +369,30 @@ function insertLabResult(profileId, body) {
   const id = uuid()
   tx(() => {
     run('INSERT INTO lab_results (id, profile_id, date, lab_name, source_file) VALUES (?,?,?,?,?)', id, profileId, date, labName, str(body.sourceFile, 200))
-    for (const r of rows) {
-      const value = numOrNull(r.value)
-      const name = str(r.name, 160)
-      if (value == null || !name) continue
-      run(
-        'INSERT INTO measurements (id, lab_result_id, name, value, unit, ref_low, ref_high, normalized_value, normalized_unit, indicator_key) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        uuid(),
-        id,
-        name,
-        value,
-        str(r.unit, 30),
-        numOrNull(r.refLow),
-        numOrNull(r.refHigh),
-        numOrNull(r.normalizedValue) ?? value,
-        str(r.normalizedUnit, 30) || str(r.unit, 30),
-        str(r.indicatorKey, 200) || null,
-      )
-    }
+    insertMeasurements(id, rows)
   })
   return id
+}
+
+function insertMeasurements(labId, rows) {
+  for (const r of rows) {
+    const value = numOrNull(r.value)
+    const name = str(r.name, 160)
+    if (value == null || !name) continue
+    run(
+      'INSERT INTO measurements (id, lab_result_id, name, value, unit, ref_low, ref_high, normalized_value, normalized_unit, indicator_key) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      uuid(),
+      labId,
+      name,
+      value,
+      str(r.unit, 30),
+      numOrNull(r.refLow),
+      numOrNull(r.refHigh),
+      numOrNull(r.normalizedValue) ?? value,
+      str(r.normalizedUnit, 30) || str(r.unit, 30),
+      str(r.indicatorKey, 200) || null,
+    )
+  }
 }
 
 app.post('/api/profiles/:id/lab-results', needUser, (req, res) => {
@@ -375,6 +402,25 @@ app.post('/api/profiles/:id/lab-results', needUser, (req, res) => {
   if (!id) return fail(res, 400, 'Проверьте дату, лабораторию и показатели')
   log(c.p.family_id, req.user, c.p.id, `Добавлен анализ (${str(req.body.labName, 60)})`)
   res.json({ id })
+})
+
+// Исправление анализа: дата, лаборатория и все строки заменяются.
+app.put('/api/lab-results/:id', needUser, (req, res) => {
+  const l = get('SELECT * FROM lab_results WHERE id = ?', req.params.id)
+  if (!l) return fail(res, 404, 'not_found')
+  const c = ctxProfile(req, res, l.profile_id, 'write')
+  if (!c) return
+  const date = str(req.body.date, 10)
+  const labName = str(req.body.labName, 120)
+  const rows = Array.isArray(req.body.rows) ? req.body.rows.slice(0, 200) : []
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !labName || !rows.length) return fail(res, 400, 'Проверьте дату, лабораторию и показатели')
+  tx(() => {
+    run('UPDATE lab_results SET date = ?, lab_name = ? WHERE id = ?', date, labName, l.id)
+    run('DELETE FROM measurements WHERE lab_result_id = ?', l.id)
+    insertMeasurements(l.id, rows)
+  })
+  log(c.p.family_id, req.user, c.p.id, `Исправлен анализ (${labName})`)
+  res.json({ ok: true })
 })
 
 app.delete('/api/lab-results/:id', needUser, (req, res) => {
@@ -484,6 +530,12 @@ app.post('/api/families/:fid/messages', needUser, (req, res) => {
   res.json({ ok: true })
 })
 
+app.post('/api/families/:fid/read', needUser, (req, res) => {
+  if (!ctxFamily(req, res, 'owner', { consent: false })) return
+  run('UPDATE families SET client_read_at = ? WHERE id = ?', nowIso(), req.params.fid)
+  res.json({ ok: true })
+})
+
 app.post('/api/families/:fid/requests', needUser, (req, res) => {
   const a = ctxFamily(req, res, 'owner')
   if (!a) return
@@ -519,54 +571,13 @@ app.get('/api/share/:token', (req, res) => {
   res.json({ ...state, activeProfileId: s.profile_id, expiresAt: s.expires_at })
 })
 
-// ---------- демо-данные ----------
+// ---------- удаление данных семьи ----------
 function wipeFamily(fid) {
   removeFiles(all('SELECT d.file_path FROM documents d JOIN profiles p ON p.id = d.profile_id WHERE p.family_id = ?', fid))
   run('DELETE FROM profiles WHERE family_id = ?', fid)
   run('DELETE FROM requests WHERE family_id = ?', fid)
   run('DELETE FROM messages WHERE family_id = ?', fid)
 }
-
-app.delete('/api/families/:fid/data', needUser, (req, res) => {
-  if (!ctxFamily(req, res, 'owner')) return
-  tx(() => wipeFamily(req.params.fid))
-  res.json({ ok: true })
-})
-
-app.post('/api/families/:fid/demo-import', needUser, (req, res) => {
-  if (!ctxFamily(req, res, 'owner')) return
-  const b = req.body.bundle || {}
-  const map = new Map()
-  const idOf = (old) => {
-    if (!map.has(old)) map.set(old, uuid())
-    return map.get(old)
-  }
-  const fid = req.params.fid
-  const f = get('SELECT staff_id FROM families WHERE id = ?', fid)
-  const staff = f?.staff_id ? get('SELECT id, name FROM users WHERE id = ?', f.staff_id) : null
-  tx(() => {
-    wipeFamily(fid)
-    for (const p of b.profiles || []) {
-      const basis = ['self', 'adult', 'guardian_child'].includes(p.basis) ? p.basis : 'self'
-      run('INSERT INTO profiles (id, family_id, name, birth_year, sex, notes, basis, consent_status) VALUES (?,?,?,?,?,?,?,?)', idOf(p.id), fid, str(p.name, 80), year(p.birthYear), sex(p.sex), str(p.notes, 4000), basis, basis === 'self' ? 'self' : 'attested')
-    }
-    for (const l of b.labResults || []) run('INSERT INTO lab_results (id, profile_id, date, lab_name, source_file) VALUES (?,?,?,?,?)', idOf(l.id), idOf(l.profileId), l.date, str(l.labName, 120), '')
-    for (const m of b.measurements || []) {
-      run('INSERT INTO measurements (id, lab_result_id, name, value, unit, ref_low, ref_high, normalized_value, normalized_unit, indicator_key) VALUES (?,?,?,?,?,?,?,?,?,?)', uuid(), idOf(m.labResultId), str(m.name, 160), Number(m.value), str(m.unit, 30), numOrNull(m.refLow), numOrNull(m.refHigh), numOrNull(m.normalizedValue), str(m.normalizedUnit, 30), str(m.indicatorKey, 200))
-    }
-    for (const v of b.vitals || []) run('INSERT INTO vitals (id, profile_id, datetime, systolic, diastolic, pulse) VALUES (?,?,?,?,?,?)', uuid(), idOf(v.profileId), v.datetime, v.systolic, v.diastolic, v.pulse)
-    for (const d of b.documents || []) {
-      run('INSERT INTO documents (id, profile_id, type, title, date, status, added_by_kind, added_by_name, note, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)', uuid(), idOf(d.profileId), TYPES.includes(d.type) ? d.type : 'extract', str(d.title, 200), d.date, ['ready', 'requested', 'processing'].includes(d.status) ? d.status : 'ready', d.addedBy === 'client' ? 'client' : 'assistant', staff?.name || 'Помощник', '', nowIso())
-    }
-    for (const r of b.requests || []) run('INSERT INTO requests (id, family_id, profile_id, title, status, assignee_id, due, created_at, created_by) VALUES (?,?,?,?,?,?,?,?,?)', uuid(), fid, idOf(r.profileId), str(r.title, 200), ['accepted', 'working', 'done'].includes(r.status) ? r.status : 'accepted', staff?.id || null, r.due, r.createdAt, req.user.id)
-    for (const m of b.messages || []) {
-      const fromStaff = m.from === 'assistant'
-      run('INSERT INTO messages (id, family_id, author_id, author_name, author_kind, text, created_at) VALUES (?,?,?,?,?,?,?)', uuid(), fid, fromStaff ? staff?.id || null : req.user.id, fromStaff ? staff?.name || 'Помощник' : req.user.name, fromStaff ? 'staff' : 'client', str(m.text, 4000), m.at)
-    }
-  })
-  const firstId = (b.profiles || [])[1]?.id || (b.profiles || [])[0]?.id
-  res.json({ activeProfileId: firstId ? map.get(firstId) : null })
-})
 
 // ---------- интерфейс сотрудников ----------
 app.get('/api/staff/inbox', needStaff, (req, res) => {
@@ -598,7 +609,7 @@ app.get('/api/staff/inbox', needStaff, (req, res) => {
   res.json(rows)
 })
 
-app.get('/api/staff/staff-list', needStaff, (req, res) => res.json(all("SELECT id, name FROM users WHERE role = 'staff' ORDER BY name")))
+app.get('/api/staff/staff-list', needStaff, (req, res) => res.json(all("SELECT id, name FROM users WHERE role = 'staff' AND disabled = 0 ORDER BY name")))
 
 app.get('/api/staff/families/:fid', needStaff, (req, res) => {
   const f = get('SELECT * FROM families WHERE id = ?', req.params.fid)
@@ -630,9 +641,28 @@ app.post('/api/staff/families/:fid/messages', needStaff, (req, res) => {
   if (!get('SELECT id FROM families WHERE id = ?', req.params.fid)) return fail(res, 404, 'not_found')
   const internal = req.body.internal ? 1 : 0
   run('INSERT INTO messages (id, family_id, author_id, author_name, author_kind, text, internal, created_at) VALUES (?,?,?,?,?,?,?,?)', uuid(), req.params.fid, req.user.id, req.user.name, 'staff', text, internal, nowIso())
-  if (!internal) run('UPDATE families SET staff_read_at = ? WHERE id = ?', nowIso(), req.params.fid)
+  if (!internal) {
+    run('UPDATE families SET staff_read_at = ? WHERE id = ?', nowIso(), req.params.fid)
+    notifyClient(req.params.fid, req.user.name)
+  }
   res.json({ ok: true })
 })
+
+// Письмо клиенту о новом сообщении помощника: без текста сообщения, не чаще раза в 15 минут.
+function notifyClient(familyId, staffName) {
+  const f = get('SELECT notified_at FROM families WHERE id = ?', familyId)
+  if (f?.notified_at && Date.now() - Date.parse(f.notified_at) < 15 * 60000) return
+  const owner = get("SELECT u.email FROM grants g JOIN users u ON u.id = g.user_id WHERE g.family_id = ? AND g.access = 'owner'", familyId)
+  if (!owner) return
+  run('UPDATE families SET notified_at = ? WHERE id = ?', nowIso(), familyId)
+  const url = `${appUrl()}/#/assistant`
+  sendMailSoon({
+    to: owner.email,
+    subject: 'Новое сообщение от помощника',
+    text: `${staffName} ответил(а) вам в «Близких». Откройте приложение, чтобы прочитать: ${url}`,
+    html: layout({ title: 'Новое сообщение от помощника', lines: [`${staffName} ответил(а) вам в «Близких».`, 'Текст сообщения мы не отправляем по почте, чтобы он не попал в чужие руки.'], cta: { label: 'Открыть сообщения', url } }),
+  })
+}
 
 app.get('/api/staff/requests', needStaff, (req, res) => {
   res.json(
@@ -676,7 +706,7 @@ app.post('/api/staff/documents/:id/process', needStaff, (req, res) => {
   run("UPDATE documents SET status = 'ready', lab_result_id = ?, type = 'analysis' WHERE id = ?", labId, d.id)
   log(d.fid, req.user, d.profile_id, `Внесён анализ из документа «${d.title}»`)
   if (req.body.notify) {
-    run('INSERT INTO messages (id, family_id, author_id, author_name, author_kind, text, created_at) VALUES (?,?,?,?,?,?,?)', uuid(), d.fid, req.user.id, req.user.name, 'staff', `Внесла анализ от ${req.body.date} (${str(req.body.labName, 80)}) в досье профиля «${d.pname}». Показатели сверены с бланком.`, nowIso())
+    run('INSERT INTO messages (id, family_id, author_id, author_name, author_kind, text, created_at) VALUES (?,?,?,?,?,?,?)', uuid(), d.fid, req.user.id, req.user.name, 'staff', `Внесла анализ от ${ruDate(req.body.date)} (${str(req.body.labName, 80)}) в досье профиля «${d.pname}». Показатели сверены с бланком.`, nowIso())
   }
   res.json({ id: labId })
 })
@@ -710,6 +740,7 @@ app.post('/api/recognize', needUser, express.raw({ type: () => true, limit: '25m
   }
 })
 
+mountAccount(app, { needUser, needStaff, fail })
 mountConsent(app, { needUser, needStaff, fail, ctxProfile, removeFiles, wipeFamily })
 
 // ---------- статика (собранное приложение) ----------

@@ -93,6 +93,7 @@ export function buildState(familyId, a) {
       due: r.due,
       assignee: r.assignee,
     }))
+    state.unread = get("SELECT COUNT(*) c FROM messages WHERE family_id = ? AND author_kind = 'staff' AND internal = 0 AND created_at > ?", familyId, family.client_read_at || '').c
     state.messages = all(`SELECT * FROM messages WHERE family_id = ? ${staff ? '' : 'AND internal = 0'} ORDER BY created_at`, familyId).map((m) => ({
       id: m.id,
       from: m.author_kind === 'staff' ? 'assistant' : 'client',

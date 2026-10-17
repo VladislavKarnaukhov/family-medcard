@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto'
 import { DATA_DIR } from './db.js'
 import { get, hashPassword, nowIso, run, uuid } from './util.js'
 
-const STAFF = [
+const STAFF = process.env.ADMIN_EMAIL ? [[process.env.ADMIN_NAME || 'Администратор', process.env.ADMIN_EMAIL.toLowerCase()]] : [
   ['Анна', 'anna@blizkie.test'],
   ['Михаил', 'mikhail@blizkie.test'],
 ]
@@ -14,10 +14,10 @@ const STAFF = [
 export function ensureStaff() {
   if (get("SELECT id FROM users WHERE role = 'staff' LIMIT 1")) return
   const lines = ['Учётные записи сотрудников (вход: /staff/)', '']
-  for (const [name, email] of STAFF) {
+  for (const [i, [name, email]] of STAFF.entries()) {
     const password = randomBytes(9).toString('base64url')
-    run('INSERT INTO users (id, email, name, password, role, created_at) VALUES (?,?,?,?,?,?)', uuid(), email, name, hashPassword(password), 'staff', nowIso())
-    lines.push(`${name}: ${email} / ${password}`)
+    run('INSERT INTO users (id, email, name, password, role, is_admin, created_at) VALUES (?,?,?,?,?,?,?)', uuid(), email, name, hashPassword(password), 'staff', i === 0 ? 1 : 0, nowIso())
+    lines.push(`${name}${i === 0 ? ' (администратор)' : ''}: ${email} / ${password}`)
   }
   const path = join(DATA_DIR, 'staff-credentials.txt')
   writeFileSync(path, lines.join('\n') + '\n', { mode: 0o600 })

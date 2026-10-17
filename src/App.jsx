@@ -1,11 +1,12 @@
 import { useEffect } from 'react'
 import { actions, can, init, startPolling, useStore } from './lib/store'
-import { useRoute } from './components/ui'
+import { Spinner, useRoute } from './components/ui'
 import Layout from './components/Layout'
-import AuthScreen, { InviteScreen } from './screens/Auth'
+import AuthScreen, { AuthShell, InviteScreen, ResetScreen } from './screens/Auth'
 import ShareView from './screens/ShareView'
 import Dashboard from './screens/Dashboard'
 import AddResult from './screens/AddResult'
+import EditResult from './screens/EditResult'
 import Indicators from './screens/Indicators'
 import Indicator from './screens/Indicator'
 import Vitals from './screens/Vitals'
@@ -19,10 +20,9 @@ import ConsentGate from './screens/ConsentGate'
 import Privacy, { Stopped } from './screens/Privacy'
 import SubjectConsent from './screens/SubjectConsent'
 
-const Note = ({ title, children }) => (
-  <div className="space-y-3 py-8">
-    <h1 className="text-2xl font-semibold">{title}</h1>
-    <p className="text-muted">{children}</p>
+const Loading = () => (
+  <div className="flex min-h-screen items-center justify-center">
+    <Spinner />
   </div>
 )
 
@@ -34,6 +34,7 @@ export default function App() {
     init().then(startPolling)
   }, [])
 
+  // Публичные страницы без входа
   if (route[0] === 'share')
     return (
       <Layout bare>
@@ -42,44 +43,42 @@ export default function App() {
     )
   if (route[0] === 'legal')
     return (
-      <Layout bare>
+      <Layout bare state={state}>
         <Legal id={route[1]} />
       </Layout>
     )
-  if (route[0] === 'consent')
-    return (
-      <Layout bare>
-        <SubjectConsent token={route[1]} />
-      </Layout>
-    )
-  if (!state.ready) return <Layout bare><p className="py-8 text-muted">Загрузка…</p></Layout>
-  if (route[0] === 'invite')
-    return (
-      <Layout bare>
-        <InviteScreen token={route[1]} user={state.user} />
-      </Layout>
-    )
-  if (!state.user)
-    return (
-      <Layout bare>
-        <AuthScreen />
-      </Layout>
-    )
+  if (route[0] === 'consent') return <SubjectConsent token={route[1]} />
+  if (route[0] === 'reset') return <ResetScreen token={route[1]} />
+
+  if (!state.ready) return <Loading />
+  if (route[0] === 'invite') return <InviteScreen token={route[1]} user={state.user} />
+  if (!state.user) return <AuthScreen />
+
   if (state.user.role === 'staff')
     return (
-      <Layout bare>
-        <Note title="Это учётная запись сотрудника">
-          Рабочее место сотрудников находится по адресу <a className="text-accent-dark underline" href="/staff/">/staff/</a>.
-        </Note>
-        <button className="min-h-12 text-accent-dark underline" onClick={actions.logout}>Выйти</button>
-      </Layout>
+      <AuthShell>
+        <h1 className="mb-2 text-[1.75rem]">Это учётная запись сотрудника</h1>
+        <p className="mb-4 text-muted">
+          Рабочее место сотрудников находится по адресу{' '}
+          <a className="font-medium text-accent-dark underline" href="/staff/">
+            /staff/
+          </a>
+          .
+        </p>
+        <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
+          Выйти
+        </button>
+      </AuthShell>
     )
   if (!state.familyId)
     return (
-      <Layout bare state={state}>
-        <Note title="Нет доступа к семье">Срок доступа мог истечь. Попросите владельца создать новое приглашение.</Note>
-        <button className="min-h-12 text-accent-dark underline" onClick={actions.logout}>Выйти</button>
-      </Layout>
+      <AuthShell>
+        <h1 className="mb-2 text-[1.75rem]">Нет доступа к семье</h1>
+        <p className="mb-4 text-muted">Срок доступа мог истечь. Попросите владельца создать новое приглашение.</p>
+        <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
+          Выйти
+        </button>
+      </AuthShell>
     )
 
   const profile = state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0] || null
@@ -92,8 +91,13 @@ export default function App() {
         <Privacy state={state} />
       </Layout>
     )
-  if (owner && state.consent.stopped) return <Layout bare><Stopped state={state} /></Layout>
-  if (owner && !state.consent.ok) return <Layout bare><ConsentGate /></Layout>
+  if (owner && state.consent.stopped)
+    return (
+      <Layout bare>
+        <Stopped state={state} />
+      </Layout>
+    )
+  if (owner && !state.consent.ok) return <ConsentGate />
 
   let screen
   switch (route[0]) {
@@ -102,6 +106,9 @@ export default function App() {
       break
     case 'add':
       screen = <AddResult {...props} />
+      break
+    case 'edit':
+      screen = <EditResult state={state} id={route[1]} />
       break
     case 'indicators':
       screen = <Indicators {...props} />

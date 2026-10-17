@@ -2,7 +2,6 @@
 import { useSyncExternalStore } from 'react'
 import { api, uploadFile } from './api'
 import { normalizeRow } from './indicators'
-import { buildDemo } from './demo'
 
 const EMPTY_DATA = {
   family: null,
@@ -20,6 +19,7 @@ const EMPTY_DATA = {
   invites: [],
   accessLog: [],
   questions: {},
+  unread: 0,
 }
 
 let state = { ...EMPTY_DATA, ready: false, user: null, families: [], familyId: null, activeProfileId: null }
@@ -174,6 +174,23 @@ export const actions = {
 
   deleteLabResult: act((id) => api('DELETE', `/api/lab-results/${id}`)),
 
+  // Исправление анализа: rows — те же поля, что при создании.
+  updateLabResult: act((id, d) =>
+    api('PUT', `/api/lab-results/${id}`, { date: d.date, labName: d.labName, rows: d.rows.map((r) => ({ ...r, ...normalizeRow(r) })) }),
+  ),
+
+  async markRead() {
+    if (!state.unread || !state.familyId) return
+    commit({ unread: 0 })
+    await api('POST', `/api/families/${state.familyId}/read`, {}).catch(() => {})
+  },
+
+  async updateName(name) {
+    await api('PATCH', '/api/me', { name })
+    commit({ user: { ...state.user, name } })
+  },
+  changePassword: (current, next) => api('POST', '/api/me/password', { current, next }),
+
   addVital: act((v) => api('POST', `/api/profiles/${v.profileId}/vitals`, v)),
   deleteVital: act((id) => api('DELETE', `/api/vitals/${id}`)),
 
@@ -196,9 +213,9 @@ export const actions = {
   createRequest: act((profileId, title) => api('POST', `/api/families/${state.familyId}/requests`, { profileId, title })),
 
   async inviteMember(m) {
-    const { token } = await api('POST', `/api/families/${state.familyId}/invites`, { ...m, consentConfirmed: true })
+    const { token, emailed } = await api('POST', `/api/families/${state.familyId}/invites`, { ...m, consentConfirmed: true })
     await refresh()
-    return `${location.origin}/#/invite/${token}`
+    return { url: `${location.origin}/#/invite/${token}`, emailed }
   },
   revokeInvite: act((token) => api('DELETE', `/api/invites/${token}`)),
   removeMember: act((id) => api('DELETE', `/api/families/${state.familyId}/members/${id}`)),
@@ -208,18 +225,6 @@ export const actions = {
     await refresh()
     return `${location.origin}/#/share/${token}`
   },
-
-  async loadDemo() {
-    const b = buildDemo()
-    const basisByName = { Я: 'self', Мама: 'adult', Сын: 'guardian_child' }
-    const bundle = { profiles: b.profiles.map((p) => ({ ...p, basis: basisByName[p.name] || 'self' })), labResults: b.labResults, measurements: b.measurements, vitals: b.vitals, documents: b.documents, requests: b.requests, messages: b.messages }
-    const r = await api('POST', `/api/families/${state.familyId}/demo-import`, { bundle })
-    if (r.activeProfileId) ls.set(`blizkie-active:${state.familyId}`, r.activeProfileId)
-    commit({ activeProfileId: r.activeProfileId })
-    await refresh()
-  },
-
-  clearAll: act(() => api('DELETE', `/api/families/${state.familyId}/data`)),
 
   async deleteAccount(password) {
     await api('DELETE', '/api/me/account', { password })

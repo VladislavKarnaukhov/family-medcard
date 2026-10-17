@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Button, Card, Field } from '../components/ui'
+import { Button, Card, ErrorText, Field, Notice, Toggle } from '../components/ui'
 import { api } from '../lib/api'
 import { actions, refresh } from '../lib/store'
+import { AuthShell } from './Auth'
 import { DocLink } from './Legal'
 
 // Подпись согласия одноразовым кодом: общая часть для владельца и для человека, чьи данные внесены.
@@ -36,70 +37,59 @@ export function OtpSign({ docId, startUrl, signUrl, extra = {}, onDone, startBod
   }
 
   return (
-    <div className="space-y-3">
-      <label className="flex items-start gap-3">
-        <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
-        <span>
+    <div className="space-y-4">
+      <div className="rounded-xl bg-paper p-4">
+        <Toggle checked={agree} onChange={setAgree}>
           {agreeText} <DocLink id={docId}>Прочитать документ</DocLink>
-        </span>
-      </label>
+        </Toggle>
+      </div>
       {!sent ? (
-        <Button className="w-full" disabled={!agree || busy} onClick={start}>
-          Получить код для подписи
+        <Button className="w-full" icon="mail" disabled={!agree || busy} onClick={start}>
+          {busy ? 'Отправляем…' : 'Получить код для подписи'}
         </Button>
       ) : (
         <>
-          <p className="text-sm text-muted">Код отправлен на {sent.to}. Он действует 10 минут.</p>
+          <p className="text-[0.95rem] text-muted">Код отправлен на {sent.to}. Он действует 10 минут.</p>
           {sent.devCode && (
-            <p className="rounded-xl bg-accent-soft p-3 text-sm">
-              Демо: письма пока не отправляются. Ваш код <strong>{sent.devCode}</strong> (в рабочей версии он придёт только на почту).
-            </p>
+            <Notice>
+              Почта на сервере не настроена, поэтому код показан здесь: <strong>{sent.devCode}</strong>. После настройки SMTP он будет приходить только письмом.
+            </Notice>
           )}
           <Field label="Код из письма">
-            <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={6} />
+            <input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} maxLength={6} className="!text-center !text-2xl !font-semibold !tracking-[0.4em]" />
           </Field>
-          <Button className="w-full" disabled={busy || code.length !== 6} onClick={sign}>
+          <Button className="w-full" icon="check" disabled={busy || code.length !== 6} onClick={sign}>
             Подписать согласие
           </Button>
-          <button className="min-h-11 text-accent-dark underline underline-offset-2" onClick={start} disabled={busy}>
+          <button className="min-h-11 w-full font-medium text-accent-dark hover:underline" onClick={start} disabled={busy}>
             Отправить код ещё раз
           </button>
         </>
       )}
-      {err && (
-        <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">
-          {err}
-        </p>
-      )}
+      <ErrorText>{err}</ErrorText>
     </div>
   )
 }
 
 export default function ConsentGate() {
   return (
-    <div className="space-y-4 py-6">
-      <h1 className="text-2xl font-semibold leading-tight">Согласие на обработку данных о здоровье</h1>
-      <p className="text-muted">
-        Сведения о здоровье — особая категория персональных данных. Чтобы хранить документы и результаты анализов, нам нужно ваше отдельное письменное согласие. Мы оформляем его электронной подписью: вы подтверждаете его кодом, отправленным на вашу почту.
+    <AuthShell wide>
+      <h1 className="mb-2 text-[1.75rem]">Согласие на обработку данных о здоровье</h1>
+      <p className="mb-6 text-muted">
+        Сведения о здоровье — особая категория персональных данных. Чтобы хранить документы и результаты анализов, нам нужно ваше отдельное письменное согласие. Мы оформляем его электронной подписью: вы подтверждаете согласие кодом, отправленным на вашу почту.
       </p>
-      <Card>
-        <OtpSign
-          docId="consent_health"
-          startUrl="/api/consents/health/start"
-          signUrl="/api/consents/health/sign"
-          onDone={refresh}
-          agreeText="Я прочитал(а) документ и даю отдельное согласие на обработку данных о состоянии моего здоровья."
-        />
+      <Card className="!p-6">
+        <OtpSign docId="consent_health" startUrl="/api/consents/health/start" signUrl="/api/consents/health/sign" onDone={refresh} agreeText="Я прочитал(а) документ и даю отдельное согласие на обработку данных о состоянии моего здоровья." />
       </Card>
-      <p className="text-sm text-muted">Без этого согласия пользоваться сервисом нельзя. Вы можете удалить аккаунт в разделе «Мои данные и согласия».</p>
-      <div className="flex gap-4">
-        <a className="text-accent-dark underline underline-offset-2" href="#/privacy">
+      <p className="mt-5 text-sm text-muted">Без этого согласия пользоваться сервисом нельзя. Вы можете удалить аккаунт в разделе «Мои данные и согласия».</p>
+      <div className="mt-3 flex gap-5">
+        <a className="font-medium text-accent-dark hover:underline" href="#/privacy">
           Мои данные и согласия
         </a>
-        <button className="text-accent-dark underline underline-offset-2" onClick={actions.logout}>
+        <button className="font-medium text-accent-dark hover:underline" onClick={actions.logout}>
           Выйти
         </button>
       </div>
-    </div>
+    </AuthShell>
   )
 }

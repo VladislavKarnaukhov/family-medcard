@@ -3,3 +3,9 @@ dist
 .claude
 .DS_Store
 server/data
+.env
+.env.local
+
+.impeccable/review/
+.impeccable/mocks/
+.impeccable/build/

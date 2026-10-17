@@ -1,11 +1,12 @@
 // Согласия, подпись одноразовым кодом, запросы субъектов, выгрузка и удаление данных.
-import { appendFileSync, unlinkSync } from 'node:fs'
+import { unlinkSync } from 'node:fs'
 import { createHash, randomInt } from 'node:crypto'
 import { join } from 'node:path'
 import { DATA_DIR, UPLOAD_DIR, tx } from './db.js'
 import { DOCS, plainText } from '../src/legal/docs.js'
 import { all, checkPassword, get, log, nowIso, plusDays, run, str, token, uuid } from './util.js'
 import { buildState, consentOk } from './state.js'
+import { isProd, layout, mailEnabled, sendMail } from './mailer.js'
 
 const sha = (s) => createHash('sha256').update(s).digest('hex')
 export const docHash = (id) => sha(plainText(DOCS[id]))
@@ -33,20 +34,27 @@ export function recordConsent(req, { userId, familyId = null, profileId = null, 
   return id
 }
 
-// Доставка кода. В прототипе письма не отправляются: код пишется в журнал сервера (server/data/outbox.log)
-// и, пока OTP_DEV не равно "0", возвращается в ответе, чтобы можно было проверить поток без почтового сервиса.
-function sendCode(target, purpose) {
-  const code = String(randomInt(0, 1000000)).padStart(6, '0')
-  appendFileSync(join(DATA_DIR, 'outbox.log'), `${nowIso()} to=${target} purpose=${purpose} code=${code}\n`)
-  return { code, dev: process.env.OTP_DEV !== '0' }
-}
-
-function startOtp(scope, target, res) {
+// Код подтверждения уходит письмом. Пока SMTP не настроен и это не production, код возвращается в ответе,
+// чтобы можно было проверить поток без почты.
+async function startOtp(scope, target, res) {
   const last = get('SELECT created_at FROM otps WHERE scope = ? ORDER BY created_at DESC LIMIT 1', scope)
   if (last && Date.now() - Date.parse(last.created_at) < 20000) return res.status(429).json({ error: 'Код уже отправлен, подождите немного' })
+  const code = String(randomInt(0, 1000000)).padStart(6, '0')
+  let mail
+  try {
+    mail = await sendMail({
+      to: target,
+      subject: 'Код подтверждения',
+      text: `Ваш код: ${code}. Он действует 10 минут. Если вы его не запрашивали, проигнорируйте письмо.`,
+      html: layout({ title: 'Код подтверждения', lines: [`Ваш код: ${code}`, 'Он действует 10 минут. Никому его не сообщайте.', 'Если вы его не запрашивали, проигнорируйте письмо.'] }),
+    })
+  } catch (e) {
+    console.error('mail:', e.message)
+    return res.status(502).json({ error: 'Не удалось отправить письмо. Проверьте адрес и попробуйте позже.' })
+  }
   run('DELETE FROM otps WHERE scope = ?', scope)
-  const { code, dev } = sendCode(target, scope.split(':')[0])
   run('INSERT INTO otps (id, scope, target, code_hash, expires_at, created_at) VALUES (?,?,?,?,?,?)', uuid(), scope, target, sha(`${scope}|${code}`), new Date(Date.now() + 10 * 60000).toISOString(), nowIso())
+  const dev = !mail.sent && !isProd() && !mailEnabled()
   return res.json({ sent: true, to: target, ...(dev ? { devCode: code } : {}) })
 }
 
@@ -78,7 +86,7 @@ export function mountConsent(app, { needUser, needStaff, fail, ctxProfile, remov
   })
 
   // --- подпись согласия на данные о здоровье одноразовым кодом (простая электронная подпись)
-  app.post('/api/consents/health/start', needUser, (req, res) => {
+  app.post('/api/consents/health/start', needUser, async (req, res) => {
     const f = ownerFamily(req.user.id)
     if (!f) return fail(res, 403, 'Только владелец семьи подписывает это согласие')
     return startOtp(`health:${req.user.id}`, req.user.email, res)
@@ -132,7 +140,7 @@ export function mountConsent(app, { needUser, needStaff, fail, ctxProfile, remov
     if (l) res.json({ owner: l.owner, profile: l.pname })
   })
 
-  app.post('/api/subject-consent/:token/start', (req, res) => {
+  app.post('/api/subject-consent/:token/start', async (req, res) => {
     const l = subjectLink(req, res)
     if (!l) return
     const email = str(req.body.email, 200).toLowerCase()

@@ -1,0 +1,53 @@
+// Отправка писем через SMTP (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM).
+// Без SMTP письма не уходят, а пишутся в server/data/outbox.log (режим разработки).
+import nodemailer from 'nodemailer'
+import { appendFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { DATA_DIR } from './db.js'
+
+export const mailEnabled = () => !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS
+export const isProd = () => process.env.NODE_ENV === 'production'
+export const appUrl = () => (process.env.APP_URL || 'http://localhost:5173').replace(/\/$/, '')
+
+let transport
+function getTransport() {
+  if (!transport) {
+    const port = Number(process.env.SMTP_PORT) || 587
+    transport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port,
+      secure: port === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    })
+  }
+  return transport
+}
+
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
+
+// Письмо в стиле продукта: индиго-шапка, один призыв к действию.
+export function layout({ title, lines, cta, footer }) {
+  const body = lines.map((l) => `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#1c2033">${esc(l)}</p>`).join('')
+  const button = cta
+    ? `<p style="margin:22px 0 6px"><a href="${esc(cta.url)}" style="display:inline-block;background:#2b3a7a;color:#fff;text-decoration:none;font-weight:600;padding:13px 22px;border-radius:10px">${esc(cta.label)}</a></p><p style="margin:0;font-size:13px;color:#5b6180;word-break:break-all">${esc(cta.url)}</p>`
+    : ''
+  return `<!doctype html><html lang="ru"><body style="margin:0;background:#eef0f5;font-family:Arial,Helvetica,sans-serif"><div style="max-width:560px;margin:0 auto;padding:24px 16px"><div style="background:#2b3a7a;color:#fff;padding:18px 24px;border-radius:14px 14px 0 0;font-size:20px;font-weight:700">Близкие <span style="font-weight:400;letter-spacing:.2em;font-size:12px;opacity:.7">KIN</span></div><div style="background:#fff;padding:26px 24px;border-radius:0 0 14px 14px"><h1 style="margin:0 0 16px;font-size:21px;color:#1c2033">${esc(title)}</h1>${body}${button}<p style="margin:26px 0 0;font-size:12px;color:#8a8fa8">${esc(footer || 'Сервис не заменяет консультацию врача. Если вы не ожидали это письмо, просто проигнорируйте его.')}</p></div></div></body></html>`
+}
+
+export async function sendMail({ to, subject, text, html }) {
+  const from = process.env.MAIL_FROM || 'Близкие <no-reply@localhost>'
+  if (!mailEnabled()) {
+    appendFileSync(join(DATA_DIR, 'outbox.log'), `${new Date().toISOString()} to=${to} subject=${subject}\n${text}\n---\n`)
+    return { sent: false }
+  }
+  await getTransport().sendMail({ from, to, subject, text, html })
+  return { sent: true }
+}
+
+// Фоновая отправка: ошибка не ломает запрос, но попадает в журнал сервера.
+export function sendMailSoon(msg) {
+  sendMail(msg).catch((e) => console.error('mail:', e.message))
+}

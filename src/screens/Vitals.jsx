@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Button, Card, Empty, Field, H } from '../components/ui'
+import { Button, Card, Empty, ErrorText, Field, H, PageHeader } from '../components/ui'
+import { Icon } from '../components/icons'
 import { actions, can } from '../lib/store'
 import { fmtDateTime, fmtShort, localISO, pad } from '../lib/format'
 
 const DAY = 86400000
+const INDIGO = '#2b3a7a'
+const SLATE = '#8d96bd'
 
 export function vitalsSince(state, profileId, days) {
   const from = Date.now() - days * DAY
@@ -22,11 +25,26 @@ function parsePressure(s) {
   return sys >= 60 && sys <= 260 && dia >= 30 && dia <= 160 && sys > dia ? { sys, dia } : null
 }
 
+function Tip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  const v = payload[0].payload
+  return (
+    <div className="rounded-xl border border-line bg-white p-3 text-sm shadow-pop">
+      <p className="text-base font-semibold">
+        {v.systolic}/{v.diastolic}
+      </p>
+      <p className="text-muted">Пульс {v.pulse}</p>
+      <p className="text-muted">{fmtDateTime(v.datetime)}</p>
+    </div>
+  )
+}
+
 export default function Vitals({ state, profile }) {
   const [bp, setBp] = useState('')
   const [pulse, setPulse] = useState('')
   const [touched, setTouched] = useState(false)
   const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false)
   const { write } = can(state)
 
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
@@ -40,91 +58,102 @@ export default function Vitals({ state, profile }) {
     setTouched(true)
     if (!p || pulseBad || pl == null) return
     const now = new Date()
+    setBusy(true)
     try {
-      await actions.addVital({
-        profileId: profile.id,
-        datetime: `${localISO(now)}T${pad(now.getHours())}:${pad(now.getMinutes())}`,
-        systolic: p.sys,
-        diastolic: p.dia,
-        pulse: pl,
-      })
+      await actions.addVital({ profileId: profile.id, datetime: `${localISO(now)}T${pad(now.getHours())}:${pad(now.getMinutes())}`, systolic: p.sys, diastolic: p.dia, pulse: pl })
       setBp('')
       setPulse('')
       setTouched(false)
       setErr('')
     } catch (e) {
       setErr(e.message)
+    } finally {
+      setBusy(false)
     }
   }
 
+  const avg = items.length
+    ? {
+        s: Math.round(items.reduce((a, v) => a + v.systolic, 0) / items.length),
+        d: Math.round(items.reduce((a, v) => a + v.diastolic, 0) / items.length),
+        p: Math.round(items.reduce((a, v) => a + v.pulse, 0) / items.length),
+      }
+    : null
+
   return (
-    <div className="py-4">
-      <h1 className="text-2xl font-semibold">Замеры</h1>
-      <p className="text-muted">Давление и пульс для профиля «{profile.name}». Дата и время подставятся автоматически.</p>
+    <div>
+      <PageHeader title="Замеры" subtitle={`Давление и пульс, профиль «${profile.name}». Дата и время подставятся автоматически.`} />
 
-      {write && <Card className="mt-4 space-y-3">
-        <Field label="Давление (верхнее/нижнее)" hint={touched && !p ? 'Введите, например, 120/80' : undefined}>
-          <input inputMode="numeric" placeholder="120/80" value={bp} onChange={(e) => setBp(e.target.value)} className="!text-2xl" />
-        </Field>
-        <Field label="Пульс, ударов в минуту" hint={touched && (pl == null || pulseBad) ? 'Введите число, например, 72' : undefined}>
-          <input inputMode="numeric" placeholder="72" value={pulse} onChange={(e) => setPulse(e.target.value)} className="!text-2xl" />
-        </Field>
-        {err && <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">{err}</p>}
-        <Button big onClick={add}>
-          Записать
-        </Button>
-      </Card>}
+      <div className="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
+        {write && (
+          <Card className="space-y-4 lg:sticky lg:top-8 lg:self-start">
+            <Field label="Давление (верхнее/нижнее)" hint={touched && !p ? 'Введите, например, 120/80' : undefined}>
+              <input inputMode="numeric" placeholder="120/80" value={bp} onChange={(e) => setBp(e.target.value)} className="!text-2xl !font-semibold" />
+            </Field>
+            <Field label="Пульс, ударов в минуту" hint={touched && (pl == null || pulseBad) ? 'Введите число, например, 72' : undefined}>
+              <input inputMode="numeric" placeholder="72" value={pulse} onChange={(e) => setPulse(e.target.value)} className="!text-2xl !font-semibold" />
+            </Field>
+            <ErrorText>{err}</ErrorText>
+            <Button big icon="check" onClick={add} disabled={busy}>
+              Записать
+            </Button>
+          </Card>
+        )}
 
-      <H>Давление за 30 дней</H>
-      {items.length === 0 ? (
-        <Empty>За последние 30 дней замеров нет.</Empty>
-      ) : (
-        <Card className="!px-2">
-          <div className="h-64" role="img" aria-label={`График давления, замеров ${items.length}`}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={items} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-                <CartesianGrid stroke="#eee9e0" vertical={false} />
-                <XAxis
-                  dataKey="t"
-                  type="number"
-                  scale="time"
-                  domain={[Date.now() - 30 * DAY, Date.now()]}
-                  tickFormatter={fmtShort}
-                  tick={{ fontSize: 12, fill: '#6b665e' }}
-                  tickCount={4}
-                />
-                <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 12, fill: '#6b665e' }} width={36} />
-                <Tooltip
-                  labelFormatter={(t) => fmtDateTime(new Date(t).toISOString().slice(0, 16))}
-                  formatter={(v, n) => [v, n]}
-                />
-                <Legend />
-                <Line name="Верхнее" dataKey="systolic" stroke="#2f7d6d" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive={false} />
-                <Line name="Нижнее" dataKey="diastolic" stroke="#8a8478" strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      )}
-
-      <H>Записи</H>
-      <ul className="space-y-2">
-        {[...items].reverse().slice(0, 10).map((v) => (
-          <li key={v.id} className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-card p-3">
-            <div>
-              <div className="text-lg font-semibold">
-                {v.systolic}/{v.diastolic} <span className="text-sm font-normal text-muted">пульс {v.pulse}</span>
+        <div className={`min-w-0 ${write ? '' : 'lg:col-span-2'}`}>
+          <H>Давление за 30 дней</H>
+          {items.length === 0 ? (
+            <Empty icon="pulse">За последние 30 дней замеров нет.</Empty>
+          ) : (
+            <Card className="!px-3 lg:!px-5">
+              {avg && (
+                <p className="mb-3 px-1 text-sm text-muted">
+                  Записей: {items.length}. Среднее значение: <span className="font-semibold text-ink">{avg.s}/{avg.d}</span>, пульс {avg.p}.
+                </p>
+              )}
+              <div className="h-72" role="img" aria-label={`График давления, записей: ${items.length}`}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={items} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+                    <CartesianGrid stroke="#e7eaf3" vertical={false} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={[Date.now() - 30 * DAY, Date.now()]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#565c78' }} tickCount={5} axisLine={{ stroke: '#c3c9dc' }} tickLine={false} />
+                    <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 12, fill: '#565c78' }} width={38} axisLine={false} tickLine={false} />
+                    <Tooltip content={<Tip />} />
+                    <Legend iconType="plainline" />
+                    <Line name="Верхнее" dataKey="systolic" stroke={INDIGO} strokeWidth={2.5} dot={{ r: 3, fill: INDIGO, strokeWidth: 0 }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                    <Line name="Нижнее" dataKey="diastolic" stroke={SLATE} strokeWidth={2.5} dot={{ r: 3, fill: SLATE, strokeWidth: 0 }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <div className="text-sm text-muted">{fmtDateTime(v.datetime)}</div>
-            </div>
-            {write && (
-              <button className="min-h-10 px-2 text-sm text-muted underline underline-offset-2" onClick={() => confirm('Удалить запись?') && actions.deleteVital(v.id)}>
-                Удалить
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+            </Card>
+          )}
+
+          <H>Последние записи</H>
+          {items.length === 0 ? (
+            <p className="text-muted">Записей нет.</p>
+          ) : (
+            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+              {[...items].reverse().slice(0, 10).map((v) => (
+                <li key={v.id} className="flex items-center gap-4 px-4 py-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+                    <Icon name="pulse" size={18} />
+                  </span>
+                  <div className="flex-1">
+                    <p className="text-lg font-semibold">
+                      {v.systolic}/{v.diastolic} <span className="text-sm font-normal text-muted">пульс {v.pulse}</span>
+                    </p>
+                    <p className="text-sm text-muted">{fmtDateTime(v.datetime)}</p>
+                  </div>
+                  {write && (
+                    <button className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert" aria-label="Удалить запись" onClick={() => confirm('Удалить запись?') && actions.deleteVital(v.id)}>
+                      <Icon name="trash" size={18} />
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

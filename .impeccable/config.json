@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "arial",
+        "createdAt": "2026-10-17T20:09:15.001Z",
+        "reason": "assistant decision: HTML email in server/mailer.js cannot load web fonts, mail clients need the Arial/Helvetica system stack; the app UI uses self-hosted Onest"
+      }
+    ]
+  }
+}

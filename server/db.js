@@ -205,6 +205,18 @@ addColumn('profiles', 'consent_status', "TEXT NOT NULL DEFAULT 'self'")    // se
 addColumn('families', 'processing_stopped', 'INTEGER NOT NULL DEFAULT 0')
 addColumn('families', 'delete_after', 'TEXT')
 
+db.exec(`
+CREATE TABLE IF NOT EXISTS resets (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL
+);
+`)
+addColumn('users', 'is_admin', 'INTEGER NOT NULL DEFAULT 0')
+addColumn('users', 'disabled', 'INTEGER NOT NULL DEFAULT 0')
+addColumn('families', 'client_read_at', 'TEXT')
+addColumn('families', 'notified_at', 'TEXT')
+
 export const tx = (fn) => {
   db.exec('BEGIN')
   try {

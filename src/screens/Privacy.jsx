@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Empty, Field, H } from '../components/ui'
+import { Button, Card, Empty, ErrorText, Field, H, Notice, PageHeader } from '../components/ui'
+import { Icon } from '../components/icons'
 import { api } from '../lib/api'
 import { actions, can, refresh } from '../lib/store'
 import { DOCS } from '../legal/docs.js'
@@ -17,21 +18,66 @@ const REQ_TYPES = [
 ]
 
 function ConsentList({ rows, empty }) {
-  if (!rows.length) return <Empty>{empty}</Empty>
+  if (!rows.length) return <p className="text-muted">{empty}</p>
   return (
-    <ul className="space-y-2">
+    <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
       {rows.map((c) => (
-        <li key={c.id} className="rounded-2xl border border-line bg-card p-3">
-          <div className="font-medium">{DOCS[c.docId]?.title || c.docId}</div>
-          <div className="text-sm text-muted">
+        <li key={c.id} className="px-4 py-3">
+          <p className="font-medium">{DOCS[c.docId]?.title || c.docId}</p>
+          <p className="text-sm text-muted">
             {fmtDateTime(c.givenAt)} · {METHOD[c.method]} · версия {c.version}
             {c.profile && ` · профиль «${c.profile}»`}
             {c.subject && c.method === 'otp' && ` · подписал(а): ${c.subject}`}
-          </div>
-          {c.revokedAt && <div className="text-sm text-alert">Отозвано {fmtDateTime(c.revokedAt)}</div>}
+          </p>
+          {c.revokedAt && <p className="text-sm font-medium text-alert">Отозвано {fmtDateTime(c.revokedAt)}</p>}
         </li>
       ))}
     </ul>
+  )
+}
+
+function Account({ state }) {
+  const [name, setName] = useState(state.user.name)
+  const [pw, setPw] = useState({ current: '', next: '' })
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+  const act = async (fn, ok) => {
+    setErr('')
+    setMsg('')
+    try {
+      await fn()
+      setMsg(ok)
+    } catch (e) {
+      setErr(e.message)
+    }
+  }
+  return (
+    <Card className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-3">
+        <Field label="Имя">
+          <input value={name} onChange={(e) => setName(e.target.value)} />
+        </Field>
+        <p className="text-sm text-muted">Почта: {state.user.email}</p>
+        <Button variant="soft" disabled={!name.trim() || name === state.user.name} onClick={() => act(() => actions.updateName(name.trim()), 'Имя сохранено')}>
+          Сохранить имя
+        </Button>
+      </div>
+      <div className="space-y-3">
+        <Field label="Текущий пароль">
+          <input type="password" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} autoComplete="current-password" />
+        </Field>
+        <Field label="Новый пароль" hint="Не короче 8 символов. Остальные устройства будут отключены.">
+          <input type="password" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} autoComplete="new-password" />
+        </Field>
+        <Button variant="soft" disabled={!pw.current || pw.next.length < 8} onClick={() => act(async () => { await actions.changePassword(pw.current, pw.next); setPw({ current: '', next: '' }) }, 'Пароль изменён')}>
+          Сменить пароль
+        </Button>
+      </div>
+      <div className="lg:col-span-2">
+        <ErrorText>{err}</ErrorText>
+        {msg && <Notice>{msg}</Notice>}
+      </div>
+    </Card>
   )
 }
 
@@ -40,31 +86,21 @@ export function Stopped({ state }) {
   const [err, setErr] = useState('')
   const [resume, setResume] = useState(false)
   return (
-    <div className="space-y-4 py-6">
-      <h1 className="text-2xl font-semibold leading-tight">Обработка данных остановлена</h1>
+    <div className="mx-auto max-w-[560px] space-y-5">
+      <h1 className="text-[1.75rem]">Обработка данных остановлена</h1>
       <p className="text-muted">
         Вы отозвали согласие на обработку данных о здоровье. Мы не обрабатываем данные и не открываем их сотрудникам. Данные будут уничтожены не позднее {state.consent.deleteAfter ? fmtDate(state.consent.deleteAfter.slice(0, 10)) : 'чем через 30 дней'}.
       </p>
-      <a className="block min-h-12 rounded-xl border border-line bg-card px-4 py-3 text-center" href={`/api/families/${state.familyId}/export`}>
-        Скачать мои данные (JSON)
+      <a className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line-strong bg-card px-4 font-medium hover:bg-paper" href={`/api/families/${state.familyId}/export`}>
+        <Icon name="download" size={19} /> Скачать мои данные (JSON)
       </a>
       <Card className="space-y-3">
-        <p className="font-medium">Удалить всё сейчас</p>
+        <p className="font-semibold">Удалить всё сейчас</p>
         <Field label="Пароль для подтверждения">
           <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
         </Field>
-        {err && <p role="alert" className="text-alert">{err}</p>}
-        <Button
-          variant="danger"
-          className="w-full"
-          onClick={async () => {
-            try {
-              await actions.deleteAccount(pw)
-            } catch (e) {
-              setErr(e.message)
-            }
-          }}
-        >
+        <ErrorText>{err}</ErrorText>
+        <Button variant="danger" onClick={() => actions.deleteAccount(pw).catch((e) => setErr(e.message))}>
           Удалить аккаунт и данные
         </Button>
       </Card>
@@ -73,11 +109,11 @@ export function Stopped({ state }) {
           <OtpSign docId="consent_health" startUrl="/api/consents/health/start" signUrl="/api/consents/health/sign" onDone={refresh} agreeText="Я передумал(а) и снова даю отдельное согласие на обработку данных о состоянии моего здоровья." />
         </Card>
       ) : (
-        <button className="min-h-11 text-accent-dark underline underline-offset-2" onClick={() => setResume(true)}>
+        <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={() => setResume(true)}>
           Я передумал(а): вернуть согласие
         </button>
       )}
-      <button className="min-h-11 text-accent-dark underline underline-offset-2" onClick={actions.logout}>
+      <button className="block min-h-11 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
         Выйти
       </button>
     </div>
@@ -109,19 +145,25 @@ export default function Privacy({ state }) {
   }
 
   return (
-    <div className="py-4">
-      <h1 className="text-2xl font-semibold">Мои данные и согласия</h1>
-      <p className="text-muted">Здесь видно, на что вы согласились, и можно скачать, исправить или удалить данные.</p>
+    <div className="max-w-[860px]">
+      <PageHeader title="Мои данные и согласия" subtitle="Здесь видно, на что вы согласились, и можно скачать, исправить или удалить данные." />
+
+      <H>Аккаунт</H>
+      <Account state={state} />
 
       <H>Документы</H>
-      <ul className="space-y-1">
+      <ul className="grid gap-2 sm:grid-cols-2">
         {['terms', 'privacy', 'consent_pd', 'consent_health'].map((id) => (
-          <li key={id}>
+          <li key={id} className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 shadow-card">
+            <Icon name="file" className="text-accent" />
             <DocLink id={id} />
           </li>
         ))}
-        <li>
-          <a className="text-accent-dark underline underline-offset-2" href="#/legal">Все документы</a>
+        <li className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 shadow-card">
+          <Icon name="folder" className="text-accent" />
+          <a className="text-accent-dark underline underline-offset-2" href="#/legal">
+            Все документы
+          </a>
         </li>
       </ul>
 
@@ -131,13 +173,13 @@ export default function Privacy({ state }) {
       {owner && data && (
         <>
           <H>Согласия за других людей</H>
-          <p className="mb-2 text-sm text-muted">Подтверждения, которые даны или заявлены по профилям вашей семьи.</p>
+          <p className="mb-3 text-sm text-muted">Подтверждения, которые даны или заявлены по профилям вашей семьи.</p>
           <ConsentList rows={data.about.filter((c) => c.profile)} empty="Пока нет." />
         </>
       )}
 
       <H>Запрос по персональным данным</H>
-      <Card className="space-y-3">
+      <Card className="space-y-4">
         <p className="text-sm text-muted">Ответим в течение 10 рабочих дней на почту аккаунта.</p>
         <Field label="Что нужно">
           <select value={req.type} onChange={(e) => setReq({ ...req, type: e.target.value })}>
@@ -151,26 +193,23 @@ export default function Privacy({ state }) {
         <Field label="Подробности">
           <textarea value={req.text} onChange={(e) => setReq({ ...req, text: e.target.value })} maxLength={2000} />
         </Field>
-        {err && <p role="alert" className="text-alert">{err}</p>}
-        {sent && <p className="rounded-xl bg-accent-soft p-3 text-sm">Запрос отправлен.</p>}
-        <Button className="w-full" onClick={sendRequest}>
-          Отправить запрос
-        </Button>
+        <ErrorText>{err}</ErrorText>
+        {sent && <Notice>Запрос отправлен.</Notice>}
+        <Button onClick={sendRequest}>Отправить запрос</Button>
       </Card>
 
       {owner && (
         <>
           <H>Скачать данные</H>
-          <a className="block min-h-12 rounded-xl border border-line bg-card px-4 py-3 text-center" href={`/api/families/${state.familyId}/export`}>
-            Скачать всё в формате JSON
+          <a className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-line-strong bg-card px-5 font-medium hover:bg-paper" href={`/api/families/${state.familyId}/export`}>
+            <Icon name="download" size={19} /> Скачать всё в формате JSON
           </a>
 
           <H>Отозвать согласие</H>
-          <Card className="space-y-2">
+          <Card className="space-y-3">
             <p>Отзыв согласия на обработку данных о здоровье останавливает обработку. Данные будут уничтожены в течение 30 дней, а пользоваться сервисом станет нельзя.</p>
             <Button
               variant="danger"
-              className="w-full"
               onClick={async () => {
                 if (confirm('Остановить обработку данных и запланировать удаление?')) {
                   await api('POST', '/api/consents/health/revoke', {})
@@ -190,10 +229,9 @@ export default function Privacy({ state }) {
         <Field label="Пароль для подтверждения">
           <input type="password" value={pw} onChange={(e) => setPw(e.target.value)} autoComplete="current-password" />
         </Field>
-        {msg && <p role="alert" className="text-alert">{msg}</p>}
+        <ErrorText>{msg}</ErrorText>
         <Button
           variant="danger"
-          className="w-full"
           disabled={!pw}
           onClick={async () => {
             if (!confirm('Удалить аккаунт и данные без возможности восстановления?')) return

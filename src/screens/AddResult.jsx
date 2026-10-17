@@ -1,75 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Card, Empty, Field, go } from '../components/ui'
+import { useEffect, useRef, useState } from 'react'
+import { Button, Card, Empty, ErrorText, Notice, PageHeader, Tabs, Toggle, go } from '../components/ui'
+import { Icon } from '../components/icons'
+import { Preview, ResultForm } from '../components/ResultForm'
 import { actions, can } from '../lib/store'
 import { recognize, getFeatures } from '../lib/recognize'
+import { draftBad, draftRows, emptyDraft, toDraft } from '../lib/draft'
+import { fmtDate, localISO } from '../lib/format'
 import { DocLink } from './Legal'
-import { findIndicator } from '../lib/indicators'
-import { parseNum, localISO } from '../lib/format'
-
-const toText = (n) => (n == null ? '' : String(n).replace('.', ','))
-
-function Preview({ file }) {
-  const url = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
-  useEffect(() => () => url && URL.revokeObjectURL(url), [url])
-  if (!file) return null
-  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name)
-  return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-paper">
-      {isPdf ? (
-        <object data={url} type="application/pdf" className="h-96 w-full">
-          <p className="p-4 text-muted">Просмотр PDF недоступен в этом браузере: {file.name}</p>
-        </object>
-      ) : (
-        <img src={url} alt={`Бланк: ${file.name}`} className="max-h-[28rem] w-full object-contain" />
-      )}
-    </div>
-  )
-}
-
-export function RowEditor({ row, onChange, onDelete }) {
-  const set = (k) => (e) => onChange({ ...row, [k]: e.target.value })
-  const known = findIndicator(row.name)
-  const bad = row.value.trim() === '' || parseNum(row.value) == null
-  return (
-    <li className="rounded-2xl border border-line bg-card p-3">
-      <div className="grid grid-cols-2 gap-2">
-        <div className="col-span-2">
-          <Field label="Показатель" hint={known ? undefined : 'Не найден в справочнике — график строится по названию'}>
-            <input value={row.name} onChange={set('name')} />
-          </Field>
-        </div>
-        <Field label="Значение">
-          <input inputMode="decimal" value={row.value} onChange={set('value')} aria-invalid={bad} className={bad ? '!border-alert' : ''} />
-        </Field>
-        <Field label="Единица">
-          <input value={row.unit} onChange={set('unit')} />
-        </Field>
-        <Field label="Референс: от">
-          <input inputMode="decimal" value={row.refLow} onChange={set('refLow')} />
-        </Field>
-        <Field label="Референс: до">
-          <input inputMode="decimal" value={row.refHigh} onChange={set('refHigh')} />
-        </Field>
-      </div>
-      <button onClick={onDelete} className="mt-2 min-h-10 text-sm text-alert underline underline-offset-2">
-        Убрать строку
-      </button>
-    </li>
-  )
-}
-
-export const toDraft = (r) => ({
-  sourceFile: r.sourceFile,
-  date: r.date,
-  labName: r.labName,
-  rows: r.rows.map((x) => ({
-    name: x.name,
-    value: toText(x.value),
-    unit: x.unit,
-    refLow: toText(x.refLow),
-    refHigh: toText(x.refHigh),
-  })),
-})
 
 export default function AddResult({ state, profile }) {
   const [files, setFiles] = useState([])
@@ -82,24 +19,21 @@ export default function AddResult({ state, profile }) {
   const [ai, setAi] = useState(false)
   const [usedAi, setUsedAi] = useState(false)
   const [warnings, setWarnings] = useState([])
-  useEffect(() => {
-    getFeatures().then(setFeatures)
-  }, [])
+  const [drag, setDrag] = useState(false)
   const cam = useRef(null)
   const pick = useRef(null)
 
-  if (!profile) {
-    return (
-      <div className="py-6">
-        <Empty>Сначала создайте профиль.</Empty>
-        <Button big className="mt-4" onClick={() => go('profile/new')}>
-          Создать профиль
-        </Button>
-      </div>
-    )
-  }
+  useEffect(() => {
+    getFeatures().then(setFeatures)
+  }, [])
 
-  if (!can(state).write) return <Empty>У вас доступ только для просмотра.</Empty>
+  if (!profile)
+    return (
+      <Empty icon="user" action={<Button onClick={() => go('profile/new')}>Создать профиль</Button>}>
+        Сначала создайте профиль.
+      </Empty>
+    )
+  if (!can(state).write) return <Empty icon="lock">У вас доступ только для просмотра.</Empty>
 
   const addFiles = (list) => setFiles((f) => [...f, ...Array.from(list)])
 
@@ -108,7 +42,7 @@ export default function AddResult({ state, profile }) {
     setError('')
     try {
       for (const file of files) {
-        await actions.addDocument({ profileId: profile.id, type: 'analysis', title: `Бланк анализа — ${file.name}`, date: localISO(), file })
+        await actions.addDocument({ profileId: profile.id, type: 'analysis', title: `Бланк анализа от ${fmtDate(localISO())}${files.length > 1 ? ` (${files.indexOf(file) + 1} из ${files.length})` : ''}`, date: localISO(), file })
       }
       go('dossier')
     } catch (e) {
@@ -118,16 +52,24 @@ export default function AddResult({ state, profile }) {
   }
 
   const run = async () => {
-    setBusy(true)
     setError('')
+    // Без ИИ показатели вносит человек: бланк показывается рядом с пустой таблицей.
+    if (!(ai && features.aiRecognition)) {
+      setUsedAi(false)
+      setWarnings([])
+      setDrafts(files.map((f) => ({ ...emptyDraft(localISO()), sourceFile: f.name })))
+      setCur(0)
+      return
+    }
+    setBusy(true)
     try {
       const res = await recognize(files, { ai: ai && features.aiRecognition, profileId: profile.id })
       setUsedAi(res.some((r) => r.ai))
       setWarnings(res.flatMap((r) => r.warnings || []))
       setDrafts(res.map(toDraft))
       setCur(0)
-    } catch {
-      setError('Не удалось распознать бланк. Попробуйте другое фото или добавьте показатели вручную.')
+    } catch (e) {
+      setError(e.status === 422 ? e.message : 'Не удалось распознать бланк. Отправьте его помощнику или внесите показатели вручную.')
     } finally {
       setBusy(false)
     }
@@ -135,94 +77,98 @@ export default function AddResult({ state, profile }) {
 
   const manual = () => {
     setFiles([])
-    setDrafts([{ sourceFile: '', date: localISO(), labName: '', rows: [{ name: '', value: '', unit: '', refLow: '', refHigh: '' }] }])
+    setUsedAi(false)
+    setDrafts([emptyDraft(localISO())])
     setCur(0)
   }
 
   // ---------- шаг 1: загрузка ----------
   if (!drafts) {
     return (
-      <div className="space-y-4 py-4">
-        <h1 className="text-2xl font-semibold">Добавить анализ</h1>
-        <p className="text-muted">Для профиля «{profile.name}». Можно выбрать сразу несколько фото или PDF.</p>
+      <div className="mx-auto max-w-[720px]">
+        <PageHeader title="Добавить анализ" subtitle={`Профиль «${profile.name}». Можно выбрать сразу несколько фото или PDF.`} back={{ href: '#/dossier', label: 'Досье' }} />
 
         <input ref={cam} type="file" accept="image/*" capture="environment" hidden onChange={(e) => addFiles(e.target.files)} />
         <input ref={pick} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => addFiles(e.target.files)} />
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Button big onClick={() => cam.current.click()}>
-            📷 Сфотографировать бланк
-          </Button>
-          <Button big variant="soft" onClick={() => pick.current.click()}>
-            Выбрать фото или PDF
-          </Button>
+        <div
+          onDragOver={(e) => (e.preventDefault(), setDrag(true))}
+          onDragLeave={() => setDrag(false)}
+          onDrop={(e) => (e.preventDefault(), setDrag(false), addFiles(e.dataTransfer.files))}
+          className={`stitch-border flex flex-col items-center gap-4 rounded-2xl px-6 py-10 text-center transition-colors ${drag ? 'bg-accent-soft' : 'bg-card'}`}
+        >
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <Icon name="upload" size={26} />
+          </span>
+          <p className="max-w-[40ch] text-muted">Перетащите бланки сюда или выберите на устройстве. Подойдут фото и PDF.</p>
+          <div className="flex w-full max-w-[420px] flex-col gap-3 sm:flex-row">
+            <Button className="flex-1" icon="camera" onClick={() => cam.current.click()}>
+              Сфотографировать
+            </Button>
+            <Button className="flex-1" variant="soft" icon="folder" onClick={() => pick.current.click()}>
+              Выбрать файлы
+            </Button>
+          </div>
         </div>
 
         {files.length > 0 && (
-          <Card>
-            <ul className="divide-y divide-line">
-              {files.map((f, i) => (
-                <li key={i} className="flex items-center justify-between gap-3 py-2">
-                  <span className="truncate">{f.name}</span>
-                  <button className="min-h-10 shrink-0 text-alert" onClick={() => setFiles(files.filter((_, j) => j !== i))}>
-                    Убрать
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </Card>
+          <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+            {files.map((f, i) => (
+              <li key={i} className="flex items-center gap-3 px-4 py-3">
+                <Icon name="file" className="text-accent" />
+                <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                <span className="text-sm text-muted">{Math.max(1, Math.round(f.size / 1024))} КБ</span>
+                <button className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert" aria-label={`Убрать ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>
+                  <Icon name="x" size={18} />
+                </button>
+              </li>
+            ))}
+          </ul>
         )}
 
-        {error && <p className="rounded-xl bg-alert-soft p-3 text-alert">{error}</p>}
-        {features.aiRecognition && (
-          <label className="flex items-start gap-3 rounded-xl bg-paper p-3">
-            <input type="checkbox" checked={ai} onChange={(e) => setAi(e.target.checked)} className="!mt-1 !h-6 !min-h-0 !w-6 shrink-0" />
-            <span className="text-sm">
-              Разрешаю передать бланк ИИ-сервису за пределы РФ для автоматического распознавания. <DocLink id="consent_ai">Документ</DocLink> Без этого показатели внесёт заглушка или помощник.
-            </span>
-          </label>
-        )}
-        <Button big disabled={!files.length || busy || saving} onClick={run}>
-          {busy ? 'Распознаём…' : `Распознать сами${files.length ? ` (${files.length})` : ''}`}
-        </Button>
-        {can(state).owner && (
-          <Button big variant="soft" disabled={!files.length || busy || saving} onClick={sendToAssistant}>
-            {saving ? 'Отправляем…' : 'Отправить помощнику на внесение'}
-          </Button>
-        )}
-        <button onClick={manual} className="block min-h-12 w-full text-center text-accent-dark underline underline-offset-2">
-          Ввести показатели вручную
-        </button>
+        <div className="mt-5 space-y-4">
+          <ErrorText>{error}</ErrorText>
+          {features.aiRecognition && (
+            <div className="rounded-xl bg-paper p-4">
+              <Toggle checked={ai} onChange={setAi}>
+                Разрешаю передать бланк ИИ-сервису за пределы РФ для автоматического распознавания. <DocLink id="consent_ai">Документ</DocLink>
+              </Toggle>
+            </div>
+          )}
+          <div className="grid gap-3 sm:grid-cols-2">
+            {can(state).owner && (
+              <Button big icon="chat" disabled={!files.length || busy || saving} onClick={sendToAssistant}>
+                {saving ? 'Отправляем…' : 'Отправить помощнику'}
+              </Button>
+            )}
+            <Button big variant={can(state).owner ? 'ghost' : 'primary'} disabled={!files.length || busy || saving} onClick={run}>
+              {busy ? 'Распознаём…' : `Внести самому${files.length ? ` (${files.length})` : ''}`}
+            </Button>
+          </div>
+          <p className="text-sm text-muted">
+            {can(state).owner ? 'Помощник внесёт показатели за вас и сообщит в переписке. ' : ''}
+            Если вносите сами, вы проверите таблицу рядом с бланком перед сохранением.
+          </p>
+          <button onClick={manual} className="block min-h-11 w-full text-center font-medium text-accent-dark hover:underline">
+            Ввести показатели вручную
+          </button>
+        </div>
       </div>
     )
   }
 
   // ---------- шаг 2: проверка ----------
-  const d = drafts[cur]
-  const patch = (p) => setDrafts(drafts.map((x, i) => (i === cur ? { ...x, ...p } : x)))
-  const setRow = (i, r) => patch({ rows: d.rows.map((x, j) => (j === i ? r : x)) })
-  const issues = drafts.map((x) => !x.date || !x.labName.trim() || !x.rows.length || x.rows.some((r) => !r.name.trim() || parseNum(r.value) == null))
+  const issues = drafts.map(draftBad)
   const canSave = issues.every((b) => !b)
+  const d = drafts[cur]
 
   const save = async () => {
     setSaving(true)
     setError('')
     try {
       await actions.saveLabResults(
-      profile.id,
-      drafts.map((x, i) => ({
-        date: x.date,
-        labName: x.labName,
-        sourceFile: x.sourceFile,
-        file: files[i],
-        rows: x.rows.map((r) => ({
-          name: r.name,
-          value: parseNum(r.value),
-          unit: r.unit,
-          refLow: r.refLow.trim() === '' ? null : parseNum(r.refLow),
-          refHigh: r.refHigh.trim() === '' ? null : parseNum(r.refHigh),
-        })),
-      })),
+        profile.id,
+        drafts.map((x, i) => ({ date: x.date, labName: x.labName, sourceFile: x.sourceFile, file: files[i], rows: draftRows(x) })),
       )
       go('')
     } catch (e) {
@@ -232,72 +178,38 @@ export default function AddResult({ state, profile }) {
   }
 
   return (
-    <div className="space-y-4 py-4">
-      <h1 className="text-2xl font-semibold">Проверьте данные</h1>
+    <div>
+      <PageHeader title="Проверьте данные" subtitle="Сверьте каждое значение, единицу и референс с бланком. Исправьте любое поле и только потом сохраняйте." />
       {usedAi && (
-        <p className="rounded-xl bg-accent-soft p-3 text-sm">
-          Бланк распознан ИИ-сервисом. Он может ошибаться: сверьте каждое значение, единицу и референс с бланком. Строки с низкой уверенностью помечены «(проверьте)».
-          {warnings.length > 0 && (
-            <>
-              <br />
-              Замечания: {warnings.join('; ')}.
-            </>
-          )}
-        </p>
+        <Notice className="mb-5">
+          Бланк распознан ИИ-сервисом, он может ошибаться. Строки с низкой уверенностью помечены «(проверьте)».
+          {warnings.length > 0 && <> Замечания: {warnings.join('; ')}.</>}
+        </Notice>
       )}
-      {!usedAi && (
-        <p className="rounded-xl bg-accent-soft p-3 text-sm">
-          Распознавание в демо-версии — заглушка: показатели ниже — пример бланка, а не данные из вашего файла. Исправьте любое
-          поле перед сохранением.
-        </p>
-      )}
+      {drafts.length > 1 && <Tabs className="mb-5" value={String(cur)} onChange={(k) => setCur(Number(k))} items={drafts.map((x, i) => [String(i), `Бланк ${i + 1}${issues[i] ? ' •' : ''}`])} />}
 
-      {drafts.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto" role="tablist">
-          {drafts.map((x, i) => (
-            <button
-              key={i}
-              role="tab"
-              aria-selected={i === cur}
-              onClick={() => setCur(i)}
-              className={`min-h-12 shrink-0 rounded-full px-4 ${i === cur ? 'bg-accent text-white' : 'border border-line bg-card'} ${
-                issues[i] ? 'ring-2 ring-alert' : ''
-              }`}
-            >
-              Бланк {i + 1}
-            </button>
-          ))}
+      <div className={`grid gap-8 ${files[cur] ? 'lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]' : ''}`}>
+        {files[cur] && (
+          <div className="lg:sticky lg:top-8 lg:self-start">
+            <Preview file={files[cur]} />
+          </div>
+        )}
+        <div className="min-w-0">
+          <ResultForm draft={d} onChange={(x) => setDrafts(drafts.map((y, i) => (i === cur ? x : y)))} />
+          <div className="mt-6 space-y-3">
+            {!canSave && <p className="text-sm text-muted">Чтобы сохранить, заполните дату, лабораторию и числовое значение в каждой строке.</p>}
+            <ErrorText>{error}</ErrorText>
+            <div className="flex flex-wrap gap-3">
+              <Button icon="check" disabled={!canSave || saving} onClick={save}>
+                {saving ? 'Сохраняем…' : `Сохранить${drafts.length > 1 ? ` (${drafts.length})` : ''}`}
+              </Button>
+              <Button variant="ghost" onClick={() => setDrafts(null)}>
+                Назад
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
-
-      {files[cur] ? <Preview file={files[cur]} /> : null}
-
-      <Card className="grid grid-cols-2 gap-3">
-        <Field label="Дата анализа">
-          <input type="date" value={d.date} onChange={(e) => patch({ date: e.target.value })} />
-        </Field>
-        <Field label="Лаборатория">
-          <input value={d.labName} onChange={(e) => patch({ labName: e.target.value })} />
-        </Field>
-      </Card>
-
-      <ul className="space-y-3">
-        {d.rows.map((r, i) => (
-          <RowEditor key={i} row={r} onChange={(x) => setRow(i, x)} onDelete={() => patch({ rows: d.rows.filter((_, j) => j !== i) })} />
-        ))}
-      </ul>
-      <Button variant="soft" className="w-full" onClick={() => patch({ rows: [...d.rows, { name: '', value: '', unit: '', refLow: '', refHigh: '' }] })}>
-        ＋ Добавить строку
-      </Button>
-
-      {!canSave && <p className="text-sm text-alert">Заполните дату, лабораторию и числовое значение в каждой строке — они подсвечены.</p>}
-      {error && <p role="alert" className="rounded-xl bg-alert-soft p-3 text-alert">{error}</p>}
-      <Button big disabled={!canSave || saving} onClick={save}>
-        {saving ? 'Сохраняем…' : `Сохранить ${drafts.length > 1 ? `(${drafts.length})` : ''}`}
-      </Button>
-      <Button variant="ghost" className="w-full" onClick={() => setDrafts(null)}>
-        Назад
-      </Button>
+      </div>
     </div>
   )
 }

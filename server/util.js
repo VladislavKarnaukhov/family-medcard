@@ -14,6 +14,12 @@ export const plusDays = (n) => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
+const MONTHS = ['янв.', 'февр.', 'мар.', 'апр.', 'мая', 'июн.', 'июл.', 'авг.', 'сент.', 'окт.', 'нояб.', 'дек.']
+export const ruDate = (iso) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso))
+  return m ? `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]} ${m[1]}` : String(iso)
+}
+
 export const get = (sql, ...p) => db.prepare(sql).get(...p)
 export const all = (sql, ...p) => db.prepare(sql).all(...p)
 export const run = (sql, ...p) => db.prepare(sql).run(...p)

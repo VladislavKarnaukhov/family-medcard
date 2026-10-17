@@ -50,6 +50,10 @@ export function ageText(birthYear) {
   return `${a} ${w}`
 }
 
+// Старые записи могут содержать имя файла в названии и даты в формате ГГГГ-ММ-ДД: показываем по-человечески.
+export const docTitle = (t) => String(t || '').replace(/\s+[—–-]\s+[^/\\]+\.(png|jpe?g|webp|heic|pdf)$/i, '')
+export const humanize = (text) => String(text || '').replace(/\b(\d{4})-(\d{2})-(\d{2})\b/g, (m) => fmtDate(m))
+
 export const SEX = { f: 'женский', m: 'мужской', '': 'не указан' }
 
 export const nowISO = (d = new Date()) => `${localISO(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`

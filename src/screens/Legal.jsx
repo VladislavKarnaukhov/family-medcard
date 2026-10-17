@@ -1,11 +1,12 @@
-import { Button } from '../components/ui'
+import { Button, Notice } from '../components/ui'
+import { Icon } from '../components/icons'
 import { DOCS } from '../legal/docs.js'
 
 export const KIND = { agreement: 'Соглашение', policy: 'Политика', consent: 'Согласие', template: 'Шаблон документа' }
 
 export function DocLink({ id, children }) {
   return (
-    <a href={`#/legal/${id}`} target="_blank" rel="noreferrer" className="text-accent-dark underline underline-offset-2">
+    <a href={`#/legal/${id}`} target="_blank" rel="noreferrer" className="font-medium text-accent-dark underline underline-offset-2 hover:text-accent">
       {children || DOCS[id].title}
     </a>
   )
@@ -13,23 +14,26 @@ export function DocLink({ id, children }) {
 
 export function Draft() {
   return (
-    <p className="no-print rounded-xl bg-alert-soft p-3 text-sm">
-      <strong>Черновик.</strong> Текст подготовлен для прототипа и не является юридической консультацией. До запуска его должен проверить юрист по персональным данным, а реквизиты в квадратных скобках нужно заполнить.
-    </p>
+    <Notice tone="alert" className="no-print">
+      <strong>Черновик.</strong> Текст подготовлен как основа и не является юридической консультацией. До запуска его должен проверить юрист по персональным данным, а реквизиты в квадратных скобках нужно заполнить.
+    </Notice>
   )
 }
 
 export default function Legal({ id }) {
   if (!id)
     return (
-      <div className="py-4">
-        <h1 className="mb-3 text-2xl font-semibold">Юридические документы</h1>
+      <div>
+        <h1 className="mb-4 text-[1.75rem]">Юридические документы</h1>
         <Draft />
-        <ul className="mt-4 space-y-2">
+        <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
           {Object.values(DOCS).map((d) => (
-            <li key={d.id} className="rounded-2xl border border-line bg-card p-4">
-              <div className="text-sm text-muted">{KIND[d.kind]}</div>
-              <DocLink id={d.id} />
+            <li key={d.id} className="flex items-center gap-4 px-4 py-3.5">
+              <Icon name="file" className="text-accent" />
+              <div>
+                <p className="text-sm text-muted">{KIND[d.kind]}</p>
+                <DocLink id={d.id} />
+              </div>
             </li>
           ))}
         </ul>
@@ -39,25 +43,31 @@ export default function Legal({ id }) {
   const d = DOCS[id]
   if (!d) return <p className="py-6 text-muted">Документ не найден.</p>
   return (
-    <article className="space-y-4 py-4">
+    <article className="space-y-5">
       <div>
-        <div className="text-sm text-muted">{KIND[d.kind]} · версия {d.version}</div>
-        <h1 className="text-2xl font-semibold leading-tight">{d.title}</h1>
+        <p className="text-sm font-medium text-muted">
+          {KIND[d.kind]} · версия {d.version}
+        </p>
+        <h1 className="mt-1 text-[1.75rem] leading-tight">{d.title}</h1>
       </div>
       <Draft />
       {d.sections.map(([h, ps]) => (
         <section key={h}>
-          <h2 className="mb-1 text-lg font-semibold">{h}</h2>
+          <h2 className="mb-1.5 text-lg">{h}</h2>
           {ps.map((p, i) => (
-            <p key={i} className="mb-2">
+            <p key={i} className="mb-2.5 max-w-[68ch]">
               {p}
             </p>
           ))}
         </section>
       ))}
-      <div className="no-print flex gap-3 pt-2">
-        {d.kind === 'template' && <Button onClick={() => window.print()}>Распечатать</Button>}
-        <a href="#/legal" className="flex min-h-12 items-center text-accent-dark underline underline-offset-2">
+      <div className="no-print flex flex-wrap items-center gap-4 pt-2">
+        {d.kind === 'template' && (
+          <Button icon="printer" onClick={() => window.print()}>
+            Распечатать
+          </Button>
+        )}
+        <a href="#/legal" className="font-medium text-accent-dark hover:underline">
           Все документы
         </a>
       </div>
