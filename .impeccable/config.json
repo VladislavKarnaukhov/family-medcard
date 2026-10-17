@@ -8,6 +8,12 @@
         "value": "arial",
         "createdAt": "2026-10-17T20:09:15.001Z",
         "reason": "assistant decision: HTML email in server/mailer.js cannot load web fonts, mail clients need the Arial/Helvetica system stack; the app UI uses self-hosted Onest"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "arial",
+        "createdAt": "2026-10-17T20:18:30.404Z",
+        "reason": "assistant decision: HTML email in server/mailer.js cannot load web fonts, so mail clients need the Arial/Helvetica system stack; the app UI itself uses Onest as DESIGN.md documents"
       }
     ]
   }
