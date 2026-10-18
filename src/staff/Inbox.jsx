@@ -70,7 +70,7 @@ function InboxList({ rows, fid, me }) {
           <ul className="divide-y divide-line">
             {list.map((r) => (
               <li key={r.id}>
-                <a href={`#/f/${r.id}`} className={`flex gap-3 px-4 py-3.5 transition-colors lg:px-5 ${r.id === fid ? 'bg-accent-soft' : 'hover:bg-paper'}`}>
+                <a href={`#/f/${r.id}`} className={`flex gap-3 px-4 py-3.5 transition-colors lg:px-5 ${r.id === fid ? 'bg-accent-soft' : 'hover:bg-sunken'}`}>
                   <div className="relative">
                     <Avatar name={r.owner || '?'} size={42} />
                     {r.unread && <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-md border-2 border-white bg-accent" aria-label="Ждёт ответа" />}
@@ -287,7 +287,7 @@ function ContextPanel({ data, reload, staff }) {
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {REQ_STATUS.map(([s, l]) => (
-                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-9 rounded-md px-3 text-sm font-medium ${r.status === s ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
+                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-9 rounded-md px-3 text-sm font-medium ${r.status === s ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-sunken'}`}>
                       {l}
                     </button>
                   ))}
@@ -451,7 +451,7 @@ function Conversation({ fid, staff, row }) {
       <div className={`min-w-0 flex-1 flex-col ${tab === 'chat' ? 'flex' : 'hidden xl:flex'}`}>
         <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line bg-card px-4 py-3 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <a href="#/" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-paper lg:hidden" aria-label="К списку">
+            <a href="#/" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-sunken lg:hidden" aria-label="К списку">
               <Icon name="chevL" size={20} />
             </a>
             <Avatar name={data.owner?.name || '?'} size={44} />

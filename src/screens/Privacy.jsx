@@ -20,7 +20,7 @@ const REQ_TYPES = [
 function ConsentList({ rows, empty }) {
   if (!rows.length) return <p className="text-muted">{empty}</p>
   return (
-    <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+    <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
       {rows.map((c) => (
         <li key={c.id} className="px-4 py-3">
           <p className="font-medium">{DOCS[c.docId]?.title || c.docId}</p>
@@ -91,7 +91,7 @@ export function Stopped({ state }) {
       <p className="text-muted">
         Вы отозвали согласие на обработку данных о здоровье. Мы не обрабатываем данные и не открываем их сотрудникам. Данные будут уничтожены не позднее {state.consent.deleteAfter ? fmtDate(state.consent.deleteAfter.slice(0, 10)) : 'чем через 30 дней'}.
       </p>
-      <a className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line-strong bg-card px-4 font-medium hover:bg-paper" href={`/api/families/${state.familyId}/export`}>
+      <a className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-line-strong bg-card px-4 font-medium hover:bg-sunken" href={`/api/families/${state.familyId}/export`}>
         <Icon name="download" size={19} /> Скачать мои данные (JSON)
       </a>
       <Card className="space-y-3">
@@ -154,12 +154,12 @@ export default function Privacy({ state }) {
       <H>Документы</H>
       <ul className="grid gap-2 sm:grid-cols-2">
         {['terms', 'privacy', 'consent_pd', 'consent_health'].map((id) => (
-          <li key={id} className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 ">
+          <li key={id} className="flex items-center gap-3 rounded-2xl bg-card shadow-sheet px-4 py-3 ">
             <Icon name="file" className="text-accent" />
             <DocLink id={id} />
           </li>
         ))}
-        <li className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 ">
+        <li className="flex items-center gap-3 rounded-2xl bg-card shadow-sheet px-4 py-3 ">
           <Icon name="folder" className="text-accent" />
           <a className="text-accent-dark underline underline-offset-2" href="#/legal">
             Все документы
@@ -201,7 +201,7 @@ export default function Privacy({ state }) {
       {owner && (
         <>
           <H>Скачать данные</H>
-          <a className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-line-strong bg-card px-5 font-medium hover:bg-paper" href={`/api/families/${state.familyId}/export`}>
+          <a className="inline-flex min-h-12 items-center gap-2 rounded-xl border border-line-strong bg-card px-5 font-medium hover:bg-sunken" href={`/api/families/${state.familyId}/export`}>
             <Icon name="download" size={19} /> Скачать всё в формате JSON
           </a>
 

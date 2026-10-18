@@ -224,7 +224,7 @@ export default function Dashboard({ state, profile }) {
               ['summary', 'sheet', 'Сводка для врача'],
               ...(owner ? [['circle', 'users', 'Круг заботы']] : []),
             ].map(([to, icon, label]) => (
-              <a key={to} href={'#/' + to} className="flex min-h-12 items-center gap-3 rounded-lg border border-line bg-card px-4 text-[0.95rem] font-medium">
+              <a key={to} href={'#/' + to} className="flex min-h-12 items-center gap-3 rounded-2xl bg-card shadow-sheet px-4 text-[0.95rem] font-medium">
                 <Icon name={icon} size={19} className="text-muted" />
                 {label}
                 <Icon name="chevR" size={16} className="ml-auto text-muted" />
@@ -235,25 +235,25 @@ export default function Dashboard({ state, profile }) {
 
         <aside className="order-1 space-y-6 lg:order-2 lg:sticky lg:top-8 lg:self-start">
           <section aria-labelledby="attn">
-            <h2 id="attn" className="mb-3 text-lg">
+            <h2 id="attn" className="mb-4 text-[1.375rem]">
               Вне диапазона лаборатории
             </h2>
             {out.length === 0 ? (
-              <p className="rounded-xl border border-line bg-card px-4 py-4 text-muted">
+              <p className="rounded-2xl bg-card shadow-sheet px-4 py-4 text-muted">
                 {latest.length ? 'В последних результатах все показатели внутри диапазона лаборатории.' : 'Пока нет загруженных анализов.'}
               </p>
             ) : (
-              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
-                {out.map(({ key, label, last }) => (
+              <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet">
+                {out.map(({ key, label, last }, i) => (
                   <li key={key}>
-                    <a href={'#/indicator/' + encodeURIComponent(key)} className="block px-4 py-3 transition-colors hover:bg-paper">
+                    <a href={'#/indicator/' + encodeURIComponent(key)} className="block px-5 py-4 transition-colors hover:bg-sunken">
                       <span className="flex items-baseline justify-between gap-3">
                         <span className="min-w-0 truncate font-medium">{label}</span>
                         <span className="whitespace-nowrap text-right text-lg font-semibold text-alert">
                           {fmtNum(last.value)} <span className="text-sm font-normal">{last.unit}</span>
                         </span>
                       </span>
-                      <RangeBar className="mt-2" value={last.value} low={last.refLow} high={last.refHigh} unit={last.unit} status={last.status} />
+                      <RangeBar className="mt-2" index={i} value={last.value} low={last.refLow} high={last.refHigh} unit={last.unit} status={last.status} />
                       <span className="mt-1.5 block text-sm text-muted">
                         Диапазон {refText(last.refLow, last.refHigh)} · {fmtDate(last.date)}
                       </span>
@@ -265,10 +265,10 @@ export default function Dashboard({ state, profile }) {
           </section>
 
           {owner && (
-            <a href="#/assistant" className="block rounded-xl border border-line bg-card p-5 transition-colors hover:border-line-strong">
+            <a href="#/assistant" className="lift block rounded-2xl bg-card p-6 shadow-sheet">
               <div className="flex items-baseline gap-3">
                 <p className="flex-1 font-semibold">{assistant}</p>
-                {state.unread > 0 && <span className="rounded-md bg-accent px-2 text-sm font-semibold text-white">{state.unread}</span>}
+                {state.unread > 0 && <span className="rounded-full bg-accent px-2 text-sm font-semibold text-white">{state.unread}</span>}
               </div>
               {lastMsg && (
                 <p className="mt-2 line-clamp-2 text-[0.95rem] text-muted">

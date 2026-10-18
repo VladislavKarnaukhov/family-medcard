@@ -19,7 +19,7 @@ export function DocQueue() {
       {rows.length === 0 ? (
         <Empty icon="sheet">Очередь пуста.</Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
           {rows.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">

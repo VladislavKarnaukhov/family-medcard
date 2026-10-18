@@ -85,10 +85,10 @@ export default function Indicator({ state, profile, keyName }) {
         actions={
           keys.length > 1 && (
             <div className="flex gap-2">
-              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-paper" aria-label="Предыдущий показатель" onClick={() => go1(idx - 1)}>
+              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-sunken" aria-label="Предыдущий показатель" onClick={() => go1(idx - 1)}>
                 <Icon name="chevL" size={19} />
               </button>
-              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-paper" aria-label="Следующий показатель" onClick={() => go1(idx + 1)}>
+              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-sunken" aria-label="Следующий показатель" onClick={() => go1(idx + 1)}>
                 <Icon name="chevR" size={19} />
               </button>
             </div>
@@ -120,7 +120,7 @@ export default function Indicator({ state, profile, keyName }) {
                     dataKey="value"
                     stroke={INK}
                     strokeWidth={2.5}
-                    isAnimationActive={false}
+                    isAnimationActive animationDuration={800} animationEasing="ease-out"
                     dot={(p) => <Dot key={p.index} cx={p.cx} cy={p.cy} r={5.5} fill={p.payload.status === 'low' || p.payload.status === 'high' ? ALERT : INK} stroke="#fff" strokeWidth={2} />}
                     activeDot={{ r: 7.5 }}
                   />
@@ -141,7 +141,7 @@ export default function Indicator({ state, profile, keyName }) {
           )}
 
           <H>Все значения</H>
-          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
             {[...series].reverse().map((p) => {
               const o = p.status === 'low' || p.status === 'high'
               return (

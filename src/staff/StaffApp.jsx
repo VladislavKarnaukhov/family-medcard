@@ -43,7 +43,7 @@ function Login({ onDone }) {
     <AuthShell {...STAFF_SHELL}>
       <h1 className="mb-1 text-[1.75rem]">{forgot ? 'Восстановление пароля' : 'Вход для сотрудников'}</h1>
       <p className="mb-6 text-muted">{forgot ? 'Мы пришлём ссылку для нового пароля на рабочую почту.' : 'Используйте рабочую почту и пароль.'}</p>
-      <form onSubmit={submit} className="space-y-4 rounded-2xl border border-line bg-card p-6 ">
+      <form onSubmit={submit} className="space-y-4 rounded-2xl bg-card shadow-sheet p-6 ">
         <Field label="Email">
           <input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="username" required />
         </Field>
@@ -125,11 +125,11 @@ export default function StaffApp() {
 
   return (
     <div className="min-h-screen lg:flex lg:h-screen">
-      <aside className="flex shrink-0 flex-col border-b border-line bg-card lg:w-[240px] lg:border-b-0 lg:border-r lg:px-4 lg:py-6">
+      <aside className="flex shrink-0 flex-col bg-sunken lg:w-[240px] lg:px-4 lg:py-7">
         <div className="flex items-center justify-between gap-3 px-4 py-3 lg:block lg:px-3 lg:py-0">
           <Wordmark />
           <p className="hidden pt-1 text-xs text-muted lg:block">Рабочее место</p>
-          <button onClick={logout} aria-label="Выйти" className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-paper lg:hidden">
+          <button onClick={logout} aria-label="Выйти" className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-card/60 lg:hidden">
             <Icon name="logout" size={19} />
           </button>
         </div>
@@ -139,29 +139,29 @@ export default function StaffApp() {
               key={to}
               href={'#/' + to}
               aria-current={active === to ? 'page' : undefined}
-              className={`flex min-h-10 shrink-0 items-center gap-3 rounded-md px-3 text-[0.95rem] transition-colors ${active === to ? 'bg-paper font-semibold text-ink' : 'text-muted hover:bg-paper hover:text-ink'}`}
+              className={`flex min-h-10 shrink-0 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors ${active === to ? 'bg-card font-semibold text-ink shadow-sheet' : 'text-muted hover:bg-card/60 hover:text-ink'}`}
             >
               <Icon name={icon} size={19} />
               <span className="lg:flex-1">{label}</span>
-              {badge[to] > 0 && <span className="rounded-md bg-accent px-1.5 text-xs font-semibold text-white">{badge[to]}</span>}
+              {badge[to] > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-semibold text-white">{badge[to]}</span>}
             </a>
           ))}
         </nav>
         <div className="mt-auto hidden border-t border-line pt-4 lg:block">
-          <a href="#/account" className="flex items-center gap-3 rounded-md px-3 py-1.5 hover:bg-paper">
+          <a href="#/account" className="flex items-center gap-3 rounded-md px-3 py-1.5 hover:bg-card/60">
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium">{user.name}</p>
               <p className="truncate text-xs text-muted">{user.isAdmin ? 'Администратор' : 'Помощник'}</p>
             </div>
           </a>
-          <button onClick={logout} className="mt-1 flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm text-muted hover:bg-paper hover:text-ink">
+          <button onClick={logout} className="mt-1 flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm text-muted hover:bg-card/60 hover:text-ink">
             <Icon name="logout" size={18} />
             Выйти
           </button>
         </div>
       </aside>
 
-      <main className={`min-w-0 flex-1 ${content ? 'px-4 py-6 lg:overflow-y-auto lg:px-10 lg:py-8' : 'lg:overflow-hidden'}`}>
+      <main className={`page-in min-w-0 flex-1 ${content ? 'px-4 py-6 lg:overflow-y-auto lg:px-10 lg:py-8' : 'lg:overflow-hidden'}`}>
         {content ? <div className="mx-auto w-full max-w-[1100px]">{content}</div> : <Inbox fid={view === 'f' ? route[1] : null} me={user} staff={staff || []} inbox={inbox} reloadInbox={reloadInbox} />}
       </main>
     </div>

@@ -13,13 +13,13 @@ export function AuthShell({ children, wide = false, headline = 'Здоровье
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col lg:flex-row">
-        <section className="border-b border-line bg-card px-6 pb-6 pt-6 lg:flex lg:w-[46%] lg:max-w-[600px] lg:flex-col lg:border-b-0 lg:border-r lg:px-14 lg:py-12">
+        <section className="bg-sunken px-6 pb-6 pt-6 lg:flex lg:w-[46%] lg:max-w-[620px] lg:flex-col lg:px-16 lg:py-14">
           <div className="flex items-center gap-3">
             <Wordmark />
             {brand && <span className="rounded border border-line px-2 py-0.5 text-xs text-muted">{brand}</span>}
           </div>
           <div className="mt-auto hidden max-w-[26rem] lg:block">
-            <h2 className="text-[2.1rem] leading-[1.15]">{headline}</h2>
+            <h2 className="text-[2.75rem] leading-[1.05] tracking-[-0.04em]">{headline}</h2>
             <p className="mt-4 text-[1.05rem] text-muted">{sentence}</p>
             {sample && (
               <div className="mt-10 border-t border-line pt-4" aria-label="Пример строки результата">
@@ -30,7 +30,7 @@ export function AuthShell({ children, wide = false, headline = 'Здоровье
                     108 <span className="text-sm font-normal text-muted">г/л</span>
                   </p>
                 </div>
-                <RangeBar className="mt-2" value={108} low={120} high={150} unit="г/л" status="low" />
+                <RangeBar className="mt-2" index={0} value={108} low={120} high={150} unit="г/л" status="low" />
                 <p className="mt-1.5 text-sm text-muted">Диапазон лаборатории 120–150 г/л</p>
               </div>
             )}
