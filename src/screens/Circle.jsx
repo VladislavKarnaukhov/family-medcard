@@ -84,7 +84,7 @@ export default function Circle({ state, profile }) {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div className="min-w-0 space-y-2">
           <H>Кто имеет доступ</H>
-          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
             {members.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5">
                 <Avatar name={m.name} size={42} />

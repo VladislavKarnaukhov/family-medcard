@@ -47,9 +47,10 @@ typography:
     fontWeight: 500
     lineHeight: 1.5
 rounded:
-  sm: "8px"
-  md: "12px"
-  lg: "14px"
+  sm: "12px"
+  md: "16px"
+  lg: "20px"
+  full: "9999px"
 spacing:
   xs: "8px"
   sm: "12px"
@@ -60,12 +61,12 @@ components:
   button-primary:
     backgroundColor: "{colors.accent}"
     textColor: "{colors.surface}"
-    rounded: "{rounded.sm}"
+    rounded: "{rounded.full}"
     height: "48px"
   button-soft:
     backgroundColor: "{colors.accent-soft}"
     textColor: "{colors.accent-dark}"
-    rounded: "{rounded.sm}"
+    rounded: "{rounded.full}"
     height: "48px"
   list:
     backgroundColor: "{colors.surface}"
@@ -93,8 +94,10 @@ The earlier indigo, linen and running-stitch look was dropped because it read as
 - Red only for values outside the lab range and for errors.
 - Hairline lists and tables instead of card grids; at most one level of container.
 - Onest for all text, Phosphor icons (regular weight, filled only for the active bottom-nav tab).
-- One radius scale (8, 12, 14 px). No shadows except the popover.
-- Motion: a short rise on first entry, disabled under reduced motion.
+- Radii 12, 16, 20 px for surfaces, pills for buttons, chips and avatars. One soft warm sheet shadow for raised surfaces; no borders around cards.
+- Type: page titles are large and light (weight 500, 3.25rem, tracking -0.04em); the person's name is the headline of the home screen.
+- Tonal layering: the sidebar and the login panel sit on a darker warm "sunken" tone; raised surfaces are warm white with a soft sheet shadow.
+- Motion has one authored moment: on the home and indicator lists the range bars sweep in and the markers settle (760ms, strong ease-out, staggered 80ms). Elsewhere it is quiet: each page rises 8px once (280ms), buttons answer a press with scale 0.97, cards lift on hover for mouse pointers only, the indicator line draws once. Only transform and opacity; reduced motion keeps a plain fade.
 
 ## Colors
 

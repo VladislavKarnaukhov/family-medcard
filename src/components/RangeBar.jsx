@@ -1,7 +1,7 @@
 import { fmtNum, refText } from '../lib/format'
 
 // Полоса значения: где значение относительно диапазона лаборатории. Цвет только у значения вне диапазона.
-export function RangeBar({ value, low, high, unit = '', status, className = '' }) {
+export function RangeBar({ value, low, high, unit = '', status, index = 0, className = '' }) {
   if (low == null && high == null) return null
   const known = [low, high].filter((v) => v != null)
   const span = known.length === 2 ? high - low : Math.abs(known[0]) || 1
@@ -19,12 +19,13 @@ export function RangeBar({ value, low, high, unit = '', status, className = '' }
       aria-label={`Значение ${fmtNum(value)} ${unit}, диапазон лаборатории ${refText(low, high)}, ${word}`}
       className={`relative h-5 ${className}`}
     >
-      <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-md bg-line" />
-      <div className="absolute top-1/2 h-[5px] -translate-y-1/2 rounded-md bg-accent-mid" style={{ left: `${from}%`, width: `${Math.max(2, to - from)}%` }} />
-      <div
-        className={`absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-md border-2 border-white ${out ? 'bg-alert' : 'bg-accent-dark'}`}
-        style={{ left: `${pos(value)}%`, boxShadow: '0 0 0 1px rgba(60,48,28,0.25)' }}
-      />
+      <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line" />
+      <div className="absolute top-1/2 h-1.5 -translate-y-1/2" style={{ left: `${from}%`, width: `${Math.max(2, to - from)}%` }}>
+        <div className="sweep-in h-full w-full rounded-full bg-accent-mid" style={{ '--i': index }} />
+      </div>
+      <div className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2" style={{ left: `${pos(value)}%` }}>
+        <div className={`marker-in h-full w-full rounded-full border-2 border-white ${out ? 'bg-alert' : 'bg-accent-dark'}`} style={{ '--i': index, boxShadow: '0 1px 3px rgba(60,44,20,0.35)' }} />
+      </div>
     </div>
   )
 }

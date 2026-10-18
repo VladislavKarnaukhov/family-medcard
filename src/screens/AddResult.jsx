@@ -112,7 +112,7 @@ export default function AddResult({ state, profile }) {
         </div>
 
         {files.length > 0 && (
-          <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+          <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
             {files.map((f, i) => (
               <li key={i} className="flex items-center gap-3 px-4 py-3">
                 <Icon name="file" className="text-accent" />

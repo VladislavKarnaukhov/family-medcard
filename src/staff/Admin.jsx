@@ -91,7 +91,7 @@ export function Team({ me }) {
           {!rows ? (
             <p className="text-muted">Загрузка…</p>
           ) : (
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+            <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
               {rows.map((u) => (
                 <li key={u.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
                   <Avatar name={u.name} size={44} />

@@ -125,7 +125,7 @@ export default function Dossier({ state, profile }) {
           {items.length === 0 ? 'В досье пока пусто. Добавьте бланк анализа или отправьте документ помощнику.' : 'Документов этого типа нет.'}
         </Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet">
           {shown.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 lg:px-5">
               <div className="min-w-0 flex-1 basis-56">

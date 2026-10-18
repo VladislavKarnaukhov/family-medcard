@@ -131,7 +131,7 @@ export default function Vitals({ state, profile }) {
           {items.length === 0 ? (
             <p className="text-muted">Записей нет.</p>
           ) : (
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+            <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
               {[...items].reverse().slice(0, 10).map((v) => (
                 <li key={v.id} className="flex items-center gap-4 px-4 py-3">
                   <div className="flex-1">

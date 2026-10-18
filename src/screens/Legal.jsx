@@ -26,7 +26,7 @@ export default function Legal({ id }) {
       <div>
         <h1 className="mb-4 text-[1.75rem]">Юридические документы</h1>
         <Draft />
-        <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+        <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
           {Object.values(DOCS).map((d) => (
             <li key={d.id} className="flex items-center gap-4 px-4 py-3.5">
               <Icon name="file" className="text-accent" />

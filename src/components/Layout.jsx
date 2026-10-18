@@ -19,7 +19,7 @@ const ALIAS = { add: 'dossier', edit: '', indicator: 'indicators', profile: '', 
 export function Wordmark() {
   return (
     <a href="#/" className="inline-flex items-baseline gap-2" aria-label="Близкие, на главную">
-      <span className="text-[1.35rem] font-bold tracking-tight text-accent-dark">Близкие</span>
+      <span className="text-[1.5rem] font-semibold tracking-[-0.04em] text-accent-dark">Близкие</span>
     </a>
   )
 }
@@ -66,7 +66,7 @@ function UserMenu({ state }) {
         <Avatar name={state.user.name} size={32} />
         <span className="max-w-[8rem] truncate">{state.user.name}</span>
       </summary>
-      <div className="absolute right-0 z-30 mt-2 w-72 space-y-1 rounded-lg border border-line bg-card p-3 shadow-pop">
+      <div className="absolute right-0 z-30 mt-2 w-72 space-y-1 rounded-2xl bg-card shadow-sheet p-3 shadow-pop">
         {state.families.length > 1 && (
           <label className="mb-2 block text-sm">
             <span className="mb-1 block text-muted">Семья</span>
@@ -81,12 +81,12 @@ function UserMenu({ state }) {
         )}
         <p className="px-2 pb-1 text-sm text-muted">{state.user.email}</p>
         {NAV_MORE.filter((i) => !i[3] || can(state).owner).map(([r, label, icon]) => (
-          <a key={r} href={'#/' + r} className="flex min-h-11 items-center gap-3 rounded-md px-2 hover:bg-paper">
+          <a key={r} href={'#/' + r} className="flex min-h-11 items-center gap-3 rounded-md px-2 hover:bg-sunken">
             <Icon name={icon} size={18} className="text-muted" />
             {label}
           </a>
         ))}
-        <button onClick={actions.logout} className="flex min-h-11 w-full items-center gap-3 rounded-md px-2 text-left hover:bg-paper">
+        <button onClick={actions.logout} className="flex min-h-11 w-full items-center gap-3 rounded-md px-2 text-left hover:bg-sunken">
           <Icon name="logout" size={18} className="text-muted" />
           Выйти
         </button>
@@ -100,13 +100,13 @@ function RailLink({ to, label, icon, active, badge }) {
     <a
       href={'#/' + to}
       aria-current={active ? 'page' : undefined}
-      className={`flex min-h-10 items-center gap-3 rounded-md px-3 text-[0.95rem] transition-colors ${
-        active ? 'bg-paper font-semibold text-ink' : 'text-muted hover:bg-paper hover:text-ink'
+      className={`flex min-h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors ${
+        active ? 'bg-card font-semibold text-ink shadow-sheet' : 'text-muted hover:bg-card/60 hover:text-ink'
       }`}
     >
       <Icon name={icon} size={19} className={active ? 'text-ink' : ''} />
       <span className="flex-1">{label}</span>
-      {badge > 0 && <span className="rounded-md bg-accent px-1.5 text-xs font-semibold text-white">{badge}</span>}
+      {badge > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-semibold text-white">{badge}</span>}
     </a>
   )
 }
@@ -115,7 +115,7 @@ function Rail({ state, active }) {
   const owner = can(state).owner
   const items = [...NAV, ...NAV_MORE].filter((i) => !i[3] || owner)
   return (
-    <aside className="no-print sticky top-0 hidden h-screen w-[252px] shrink-0 flex-col border-r border-line bg-card px-4 py-6 lg:flex">
+    <aside className="no-print sticky top-0 hidden h-screen w-[252px] shrink-0 flex-col bg-sunken px-4 py-7 lg:flex">
       <div className="px-3">
         <Wordmark />
       </div>
@@ -137,7 +137,7 @@ function Rail({ state, active }) {
                     role="tab"
                     aria-selected={on}
                     onClick={() => actions.setActive(p.id)}
-                    className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[0.95rem] transition-colors ${on ? 'bg-accent-soft font-semibold text-accent-dark' : 'hover:bg-paper'}`}
+                    className={`flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] transition-colors ${on ? 'bg-card font-semibold text-accent-dark shadow-sheet' : 'hover:bg-card/60'}`}
                   >
                     <span className="truncate">{p.name}</span>
                   </button>
@@ -146,7 +146,7 @@ function Rail({ state, active }) {
             })}
             {owner && (
               <li>
-                <button onClick={() => go('profile/new')} className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[0.95rem] text-accent-dark hover:bg-paper">
+                <button onClick={() => go('profile/new')} className="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] text-accent-dark hover:bg-card/60">
                   <Icon name="plus" size={16} />
                   Добавить профиль
                 </button>
@@ -156,13 +156,13 @@ function Rail({ state, active }) {
         </div>
       )}
 
-      <div className="mt-4 border-t border-line pt-4">
+      <div className="mt-4 border-t border-line-strong/60 pt-4">
         <div className="flex items-center gap-3 px-3">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-medium">{state.user.name}</p>
             <p className="truncate text-xs text-muted">{state.user.email}</p>
           </div>
-          <button onClick={actions.logout} aria-label="Выйти" title="Выйти" className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-paper hover:text-ink">
+          <button onClick={actions.logout} aria-label="Выйти" title="Выйти" className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-sunken hover:text-ink">
             <Icon name="logout" size={18} />
           </button>
         </div>
@@ -183,7 +183,7 @@ function Rail({ state, active }) {
 function BottomNav({ state, active }) {
   const tabs = NAV.filter((t) => !t[3] || can(state).owner)
   return (
-    <nav className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Основная навигация">
+    <nav className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/90 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Основная навигация">
       <ul className="mx-auto flex max-w-xl">
         {tabs.map(([r, label, icon]) => {
           const on = active === r
@@ -193,7 +193,7 @@ function BottomNav({ state, active }) {
               <a href={'#/' + r} aria-current={on ? 'page' : undefined} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[0.72rem] ${on ? 'font-semibold text-ink' : 'text-muted'}`}>
                 <Icon name={icon} size={22} weight={on ? 'fill' : 'regular'} />
                 {label}
-                {badge > 0 && <span className="absolute right-[24%] top-2 min-w-4 rounded-md bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{badge}</span>}
+                {badge > 0 && <span className="absolute right-[24%] top-2 min-w-4 rounded-full bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{badge}</span>}
               </a>
             </li>
           )
@@ -210,7 +210,7 @@ export default function Layout({ route = [], state, bare, children }) {
   if (bare || !state?.user) {
     return (
       <div className="flex min-h-screen flex-col">
-        <header className="no-print border-b border-line bg-card px-4 py-4 lg:px-10">
+        <header className="no-print px-4 py-5 lg:px-10">
           <Wordmark />
         </header>
         <main className="mx-auto w-full max-w-[920px] flex-1 px-4 pb-10 pt-6 lg:pt-10">{children}</main>
@@ -223,17 +223,17 @@ export default function Layout({ route = [], state, bare, children }) {
     <div className="min-h-screen lg:flex">
       <Rail state={state} active={active} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print flex items-center justify-between gap-3 border-b border-line bg-card px-4 py-2.5 lg:hidden">
+        <header className="no-print flex items-center justify-between gap-3 border-b border-line bg-paper/90 px-4 py-2.5 backdrop-blur lg:hidden">
           <Wordmark />
           <UserMenu state={state} />
         </header>
-        <main className="flex-1 px-4 pb-28 pt-5 lg:px-12 lg:pb-12 lg:pt-10 print:p-0">
+        <main className="flex-1 px-4 pb-28 pt-5 lg:px-14 lg:pb-14 lg:pt-12 print:p-0">
           {state.profiles.length > 0 && route[0] !== 'profile' && (
             <div className="mb-5 lg:hidden">
               <ProfileTabs state={state} />
             </div>
           )}
-          <div className="mx-auto w-full max-w-[1080px]">{children}</div>
+          <div key={route.join("/") + (state.activeProfileId || "")} className="page-in mx-auto w-full max-w-[1120px]">{children}</div>
         </main>
         <Footer className="pb-24 lg:pb-6" />
       </div>

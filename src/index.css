@@ -7,6 +7,7 @@
 
   --color-paper: #f8f5ef; /* фон страницы */
   --color-card: #fffdf9;
+  --color-sunken: #f1ece1; /* тональная панель вместо рамки */
   --color-line: #e9e3d7;
   --color-line-strong: #d8d0c0;
   --color-ink: #26332f;
@@ -20,15 +21,17 @@
   --color-alert: #b3362e; /* только значения вне диапазона и ошибки */
   --color-alert-soft: #fbecea;
 
-  --radius-lg: 0.5rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 0.875rem;
-  --radius-3xl: 1rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
 
   --shadow-sm: none;
-  --shadow-card: none;
+  --shadow-sheet: 0 1px 2px rgba(60, 44, 20, 0.04), 0 24px 44px -32px rgba(60, 44, 20, 0.26);
+  --shadow-card: 0 1px 2px rgba(60, 44, 20, 0.04), 0 24px 44px -32px rgba(60, 44, 20, 0.26);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --shadow-pop: 0 10px 30px -12px rgba(60, 48, 28, 0.22);
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 html { font-size: 17px; -webkit-text-size-adjust: 100%; }
@@ -44,23 +47,24 @@ body {
 }
 
 @layer base {
-  h1, h2, h3 { font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; text-wrap: balance; }
+  h1, h2, h3 { font-weight: 500; letter-spacing: -0.03em; line-height: 1.15; text-wrap: balance; }
+  h1 { letter-spacing: -0.04em; line-height: 1.04; }
   p { text-wrap: pretty; }
 }
 
-::selection { background: #cfe3dc; color: var(--color-ink); }
+::selection { background: #cde3d6; color: var(--color-ink); }
 
-* { scrollbar-width: thin; scrollbar-color: #c2c2bc transparent; }
+* { scrollbar-width: thin; scrollbar-color: #d2c9b6 transparent; }
 ::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: #c2c2bc; border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb { background: #d2c9b6; border-radius: 10px; border: 3px solid transparent; background-clip: content-box; }
 
 input, select, textarea {
   width: 100%;
   min-height: 48px;
   padding: 10px 12px;
   border: 1px solid var(--color-line-strong);
-  border-radius: 8px;
-  background: #fff;
+  border-radius: 12px;
+  background: #fffdf9;
   color: var(--color-ink);
   font: inherit;
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -72,9 +76,10 @@ input:hover, select:hover, textarea:hover { border-color: #a9a9a3; }
 input:focus, select:focus, textarea:focus {
   outline: none;
   border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px rgba(15, 107, 87, 0.18);
+  box-shadow: 0 0 0 3px rgba(27, 107, 88, 0.16);
 }
-input[type="checkbox"] { accent-color: var(--color-ink); }
+input[type="checkbox"] { accent-color: var(--color-accent); }
+input, textarea { caret-color: var(--color-accent); }
 button:focus-visible, a:focus-visible, summary:focus-visible, [tabindex]:focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -88,10 +93,28 @@ button, [role="tab"], summary { -webkit-tap-highlight-color: transparent; }
 
 .print-only { display: none; }
 
-/* Одно движение: список появляется последовательно */
-@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-.thread-in { animation: rise 0.4s var(--ease-out) both; animation-delay: calc(var(--i, 0) * 35ms); }
-@media (prefers-reduced-motion: reduce) { .thread-in { animation: none; } }
+/* Движение. Один главный момент: на «Главной» диапазоны разворачиваются полосами. Остальное тихо:
+   страница входит одним коротким подъёмом, кнопки отвечают нажатием. Только transform и opacity. */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes sweep { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.6); } to { opacity: 1; transform: none; } }
+.page-in { animation: rise 280ms var(--ease-out) both; }
+.thread-in { animation: rise 320ms var(--ease-out) both; animation-delay: calc(var(--i, 0) * 45ms); }
+.sweep-in { transform-origin: left center; animation: sweep 760ms var(--ease-out) both; animation-delay: calc(120ms + var(--i, 0) * 80ms); }
+.marker-in { animation: pop-in 360ms var(--ease-out) both; animation-delay: calc(560ms + var(--i, 0) * 80ms); }
+.press { transition: transform 140ms var(--ease-out), background-color 160ms, border-color 160ms, color 160ms; }
+.press:active:not(:disabled) { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .lift { transition: transform 220ms var(--ease-out), box-shadow 220ms var(--ease-out); }
+  .lift:hover { transform: translateY(-2px); box-shadow: 0 1px 2px rgba(60, 44, 20, 0.05), 0 30px 50px -30px rgba(60, 44, 20, 0.32); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-in, .thread-in { animation: fade 200ms ease both; }
+  .sweep-in, .marker-in { animation: none; }
+  .press:active:not(:disabled) { transform: none; }
+  .lift:hover { transform: none; }
+}
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
 
 /* Крупные числа без табличных промежутков */
 .num-display { font-variant-numeric: proportional-nums; letter-spacing: -0.03em; }

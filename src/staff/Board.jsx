@@ -20,7 +20,7 @@ export default function Board({ me, staff }) {
         title="Поручения"
         subtitle="Что клиенты просят сделать и на каком этапе работа."
         actions={
-          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-11 rounded-md px-5 font-medium transition-colors ${mine ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
+          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-11 rounded-md px-5 font-medium transition-colors ${mine ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-sunken'}`}>
             Только мои
           </button>
         }
@@ -37,7 +37,7 @@ export default function Board({ me, staff }) {
                 {col.map((r) => {
                   const late = r.status !== 'done' && r.due && r.due < new Date().toISOString().slice(0, 10)
                   return (
-                    <li key={r.id} className="rounded-xl border border-line bg-card p-4 ">
+                    <li key={r.id} className="rounded-2xl bg-card shadow-sheet p-4 ">
                       <a href={`#/f/${r.familyId}`} className="font-semibold hover:underline">
                         {r.title}
                       </a>
