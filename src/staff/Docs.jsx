@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
-import { Button, Card, Chip, Empty, ErrorText, PageHeader, Toggle, go } from '../components/ui'
+import { Button, Card, Chip, Empty, ErrorText, PageHeader, Tabs, Toggle, go } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Preview, ResultForm } from '../components/ResultForm'
 import { usePoll } from './hooks'
@@ -11,13 +11,16 @@ import { DOC_TYPES } from '../screens/Dossier'
 import { ago } from './Inbox'
 
 export function DocQueue() {
-  const [rows] = usePoll(() => api('GET', '/api/staff/documents'), 6000, [])
-  if (!rows) return <p className="text-muted">Загрузка…</p>
+  const [view, setView] = useState('queue')
+  const [rows] = usePoll(() => api('GET', `/api/staff/documents${view === 'all' ? '?all=1' : ''}`), 6000, [view])
   return (
     <div>
-      <PageHeader title="Документы на обработку" subtitle="Бланки, которые клиенты прислали на внесение, и документы, запрошенные в клиниках." />
-      {rows.length === 0 ? (
-        <Empty icon="sheet">Очередь пуста.</Empty>
+      <PageHeader title="Документы" subtitle="Очередь на внесение и все файлы, которые прислали клиенты, в том числе при самостоятельном внесении." />
+      <Tabs className="mb-6" value={view} onChange={setView} items={[['queue', 'Ждут внесения'], ['all', 'Все файлы']]} />
+      {!rows ? (
+        <p className="text-muted">Загрузка…</p>
+      ) : rows.length === 0 ? (
+        <Empty icon="sheet">{view === 'all' ? 'Файлов пока нет.' : 'Очередь пуста.'}</Empty>
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">
           {rows.map((d) => (
@@ -34,7 +37,7 @@ export function DocQueue() {
                   · {d.profile} · {DOC_TYPES[d.type]}
                 </p>
               </div>
-              <Chip tone={d.status === 'requested' ? 'quiet' : 'solid'}>{d.status === 'requested' ? 'запрошено в клинике' : `ждёт внесения · ${ago(d.createdAt)}`}</Chip>
+              <Chip tone={d.status === 'processing' ? 'solid' : 'quiet'}>{d.status === 'requested' ? 'запрошено в клинике' : d.status === 'processing' ? `ждёт внесения · ${ago(d.createdAt)}` : `в досье · ${ago(d.createdAt)}`}</Chip>
               <div className="flex items-center gap-1">
                 {d.fileUrl && (
                   <a className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent-dark hover:bg-accent-soft" href={d.fileUrl} target="_blank" rel="noreferrer">

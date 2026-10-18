@@ -147,11 +147,15 @@ export default function AddResult({ state, profile }) {
           </div>
           <p className="text-sm text-muted">
             {can(state).owner ? 'Помощник внесёт показатели за вас и сообщит в переписке. ' : ''}
-            Если вносите сами, вы проверите таблицу рядом с бланком перед сохранением.
+            Если вносите сами, вы проверите таблицу рядом с бланком перед сохранением. Файл при этом тоже попадёт к помощнику и останется в досье.
           </p>
-          <button onClick={manual} className="block min-h-11 w-full text-center font-medium text-accent-dark hover:underline">
-            Ввести показатели вручную
-          </button>
+          <div className="rounded-2xl bg-sunken p-5">
+            <p className="font-semibold">Нет бланка или измеряли сами</p>
+            <p className="mt-1 text-[0.95rem] text-muted">Давление, сахар, вес или любой показатель можно внести без файла. Лабораторию указывать не нужно.</p>
+            <Button className="mt-4" variant="ghost" icon="edit" onClick={manual}>
+              Внести показатели без файла
+            </Button>
+          </div>
         </div>
       </div>
     )

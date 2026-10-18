@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react'
-import { Button, Card, Field } from './ui'
+import { Button, Card, Field, Toggle } from './ui'
 import { Icon } from './icons'
 import { findIndicator } from '../lib/indicators'
-import { emptyRow, rowBad } from '../lib/draft'
+import { SELF_LAB, emptyRow, rowBad } from '../lib/draft'
 
 // Просмотр бланка (фото или PDF) рядом с формой. file — File, либо url + name для файла с сервера.
 export function Preview({ file, url, name, className = '' }) {
@@ -70,9 +70,20 @@ export function ResultForm({ draft, onChange }) {
         <Field label="Дата анализа">
           <input type="date" value={draft.date} onChange={(e) => patch({ date: e.target.value })} />
         </Field>
-        <Field label="Лаборатория">
-          <input value={draft.labName} onChange={(e) => patch({ labName: e.target.value })} placeholder="Как на бланке" />
-        </Field>
+        {draft.labName === SELF_LAB ? (
+          <Field label="Источник">
+            <input value="Измерено самостоятельно" readOnly />
+          </Field>
+        ) : (
+          <Field label="Лаборатория">
+            <input value={draft.labName} onChange={(e) => patch({ labName: e.target.value })} placeholder="Как на бланке" />
+          </Field>
+        )}
+        <div className="sm:col-span-2">
+          <Toggle checked={draft.labName === SELF_LAB} onChange={(on) => patch({ labName: on ? SELF_LAB : '' })}>
+            Измерял(а) сам(а) или бланка нет. Диапазон лаборатории можно не указывать.
+          </Toggle>
+        </div>
       </Card>
 
       <div>

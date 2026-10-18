@@ -510,6 +510,7 @@ app.put('/api/documents/:id/file', needUser, express.raw({ type: () => true, lim
   writeFileSync(join(UPLOAD_DIR, name), req.body)
   removeFiles([d])
   run('UPDATE documents SET file_path = ?, file_mime = ?, file_name = ? WHERE id = ?', name, mime, str(decodeURIComponent(req.get('x-filename') || 'file'), 200), d.id)
+  if (req.user.role !== 'staff') notifyStaffFile(req.user.name)
   res.json({ ok: true })
 })
 
@@ -697,13 +698,32 @@ app.patch('/api/staff/requests/:id', needStaff, (req, res) => {
   res.json({ ok: true })
 })
 
+// Письмо администраторам о новом файле от клиента: без содержимого, не чаще раза в 10 минут.
+let staffNotifiedAt = 0
+function notifyStaffFile(clientName) {
+  if (Date.now() - staffNotifiedAt < 600000) return
+  const admins = all('SELECT email FROM users WHERE role = ? AND is_admin = 1 AND disabled = 0', 'staff')
+  if (!admins.length) return
+  staffNotifiedAt = Date.now()
+  const url = `${appUrl()}/staff/#/docs`
+  for (const a of admins) {
+    sendMailSoon({
+      to: a.email,
+      subject: 'Новый файл от клиента',
+      text: `${clientName} прислал(а) файл. Откройте очередь документов: ${url}`,
+      html: layout({ title: 'Новый файл от клиента', lines: [`${clientName} прислал(а) файл. Содержимое по почте не отправляется.`], cta: { label: 'Открыть очередь', url } }),
+    })
+  }
+}
+
 app.get('/api/staff/documents', needStaff, (req, res) => {
+  const everything = req.query.all === '1'
   res.json(
     all(
       `SELECT d.*, p.name profile_name, p.id pid, p.family_id fid,
          (SELECT u.name FROM grants g JOIN users u ON u.id = g.user_id WHERE g.family_id = p.family_id AND g.access = 'owner' LIMIT 1) owner
        FROM documents d JOIN profiles p ON p.id = d.profile_id
-       WHERE d.status IN ('processing', 'requested') ORDER BY d.created_at`,
+       ${everything ? "WHERE d.file_path IS NOT NULL ORDER BY d.created_at DESC LIMIT 200" : "WHERE d.status IN ('processing', 'requested') ORDER BY d.created_at"}`,
     ).map((d) => ({ id: d.id, familyId: d.fid, profileId: d.pid, profile: d.profile_name, owner: d.owner, type: d.type, title: d.title, date: d.date, status: d.status, fileUrl: d.file_path ? `/api/documents/${d.id}/file` : null, fileName: d.file_name, createdAt: d.created_at })),
   )
 })
