@@ -25,7 +25,7 @@ function Steps({ status }) {
       {STEPS.map(([s, label], i) => (
         <li key={s} className="flex flex-1 items-center last:flex-none">
           <span className={`flex items-center gap-1.5 text-sm ${i <= at ? 'font-medium text-accent-dark' : 'text-muted'}`}>
-            <span className={`flex h-5 w-5 items-center justify-center rounded-full text-white ${i <= at ? 'bg-accent' : 'bg-line-strong'}`}>{i <= at && <Icon name="check" size={12} strokeWidth={3} />}</span>
+            <span className={`flex h-5 w-5 items-center justify-center rounded-md text-white ${i <= at ? 'bg-accent' : 'bg-line-strong'}`}>{i <= at && <Icon name="check" size={12} strokeWidth={3} />}</span>
             {label}
           </span>
           {i < STEPS.length - 1 && <span className="stitch-h mx-2 flex-1" aria-hidden />}
@@ -95,7 +95,7 @@ export default function Assistant({ state, profile }) {
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <section className="min-w-0 lg:order-1" aria-label="Переписка">
-          <div className="flex min-h-[26rem] flex-col rounded-2xl border border-line bg-card shadow-card">
+          <div className="flex min-h-[26rem] flex-col rounded-2xl border border-line bg-card ">
             <ul className="flex-1 space-y-1 px-4 py-5 lg:max-h-[calc(100vh-22rem)] lg:overflow-y-auto lg:px-6" aria-live="polite">
               {state.messages.length === 0 && <li className="py-10 text-center text-muted">Сообщений пока нет. Напишите помощнику или выберите поручение.</li>}
               {state.messages.map((m) => {
@@ -114,7 +114,7 @@ export default function Assistant({ state, profile }) {
                     )}
                     <div className={`flex items-end gap-2 ${mine ? 'justify-end' : ''}`}>
                       {!mine && <Avatar name={m.author || assistant} size={30} />}
-                      <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 lg:max-w-[70%] ${mine ? 'rounded-br-md bg-accent text-white' : 'rounded-bl-md bg-paper'}`}>
+                      <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 lg:max-w-[70%] ${mine ? 'rounded-br-md bg-ink text-white' : 'rounded-bl-md bg-paper'}`}>
                         <p className="whitespace-pre-wrap break-words">{humanize(m.text)}</p>
                         <p className={`mt-0.5 text-right text-xs ${mine ? 'text-white/70' : 'text-muted'}`}>{fmtDateTime(m.at).split(', ').pop()}</p>
                       </div>

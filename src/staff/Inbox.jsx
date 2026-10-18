@@ -47,7 +47,7 @@ function InboxList({ rows, fid, me }) {
         </div>
         <div className="relative">
           <Icon name="search" size={17} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
-          <input placeholder="Поиск по имени, почте, профилю" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Поиск" className="!pl-10" />
+          <input placeholder="Имя, почта, профиль" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Поиск" className="!pl-10" />
         </div>
         <Tabs
           value={filter}
@@ -73,7 +73,7 @@ function InboxList({ rows, fid, me }) {
                 <a href={`#/f/${r.id}`} className={`flex gap-3 px-4 py-3.5 transition-colors lg:px-5 ${r.id === fid ? 'bg-accent-soft' : 'hover:bg-paper'}`}>
                   <div className="relative">
                     <Avatar name={r.owner || '?'} size={42} />
-                    {r.unread && <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-accent" aria-label="Ждёт ответа" />}
+                    {r.unread && <span className="absolute -right-0.5 -top-0.5 h-3.5 w-3.5 rounded-md border-2 border-white bg-accent" aria-label="Ждёт ответа" />}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
@@ -148,7 +148,7 @@ function Thread({ data, reload, fid }) {
                 </p>
               )}
               <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 lg:max-w-[72%] ${m.internal ? 'stitch-border bg-white' : mine ? 'rounded-br-md bg-accent text-white' : 'rounded-bl-md bg-white shadow-card'}`}>
+                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 lg:max-w-[72%] ${m.internal ? 'stitch-border bg-white' : mine ? 'rounded-br-md bg-ink text-white' : 'rounded-bl-md bg-white '}`}>
                   <p className={`mb-0.5 flex items-center gap-1 text-xs font-medium ${mine && !m.internal ? 'text-white/80' : 'text-muted'}`}>
                     {m.internal && <Icon name="lock" size={12} />}
                     {m.internal ? `Внутренняя заметка · ${m.author}` : m.author}
@@ -287,7 +287,7 @@ function ContextPanel({ data, reload, staff }) {
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {REQ_STATUS.map(([s, l]) => (
-                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-9 rounded-full px-3 text-sm font-medium ${r.status === s ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
+                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-9 rounded-md px-3 text-sm font-medium ${r.status === s ? 'bg-ink text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
                       {l}
                     </button>
                   ))}
@@ -425,7 +425,7 @@ function Conversation({ fid, staff, row }) {
   if (!data)
     return (
       <div className="flex flex-1 items-center justify-center text-muted">
-        <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-accent-soft border-t-accent" />
+        <span className="inline-block h-5 w-5 animate-spin rounded-md border-2 border-accent-soft border-t-accent" />
       </div>
     )
   if (data.blocked)

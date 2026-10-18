@@ -84,7 +84,7 @@ export default function Circle({ state, profile }) {
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div className="min-w-0 space-y-2">
           <H>Кто имеет доступ</H>
-          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
             {members.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5">
                 <Avatar name={m.name} size={42} />
@@ -177,7 +177,7 @@ export default function Circle({ state, profile }) {
                     {state.profiles.map((p) => {
                       const on = selected.includes(p.id)
                       return (
-                        <button key={p.id} type="button" aria-pressed={on} onClick={() => toggle(p.id)} className={`flex min-h-11 items-center gap-2 rounded-full px-4 font-medium transition-colors ${on ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>
+                        <button key={p.id} type="button" aria-pressed={on} onClick={() => toggle(p.id)} className={`flex min-h-11 items-center gap-2 rounded-md px-4 font-medium transition-colors ${on ? 'bg-ink text-white' : 'border border-line-strong bg-card'}`}>
                           {on && <Icon name="check" size={16} />}
                           {p.name}
                         </button>
@@ -212,18 +212,14 @@ export default function Circle({ state, profile }) {
           {log.length === 0 ? (
             <p className="text-muted">Пока записей нет.</p>
           ) : (
-            <ul className="relative space-y-4">
-              <span className="stitch-v absolute bottom-3 left-[7px] top-3" aria-hidden />
+            <ul className="divide-y divide-line border-y border-line">
               {log.map((l) => (
-                <li key={l.id} className="relative flex gap-4">
-                  <span className="z-10 mt-1.5 h-4 w-4 shrink-0 rounded-full border-2 border-accent-mid bg-card" aria-hidden />
-                  <div>
-                    <p className="text-[0.95rem]">
-                      <span className="font-medium">{l.who}</span>
-                      <span className="text-muted">: {docTitle(l.action)}</span>
-                    </p>
-                    <p className="text-sm text-muted">{fmtDateTime(l.at)}</p>
-                  </div>
+                <li key={l.id} className="flex flex-wrap items-baseline justify-between gap-x-4 py-3">
+                  <p className="text-[0.95rem]">
+                    <span className="font-medium">{l.who}</span>
+                    <span className="text-muted">: {docTitle(l.action)}</span>
+                  </p>
+                  <p className="text-sm text-muted">{fmtDateTime(l.at)}</p>
                 </li>
               ))}
             </ul>

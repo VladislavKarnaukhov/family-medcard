@@ -1,5 +1,6 @@
-import { Empty, H, PageHeader, StatusBadge, go } from '../components/ui'
+import { Empty, H, PageHeader, go } from '../components/ui'
 import { Icon } from '../components/icons'
+import { RangeBar } from '../components/RangeBar'
 import { latestPoints } from '../lib/data'
 import { GROUPS, getIndicator } from '../lib/indicators'
 import { fmtDate, fmtNum, refText } from '../lib/format'
@@ -9,10 +10,7 @@ export default function Indicators({ state, profile }) {
   const all = latestPoints(state, profile.id)
 
   const vitalsRow = (
-    <a href="#/vitals" className="mb-2 flex min-h-14 items-center gap-4 rounded-2xl border border-line bg-card px-4 shadow-card transition-colors hover:bg-accent-soft/50">
-      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent-soft text-accent">
-        <Icon name="pulse" size={19} />
-      </span>
+    <a href="#/vitals" className="flex min-h-14 items-center gap-4 rounded-xl border border-line bg-card px-4 transition-colors hover:bg-paper">
       <span className="flex-1 font-semibold">Давление и пульс</span>
       <span className="flex items-center gap-1 text-sm font-medium text-accent-dark">
         Замеры <Icon name="chevR" size={16} />
@@ -42,29 +40,24 @@ export default function Indicators({ state, profile }) {
         const items = all.filter((l) => groupOf(l) === g)
         if (!items.length) return null
         return (
-          <section key={g}>
+          <section key={g} className="mt-8">
             <H>{g}</H>
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+            <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
               {items.map(({ key, label, last, series }) => {
                 const out = last.status === 'low' || last.status === 'high'
                 return (
                   <li key={key}>
-                    <button onClick={() => go('indicator/' + encodeURIComponent(key))} className="flex min-h-16 w-full items-center gap-4 px-4 py-3 text-left transition-colors hover:bg-accent-soft/40 lg:px-5">
-                      <div className="min-w-0 flex-1">
+                    <button onClick={() => go('indicator/' + encodeURIComponent(key))} className="grid min-h-16 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-3 text-left transition-colors hover:bg-paper lg:grid-cols-[minmax(0,1fr)_200px_9rem] lg:px-5">
+                      <div className="min-w-0">
                         <p className="truncate font-semibold">{label}</p>
                         <p className="text-sm text-muted">
                           Диапазон {refText(last.refLow, last.refHigh)} · {fmtDate(last.date)} · значений: {series.length}
                         </p>
-                        {out && (
-                          <div className="mt-1">
-                            <StatusBadge status={last.status} />
-                          </div>
-                        )}
                       </div>
-                      <p className={`whitespace-nowrap text-right text-lg font-semibold ${out ? 'text-alert' : ''}`}>
+                      <p className={`whitespace-nowrap text-right text-lg font-semibold lg:order-3 ${out ? 'text-alert' : ''}`}>
                         {fmtNum(last.value)} <span className="text-sm font-normal text-muted">{last.unit}</span>
                       </p>
-                      <Icon name="chevR" size={18} className="text-muted" />
+                      <RangeBar className="col-span-2 lg:order-2 lg:col-span-1" value={last.value} low={last.refLow} high={last.refHigh} unit={last.unit} status={last.status} />
                     </button>
                   </li>
                 )

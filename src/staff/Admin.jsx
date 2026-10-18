@@ -21,7 +21,7 @@ export function DataRequests() {
           {rows.map((r) => {
             const late = r.status === 'new' && r.dueAt < now
             return (
-              <li key={r.id} className={`rounded-2xl border p-5 shadow-card ${late ? 'border-accent bg-accent-soft' : 'border-line bg-card'}`}>
+              <li key={r.id} className={`rounded-2xl border p-5  ${late ? 'border-accent bg-accent-soft' : 'border-line bg-card'}`}>
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <p className="font-semibold">{REQ_TYPES[r.type]}</p>
                   <Chip tone={r.status === 'done' ? 'quiet' : late ? 'solid' : 'accent'}>{r.status === 'done' ? `выполнено ${fmtDate(r.resolvedAt.slice(0, 10))}` : `ответить до ${fmtDate(r.dueAt.slice(0, 10))}`}</Chip>
@@ -91,7 +91,7 @@ export function Team({ me }) {
           {!rows ? (
             <p className="text-muted">Загрузка…</p>
           ) : (
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
               {rows.map((u) => (
                 <li key={u.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
                   <Avatar name={u.name} size={44} />

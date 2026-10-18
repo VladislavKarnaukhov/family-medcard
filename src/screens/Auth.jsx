@@ -1,38 +1,41 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, ErrorText, Field, Notice, Toggle } from '../components/ui'
 import { Footer, Wordmark } from '../components/Layout'
+import { RangeBar } from '../components/RangeBar'
 import { api } from '../lib/api'
 import { actions } from '../lib/store'
 import { DocLink } from './Legal'
 
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
-const THREAD = 'M330 120 C 330 220, 372 262, 352 330 S 322 450, 352 530 S 382 640, 342 720 S 322 820, 342 900'
-
-// Вход и регистрация: на компьютере слева индиго-панель с нитью-стёжкой, справа форма.
-export function AuthShell({ children, wide = false, headline = 'Здоровье близких: всё под рукой и под присмотром', sentence = 'Анализы, документы и замеры семьи в одном месте. Помощник берёт рутину на себя, а доступ остаётся у вас.', brand = '' }) {
+// Вход и регистрация: на компьютере слева текстовая колонка с примером строки результата, справа форма.
+export function AuthShell({ children, wide = false, headline = 'Здоровье близких: всё под рукой и под присмотром', sentence = 'Анализы, документы и замеры семьи в одном месте. Помощник берёт рутину на себя, а доступ остаётся у вас.', brand = '', sample = true }) {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col lg:flex-row">
-        <section className="linen-rail relative overflow-hidden px-6 pb-8 pt-6 text-white lg:flex lg:w-[44%] lg:max-w-[560px] lg:flex-col lg:px-14 lg:py-12">
-          <svg className="draw-v pointer-events-none absolute inset-0 hidden h-full w-full lg:block" viewBox="0 0 400 1000" preserveAspectRatio="xMidYMid slice" aria-hidden>
-            <path d={THREAD} fill="none" stroke="#ffffff" strokeOpacity="0.38" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="11 10" />
-            {[[352, 330], [352, 530], [342, 720]].map(([x, y]) => (
-              <g key={y}>
-                <circle cx={x} cy={y} r="13" fill="#1c2755" stroke="#ffffff" strokeOpacity="0.55" strokeWidth="2" />
-                <circle cx={x} cy={y} r="4.5" fill="#ffffff" fillOpacity="0.8" />
-              </g>
-            ))}
-          </svg>
-          <div className="relative flex items-center gap-3">
-            <Wordmark light />
-            {brand && <span className="rounded-full bg-white/10 px-3 py-0.5 text-xs font-medium text-white/80">{brand}</span>}
+        <section className="border-b border-line bg-card px-6 pb-6 pt-6 lg:flex lg:w-[46%] lg:max-w-[600px] lg:flex-col lg:border-b-0 lg:border-r lg:px-14 lg:py-12">
+          <div className="flex items-center gap-3">
+            <Wordmark />
+            {brand && <span className="rounded border border-line px-2 py-0.5 text-xs text-muted">{brand}</span>}
           </div>
-          <div className="relative mt-auto hidden max-w-[22rem] lg:block">
-            <h2 className="text-[2.1rem] leading-[1.15] text-white">{headline}</h2>
-            <p className="mt-4 text-[1.05rem] text-white/75">{sentence}</p>
+          <div className="mt-auto hidden max-w-[26rem] lg:block">
+            <h2 className="text-[2.1rem] leading-[1.15]">{headline}</h2>
+            <p className="mt-4 text-[1.05rem] text-muted">{sentence}</p>
+            {sample && (
+              <div className="mt-10 border-t border-line pt-4" aria-label="Пример строки результата">
+                <p className="mb-2 text-xs text-muted">Пример</p>
+                <div className="flex items-baseline justify-between gap-3">
+                  <p className="font-semibold">Гемоглобин</p>
+                  <p className="num-display text-2xl font-semibold text-alert">
+                    108 <span className="text-sm font-normal text-muted">г/л</span>
+                  </p>
+                </div>
+                <RangeBar className="mt-2" value={108} low={120} high={150} unit="г/л" status="low" />
+                <p className="mt-1.5 text-sm text-muted">Диапазон лаборатории 120–150 г/л</p>
+              </div>
+            )}
           </div>
-          <p className="relative mt-6 text-lg font-medium text-white/90 lg:hidden">{headline}</p>
+          <p className="mt-4 text-lg font-medium lg:hidden">{headline}</p>
         </section>
         <section className="flex flex-1 items-start justify-center px-4 py-8 lg:items-center lg:px-12">
           <div className={`w-full ${wide ? 'max-w-[560px]' : 'max-w-[440px]'}`}>{children}</div>
@@ -47,6 +50,7 @@ export const STAFF_SHELL = {
   headline: 'Рабочее место помощников',
   sentence: 'Очередь диалогов, внесение показателей из бланков и поручения клиентов. Каждое открытие семьи записывается в журнал владельца.',
   brand: 'Сотрудники',
+  sample: false,
 }
 
 export function AuthForm({ invite, onDone, startMode }) {

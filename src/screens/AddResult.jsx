@@ -97,7 +97,7 @@ export default function AddResult({ state, profile }) {
           onDrop={(e) => (e.preventDefault(), setDrag(false), addFiles(e.dataTransfer.files))}
           className={`stitch-border flex flex-col items-center gap-4 rounded-2xl px-6 py-10 text-center transition-colors ${drag ? 'bg-accent-soft' : 'bg-card'}`}
         >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+          <span className="flex h-14 w-14 items-center justify-center rounded-md bg-accent-soft text-accent">
             <Icon name="upload" size={26} />
           </span>
           <p className="max-w-[40ch] text-muted">Перетащите бланки сюда или выберите на устройстве. Подойдут фото и PDF.</p>
@@ -112,7 +112,7 @@ export default function AddResult({ state, profile }) {
         </div>
 
         {files.length > 0 && (
-          <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+          <ul className="mt-5 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
             {files.map((f, i) => (
               <li key={i} className="flex items-center gap-3 px-4 py-3">
                 <Icon name="file" className="text-accent" />

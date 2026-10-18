@@ -6,8 +6,8 @@ import { actions, can } from '../lib/store'
 import { fmtDateTime, fmtShort, localISO, pad } from '../lib/format'
 
 const DAY = 86400000
-const INDIGO = '#2b3a7a'
-const SLATE = '#8d96bd'
+const INK = '#161616'
+const SLATE = '#9a9a94'
 
 export function vitalsSince(state, profileId, days) {
   const from = Date.now() - days * DAY
@@ -114,12 +114,12 @@ export default function Vitals({ state, profile }) {
               <div className="h-72" role="img" aria-label={`График давления, записей: ${items.length}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={items} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="#e7eaf3" vertical={false} />
-                    <XAxis dataKey="t" type="number" scale="time" domain={[Date.now() - 30 * DAY, Date.now()]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#565c78' }} tickCount={5} axisLine={{ stroke: '#c3c9dc' }} tickLine={false} />
-                    <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 12, fill: '#565c78' }} width={38} axisLine={false} tickLine={false} />
+                    <CartesianGrid stroke="#e4e4e0" vertical={false} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={[Date.now() - 30 * DAY, Date.now()]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#62625d' }} tickCount={5} axisLine={{ stroke: '#cfcfca' }} tickLine={false} />
+                    <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 12, fill: '#62625d' }} width={38} axisLine={false} tickLine={false} />
                     <Tooltip content={<Tip />} />
                     <Legend iconType="plainline" />
-                    <Line name="Верхнее" dataKey="systolic" stroke={INDIGO} strokeWidth={2.5} dot={{ r: 3, fill: INDIGO, strokeWidth: 0 }} activeDot={{ r: 6 }} isAnimationActive={false} />
+                    <Line name="Верхнее" dataKey="systolic" stroke={INK} strokeWidth={2.5} dot={{ r: 3, fill: INK, strokeWidth: 0 }} activeDot={{ r: 6 }} isAnimationActive={false} />
                     <Line name="Нижнее" dataKey="diastolic" stroke={SLATE} strokeWidth={2.5} dot={{ r: 3, fill: SLATE, strokeWidth: 0 }} activeDot={{ r: 6 }} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -131,12 +131,9 @@ export default function Vitals({ state, profile }) {
           {items.length === 0 ? (
             <p className="text-muted">Записей нет.</p>
           ) : (
-            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+            <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
               {[...items].reverse().slice(0, 10).map((v) => (
                 <li key={v.id} className="flex items-center gap-4 px-4 py-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
-                    <Icon name="pulse" size={18} />
-                  </span>
                   <div className="flex-1">
                     <p className="text-lg font-semibold">
                       {v.systolic}/{v.diastolic} <span className="text-sm font-normal text-muted">пульс {v.pulse}</span>

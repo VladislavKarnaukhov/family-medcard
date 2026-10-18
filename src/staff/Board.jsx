@@ -20,7 +20,7 @@ export default function Board({ me, staff }) {
         title="Поручения"
         subtitle="Что клиенты просят сделать и на каком этапе работа."
         actions={
-          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-11 rounded-full px-5 font-medium transition-colors ${mine ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
+          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-11 rounded-md px-5 font-medium transition-colors ${mine ? 'bg-ink text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
             Только мои
           </button>
         }
@@ -29,7 +29,7 @@ export default function Board({ me, staff }) {
         {REQ_STATUS.map(([s, label]) => {
           const col = list.filter((r) => r.status === s)
           return (
-            <section key={s} aria-label={label} className="rounded-2xl bg-white/50 p-3 ring-1 ring-line">
+            <section key={s} aria-label={label} className="rounded-xl bg-paper p-3 ring-1 ring-line">
               <h2 className="mb-3 flex items-baseline gap-2 px-1 text-base">
                 {label} <span className="text-sm font-normal text-muted">{col.length}</span>
               </h2>
@@ -37,7 +37,7 @@ export default function Board({ me, staff }) {
                 {col.map((r) => {
                   const late = r.status !== 'done' && r.due && r.due < new Date().toISOString().slice(0, 10)
                   return (
-                    <li key={r.id} className="rounded-xl border border-line bg-card p-4 shadow-card">
+                    <li key={r.id} className="rounded-xl border border-line bg-card p-4 ">
                       <a href={`#/f/${r.familyId}`} className="font-semibold hover:underline">
                         {r.title}
                       </a>
@@ -49,7 +49,7 @@ export default function Board({ me, staff }) {
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-1.5">
                         {REQ_STATUS.filter(([k]) => k !== s).map(([k, l]) => (
-                          <button key={k} onClick={() => patch(r.id, { status: k })} className="min-h-9 rounded-full border border-line-strong px-3 text-sm font-medium hover:bg-accent-soft">
+                          <button key={k} onClick={() => patch(r.id, { status: k })} className="min-h-9 rounded-md border border-line-strong px-3 text-sm font-medium hover:bg-accent-soft">
                             → {l}
                           </button>
                         ))}

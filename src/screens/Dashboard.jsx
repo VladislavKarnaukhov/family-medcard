@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
-import { Avatar, Button, Card, Chip, Empty, H, PageHeader, go } from '../components/ui'
+import { Button, Card, Chip, Empty, H, PageHeader, go } from '../components/ui'
 import { Icon } from '../components/icons'
+import { RangeBar } from '../components/RangeBar'
 import { actions, can } from '../lib/store'
 import { latestPoints, isOut } from '../lib/data'
 import { docTitle, fmtDate, fmtDateTime, fmtNum, humanize, refText, ageText, SEX } from '../lib/format'
@@ -19,14 +20,11 @@ function Welcome({ owner }) {
       <PageHeader title="Давайте соберём досье" subtitle={owner ? 'Три шага, и все анализы семьи будут в одном месте.' : 'Для вас пока не открыт ни один профиль.'} />
       {owner && (
         <>
-          <ol className="relative mb-8 space-y-6">
-            <span className="stitch-v absolute bottom-6 left-[19px] top-6" aria-hidden />
-            {STEPS.map(([icon, title, text], i) => (
-              <li key={title} className="thread-in relative flex gap-4" style={{ '--i': i }}>
-                <span className="z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-line-strong bg-card text-accent">
-                  <Icon name={icon} size={19} />
-                </span>
-                <div className="pt-1">
+          <ol className="mb-8 divide-y divide-line border-y border-line">
+            {STEPS.map(([, title, text], i) => (
+              <li key={title} className="flex gap-5 py-5">
+                <span className="num-display w-6 shrink-0 text-2xl font-semibold text-muted">{i + 1}</span>
+                <div>
                   <p className="font-semibold">{title}</p>
                   <p className="mt-0.5 text-muted">{text}</p>
                 </div>
@@ -42,8 +40,6 @@ function Welcome({ owner }) {
   )
 }
 
-const KIND_ICON = { lab: 'flask', doc: 'file', vitals: 'pulse' }
-
 function Timeline({ events, write }) {
   const [all, setAll] = useState(false)
   const shown = all ? events : events.slice(0, 7)
@@ -55,19 +51,18 @@ function Timeline({ events, write }) {
     )
   return (
     <div>
-      <ol className="relative space-y-3">
-        <span className="stitch-v draw-v absolute bottom-6 left-[19px] top-6" aria-hidden />
-        {shown.map((e, i) => (
-          <li key={e.id} className="thread-in relative flex gap-4" style={{ '--i': Math.min(i, 8) }}>
-            <span className={`z-10 mt-3 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border bg-card ${e.alert ? 'border-[#e2b9b5] text-alert' : 'border-line-strong text-accent'}`}>
-              <Icon name={KIND_ICON[e.kind]} size={19} />
-            </span>
-            <div className="min-w-0 flex-1 rounded-2xl border border-line bg-card px-4 py-3 shadow-card">{e.body}</div>
+      <ol className="divide-y divide-line border-y border-line">
+        {shown.map((e) => (
+          <li key={e.id} className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4 py-3 lg:grid-cols-[6.5rem_minmax(0,1fr)]">
+            <p className="pt-3 text-sm text-muted">
+              {fmtDate(e.date)}
+            </p>
+            <div className="min-w-0">{e.body}</div>
           </li>
         ))}
       </ol>
       {events.length > 7 && (
-        <div className="mt-4 pl-14">
+        <div className="mt-4">
           <Button variant="quiet" onClick={() => setAll(!all)}>
             {all ? 'Свернуть' : `Показать ещё ${events.length - 7}`}
           </Button>
@@ -101,8 +96,7 @@ export default function Dashboard({ state, profile }) {
                   {ms.length} показателей{outCount > 0 && <span className="text-alert"> · вне диапазона лаборатории: {outCount}</span>}
                 </p>
               </div>
-              <span className="flex shrink-0 items-center gap-2 text-sm text-muted">
-                {fmtDate(r.date)}
+              <span className="flex shrink-0 items-center text-muted">
                 <Icon name="chevD" size={16} className="transition-transform group-open:rotate-180" />
               </span>
             </summary>
@@ -151,7 +145,6 @@ export default function Dashboard({ state, profile }) {
                 {d.status === 'processing' && ' · помощник вносит в досье'}
               </p>
             </div>
-            <span className="shrink-0 text-sm text-muted">{fmtDate(d.date)}</span>
           </a>
         ),
       })
@@ -171,7 +164,6 @@ export default function Dashboard({ state, profile }) {
               </p>
               <p className="text-sm text-muted">Последний замер · всего записей: {vit.length}</p>
             </div>
-            <span className="shrink-0 text-sm text-muted">{fmtDateTime(v.datetime)}</span>
           </a>
         ),
       })
@@ -216,15 +208,13 @@ export default function Dashboard({ state, profile }) {
       />
 
       {!owner && me && (
-        <p className="mb-6 rounded-xl bg-accent-soft px-4 py-3 text-[0.95rem]">
+        <p className="mb-6 rounded-lg bg-accent-soft px-4 py-3 text-[0.95rem]">
           Вы в круге заботы: {me.roleLabel}. {write ? 'Можно просматривать данные и добавлять документы.' : 'Доступ только для просмотра.'}
           {me.expiresAt ? ` Доступ до ${fmtDate(me.expiresAt)}.` : ''}
         </p>
       )}
 
-      <div className="thread-h draw-h -mt-2 mb-7" aria-hidden />
-
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="order-2 min-w-0 lg:order-1">
           <H plain>История</H>
           <Timeline events={events} write={write} />
@@ -234,8 +224,8 @@ export default function Dashboard({ state, profile }) {
               ['summary', 'sheet', 'Сводка для врача'],
               ...(owner ? [['circle', 'users', 'Круг заботы']] : []),
             ].map(([to, icon, label]) => (
-              <a key={to} href={'#/' + to} className="flex min-h-12 items-center gap-3 rounded-xl border border-line bg-card px-4 text-[0.95rem] font-medium shadow-card">
-                <Icon name={icon} size={19} className="text-accent" />
+              <a key={to} href={'#/' + to} className="flex min-h-12 items-center gap-3 rounded-lg border border-line bg-card px-4 text-[0.95rem] font-medium">
+                <Icon name={icon} size={19} className="text-muted" />
                 {label}
                 <Icon name="chevR" size={16} className="ml-auto text-muted" />
               </a>
@@ -249,25 +239,23 @@ export default function Dashboard({ state, profile }) {
               Вне диапазона лаборатории
             </h2>
             {out.length === 0 ? (
-              <p className="rounded-2xl border border-line bg-card px-4 py-4 text-muted shadow-card">
+              <p className="rounded-xl border border-line bg-card px-4 py-4 text-muted">
                 {latest.length ? 'В последних результатах все показатели внутри диапазона лаборатории.' : 'Пока нет загруженных анализов.'}
               </p>
             ) : (
-              <ul className="stitch-edge divide-y divide-line overflow-hidden rounded-2xl bg-card">
+              <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
                 {out.map(({ key, label, last }) => (
                   <li key={key}>
-                    <a href={'#/indicator/' + encodeURIComponent(key)} className="flex min-h-14 items-center gap-3 px-4 py-3 transition-colors hover:bg-alert-soft/60">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-alert-soft text-alert">
-                        <Icon name={last.status === 'low' ? 'arrowDown' : 'arrowUp'} size={17} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{label}</span>
-                        <span className="block text-sm text-muted">
-                          Диапазон {refText(last.refLow, last.refHigh)} · {fmtDate(last.date)}
+                    <a href={'#/indicator/' + encodeURIComponent(key)} className="block px-4 py-3 transition-colors hover:bg-paper">
+                      <span className="flex items-baseline justify-between gap-3">
+                        <span className="min-w-0 truncate font-medium">{label}</span>
+                        <span className="whitespace-nowrap text-right text-lg font-semibold text-alert">
+                          {fmtNum(last.value)} <span className="text-sm font-normal">{last.unit}</span>
                         </span>
                       </span>
-                      <span className="whitespace-nowrap text-right font-semibold text-alert">
-                        {fmtNum(last.value)} <span className="text-sm font-normal">{last.unit}</span>
+                      <RangeBar className="mt-2" value={last.value} low={last.refLow} high={last.refHigh} unit={last.unit} status={last.status} />
+                      <span className="mt-1.5 block text-sm text-muted">
+                        Диапазон {refText(last.refLow, last.refHigh)} · {fmtDate(last.date)}
                       </span>
                     </a>
                   </li>
@@ -277,22 +265,18 @@ export default function Dashboard({ state, profile }) {
           </section>
 
           {owner && (
-            <a href="#/assistant" className="linen-rail block rounded-2xl p-5 text-white shadow-pop transition-transform hover:-translate-y-0.5">
-              <div className="flex items-center gap-3">
-                <Avatar name={assistant} size={44} tone="rail" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{assistant}</p>
-                  <p className="text-sm text-white/70">Помощник по здоровью</p>
-                </div>
-                {state.unread > 0 && <span className="rounded-full bg-white px-2.5 py-0.5 text-sm font-semibold text-accent-dark">{state.unread}</span>}
+            <a href="#/assistant" className="block rounded-xl border border-line bg-card p-5 transition-colors hover:border-line-strong">
+              <div className="flex items-baseline gap-3">
+                <p className="flex-1 font-semibold">{assistant}</p>
+                {state.unread > 0 && <span className="rounded bg-ink px-2 text-sm font-semibold text-white">{state.unread}</span>}
               </div>
               {lastMsg && (
-                <p className="mt-4 line-clamp-2 text-[0.95rem] text-white/85">
+                <p className="mt-2 line-clamp-2 text-[0.95rem] text-muted">
                   {lastMsg.from === 'assistant' ? '' : 'Вы: '}
                   {humanize(lastMsg.text)}
                 </p>
               )}
-              <p className="mt-4 flex items-center justify-between text-sm font-medium text-white">
+              <p className="mt-3 flex items-center justify-between text-sm font-medium text-accent-dark">
                 <span>{openReq > 0 ? `Поручений в работе: ${openReq}` : 'Написать помощнику'}</span>
                 <Icon name="chevR" size={18} />
               </p>

@@ -20,7 +20,7 @@ const REQ_TYPES = [
 function ConsentList({ rows, empty }) {
   if (!rows.length) return <p className="text-muted">{empty}</p>
   return (
-    <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+    <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
       {rows.map((c) => (
         <li key={c.id} className="px-4 py-3">
           <p className="font-medium">{DOCS[c.docId]?.title || c.docId}</p>
@@ -154,12 +154,12 @@ export default function Privacy({ state }) {
       <H>Документы</H>
       <ul className="grid gap-2 sm:grid-cols-2">
         {['terms', 'privacy', 'consent_pd', 'consent_health'].map((id) => (
-          <li key={id} className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 shadow-card">
+          <li key={id} className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 ">
             <Icon name="file" className="text-accent" />
             <DocLink id={id} />
           </li>
         ))}
-        <li className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 shadow-card">
+        <li className="flex items-center gap-3 rounded-xl border border-line bg-card px-4 py-3 ">
           <Icon name="folder" className="text-accent" />
           <a className="text-accent-dark underline underline-offset-2" href="#/legal">
             Все документы

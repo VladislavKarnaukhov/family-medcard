@@ -13,7 +13,7 @@ export function Preview({ file, url, name, className = '' }) {
   if (!src) return null
   const pdf = file ? file.type === 'application/pdf' || /\.pdf$/i.test(file.name) : /\.pdf$/i.test(label)
   return (
-    <div className={`overflow-hidden rounded-2xl border border-line bg-white shadow-card ${className}`}>
+    <div className={`overflow-hidden rounded-2xl border border-line bg-white  ${className}`}>
       {pdf ? (
         <object data={src} type="application/pdf" className="h-[70vh] w-full">
           <p className="p-4 text-muted">Просмотр PDF недоступен в этом браузере: {label}</p>

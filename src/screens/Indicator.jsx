@@ -5,8 +5,8 @@ import { indicatorKeys, labelFor, seriesFor } from '../lib/data'
 import { getIndicator } from '../lib/indicators'
 import { fmtDate, fmtNum, fmtShort, refText } from '../lib/format'
 
-const INDIGO = '#2b3a7a'
-const THREAD = '#5468b8'
+const INK = '#161616'
+const THREAD = '#0f6b57'
 const ALERT = '#b3362e'
 const DAY = 86400000
 
@@ -109,19 +109,19 @@ export default function Indicator({ state, profile, keyName }) {
             <div className="h-72" role="img" aria-label={`График: ${label}, значений ${series.length}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-                  <CartesianGrid stroke="#e7eaf3" vertical={false} />
-                  <XAxis dataKey="t" type="number" scale="time" domain={[t0 - span, t1 + span]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#565c78' }} tickCount={5} axisLine={{ stroke: '#c3c9dc' }} tickLine={false} />
-                  <YAxis domain={[yMin, yMax]} ticks={ticks} tickFormatter={(v) => fmtNum(Number(v.toPrecision(4)))} tick={{ fontSize: 12, fill: '#565c78' }} width={46} axisLine={false} tickLine={false} allowDataOverflow />
+                  <CartesianGrid stroke="#e4e4e0" vertical={false} />
+                  <XAxis dataKey="t" type="number" scale="time" domain={[t0 - span, t1 + span]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#62625d' }} tickCount={5} axisLine={{ stroke: '#cfcfca' }} tickLine={false} />
+                  <YAxis domain={[yMin, yMax]} ticks={ticks} tickFormatter={(v) => fmtNum(Number(v.toPrecision(4)))} tick={{ fontSize: 12, fill: '#62625d' }} width={46} axisLine={false} tickLine={false} allowDataOverflow />
                   <Tooltip content={<Tip />} />
                   <Area dataKey="band" stroke="none" fill={THREAD} fillOpacity={0.12} activeDot={false} dot={false} isAnimationActive={false} connectNulls />
                   <Line dataKey="refLow" stroke={THREAD} strokeWidth={1.5} strokeDasharray="7 6" dot={false} activeDot={false} connectNulls isAnimationActive={false} legendType="none" />
                   <Line dataKey="refHigh" stroke={THREAD} strokeWidth={1.5} strokeDasharray="7 6" dot={false} activeDot={false} connectNulls isAnimationActive={false} legendType="none" />
                   <Line
                     dataKey="value"
-                    stroke={INDIGO}
+                    stroke={INK}
                     strokeWidth={2.5}
                     isAnimationActive={false}
-                    dot={(p) => <Dot key={p.index} cx={p.cx} cy={p.cy} r={5.5} fill={p.payload.status === 'low' || p.payload.status === 'high' ? ALERT : INDIGO} stroke="#fff" strokeWidth={2} />}
+                    dot={(p) => <Dot key={p.index} cx={p.cx} cy={p.cy} r={5.5} fill={p.payload.status === 'low' || p.payload.status === 'high' ? ALERT : INK} stroke="#fff" strokeWidth={2} />}
                     activeDot={{ r: 7.5 }}
                   />
                 </ComposedChart>
@@ -141,7 +141,7 @@ export default function Indicator({ state, profile, keyName }) {
           )}
 
           <H>Все значения</H>
-          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card shadow-card">
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
             {[...series].reverse().map((p) => {
               const o = p.status === 'low' || p.status === 'high'
               return (
