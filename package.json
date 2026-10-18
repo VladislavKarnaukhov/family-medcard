@@ -14,7 +14,8 @@
     "backup": "node server/backup.js",
     "share": "node scripts/share.mjs",
     "serve": "vite build && npm start",
-    "share:public": "DATA_DIR=server/data/public node scripts/share.mjs"
+    "share:public": "DATA_DIR=server/data/public node scripts/share.mjs",
+    "mail:test": "node --env-file-if-exists=.env scripts/mail-test.mjs"
   },
   "keywords": [],
   "author": "",

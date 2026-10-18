@@ -2,6 +2,7 @@
 // Использование: npm run share            (сборка, сервер, туннель)
 //                npm run share -- --no-tunnel   (только сборка и сервер на :3000)
 // Адрес туннеля меняется при каждом запуске. Сайт работает, пока запущена эта команда.
+import nodemailer from 'nodemailer'
 import { spawn, spawnSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { createConnection } from 'node:net'
@@ -72,13 +73,17 @@ if (!noTunnel) {
 
 const envText = existsSync('.env') ? readFileSync('.env', 'utf8') : ''
 const envVar = (k) => new RegExp(`^${k}=(.*)$`, 'm').exec(envText)?.[1]?.trim().replace(/^["']|["']$/g, '')
-const reachable = (host, port) =>
-  new Promise((resolve) => {
-    const s = createConnection({ host, port, timeout: 6000 })
-    s.on('connect', () => (s.destroy(), resolve(true)))
-    s.on('timeout', () => (s.destroy(), resolve(false)))
-    s.on('error', () => resolve(false))
-  })
+// Настоящая проверка входа на почтовый сервер: открытого порта мало (сервис может не пускать IP или ключ).
+const smtpCheck = async () => {
+  const port = Number(envVar('SMTP_PORT')) || 587
+  const t = nodemailer.createTransport({ host: envVar('SMTP_HOST'), port, secure: port === 465, auth: { user: envVar('SMTP_USER'), pass: envVar('SMTP_PASS') }, connectionTimeout: 20000, greetingTimeout: 20000, socketTimeout: 30000 })
+  try {
+    await t.verify()
+    return ''
+  } catch (e) {
+    return /Unauthorized IP/i.test(e.message) ? 'Почтовый сервис не пускает этот IP (Brevo: Security, Authorized IPs).' : e.message
+  }
+}
 
 const env = { ...process.env, PORT: String(PORT), HOST: '127.0.0.1', TRUST_PROXY: '1' }
 if (publicUrl) env.APP_URL = publicUrl
@@ -87,10 +92,11 @@ if (publicUrl) env.APP_URL = publicUrl
 // Тогда запускаем без почты: код подтверждения показывается на экране (только для тестовых данных).
 let smtp = !!envVar('SMTP_HOST')
 let mailNote = ''
-if (smtp && !(await reachable(envVar('SMTP_HOST'), Number(envVar('SMTP_PORT')) || 587))) {
+const smtpProblem = smtp ? await smtpCheck() : ''
+if (smtp && smtpProblem) {
   smtp = false
   Object.assign(env, { SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '' })
-  mailNote = 'Почтовый сервер из этой сети недоступен: письма не уйдут, коды подтверждения показываются на экране.'
+  mailNote = `Почта не работает (${smtpProblem}). Письма не уйдут, коды подтверждения показываются на экране. Проверка: npm run mail:test`
 }
 // Строгий режим включаем, только если почта работает: иначе коды подтверждения негде показать.
 if (smtp) env.NODE_ENV = 'production'
