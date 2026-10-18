@@ -19,8 +19,7 @@ const ALIAS = { add: 'dossier', edit: '', indicator: 'indicators', profile: '', 
 export function Wordmark() {
   return (
     <a href="#/" className="inline-flex items-baseline gap-2" aria-label="Близкие, на главную">
-      <span className="text-[1.35rem] font-bold tracking-tight text-ink">Близкие</span>
-      <span className="text-[0.68rem] font-medium tracking-[0.24em] text-muted">KIN</span>
+      <span className="text-[1.35rem] font-bold tracking-tight text-accent-dark">Близкие</span>
     </a>
   )
 }
@@ -107,7 +106,7 @@ function RailLink({ to, label, icon, active, badge }) {
     >
       <Icon name={icon} size={19} className={active ? 'text-ink' : ''} />
       <span className="flex-1">{label}</span>
-      {badge > 0 && <span className="rounded bg-ink px-1.5 text-xs font-semibold text-white">{badge}</span>}
+      {badge > 0 && <span className="rounded-md bg-accent px-1.5 text-xs font-semibold text-white">{badge}</span>}
     </a>
   )
 }
@@ -138,7 +137,7 @@ function Rail({ state, active }) {
                     role="tab"
                     aria-selected={on}
                     onClick={() => actions.setActive(p.id)}
-                    className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[0.95rem] transition-colors ${on ? 'bg-ink font-medium text-white' : 'hover:bg-paper'}`}
+                    className={`flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-left text-[0.95rem] transition-colors ${on ? 'bg-accent-soft font-semibold text-accent-dark' : 'hover:bg-paper'}`}
                   >
                     <span className="truncate">{p.name}</span>
                   </button>
@@ -194,7 +193,7 @@ function BottomNav({ state, active }) {
               <a href={'#/' + r} aria-current={on ? 'page' : undefined} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[0.72rem] ${on ? 'font-semibold text-ink' : 'text-muted'}`}>
                 <Icon name={icon} size={22} weight={on ? 'fill' : 'regular'} />
                 {label}
-                {badge > 0 && <span className="absolute right-[24%] top-2 min-w-4 rounded bg-ink px-1 text-center text-[0.65rem] font-semibold text-white">{badge}</span>}
+                {badge > 0 && <span className="absolute right-[24%] top-2 min-w-4 rounded-md bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{badge}</span>}
               </a>
             </li>
           )

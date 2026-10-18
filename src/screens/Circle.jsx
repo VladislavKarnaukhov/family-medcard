@@ -177,7 +177,7 @@ export default function Circle({ state, profile }) {
                     {state.profiles.map((p) => {
                       const on = selected.includes(p.id)
                       return (
-                        <button key={p.id} type="button" aria-pressed={on} onClick={() => toggle(p.id)} className={`flex min-h-11 items-center gap-2 rounded-md px-4 font-medium transition-colors ${on ? 'bg-ink text-white' : 'border border-line-strong bg-card'}`}>
+                        <button key={p.id} type="button" aria-pressed={on} onClick={() => toggle(p.id)} className={`flex min-h-11 items-center gap-2 rounded-md px-4 font-medium transition-colors ${on ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>
                           {on && <Icon name="check" size={16} />}
                           {p.name}
                         </button>

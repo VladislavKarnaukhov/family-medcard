@@ -1,16 +1,16 @@
 ---
-name: Близкие (KIN)
+name: Близкие
 description: Выписка: белые строки на тёплой бумаге, один зелёный акцент, полоса диапазона у каждого значения.
 colors:
-  paper: "#f6f6f4"
-  surface: "#ffffff"
-  line: "#e4e4e0"
-  line-strong: "#cfcfca"
-  ink: "#161616"
-  muted: "#62625d"
-  accent: "#0f6b57"
-  accent-dark: "#0a4d3f"
-  accent-soft: "#e6f0ec"
+  paper: "#f8f5ef"
+  surface: "#fffdf9"
+  line: "#e9e3d7"
+  line-strong: "#d8d0c0"
+  ink: "#26332f"
+  muted: "#67685f"
+  accent: "#1b6b58"
+  accent-dark: "#0f4f40"
+  accent-soft: "#e5efe8"
   accent-mid: "#5fa592"
   alert: "#b3362e"
   alert-soft: "#fbecea"
@@ -47,9 +47,9 @@ typography:
     fontWeight: 500
     lineHeight: 1.5
 rounded:
-  sm: "6px"
-  md: "8px"
-  lg: "10px"
+  sm: "8px"
+  md: "12px"
+  lg: "14px"
 spacing:
   xs: "8px"
   sm: "12px"
@@ -58,7 +58,7 @@ spacing:
   xl: "32px"
 components:
   button-primary:
-    backgroundColor: "{colors.ink}"
+    backgroundColor: "{colors.accent}"
     textColor: "{colors.surface}"
     rounded: "{rounded.sm}"
     height: "48px"
@@ -78,7 +78,7 @@ components:
     height: "40px"
 ---
 
-# Design System: Близкие (KIN)
+# Design System: Близкие
 
 ## Overview
 
@@ -89,19 +89,19 @@ The product is a record, so it looks like one: white rows on warm paper, separat
 The earlier indigo, linen and running-stitch look was dropped because it read as a generic AI-made SaaS skin. The replacement avoids the same tells: no gradient or glow, no pill chips and tabs, no icon-in-circle rows, no card stacks with soft shadows, no decorative dashes or textures, no eyebrows.
 
 **Key Characteristics:**
-- Warm paper ground, white flat surfaces, near-black ink, one green accent.
+- Warm paper ground, warm-white flat surfaces, soft dark-green ink (no black anywhere), one green accent.
 - Red only for values outside the lab range and for errors.
 - Hairline lists and tables instead of card grids; at most one level of container.
 - Onest for all text, Phosphor icons (regular weight, filled only for the active bottom-nav tab).
-- One small radius scale (6, 8, 10 px). No shadows except the popover.
+- One radius scale (8, 12, 14 px). No shadows except the popover.
 - Motion: a short rise on first entry, disabled under reduced motion.
 
 ## Colors
 
-- **Paper** (#f6f6f4): page ground. **Surface** (#ffffff): lists, inputs, sidebars, header.
-- **Line** (#e4e4e0) hairlines and row dividers; **Line Strong** (#cfcfca) input and ghost-button borders.
-- **Ink** (#161616): text, primary button, active profile row, unread badge. **Muted** (#62625d): secondary text.
-- **Accent** (#0f6b57) with **Accent Dark** (#0a4d3f): links, focus ring, soft buttons; **Accent Soft** (#e6f0ec): soft buttons, notices, own chat bubbles; **Accent Mid** (#5fa592): the in-range segment of the range bar and chart band.
+- **Paper** (#f8f5ef): page ground. **Surface** (#ffffff): lists, inputs, sidebars, header.
+- **Line** (#e9e3d7) hairlines and row dividers; **Line Strong** (#d8d0c0) input and ghost-button borders.
+- **Ink** (#26332f): a soft dark green-slate used for text; there is no pure black in the system. **Muted** (#67685f): secondary text.
+- **Accent** (#1b6b58) with **Accent Dark** (#0f4f40): links, focus ring, soft buttons; **Accent Soft** (#e5efe8): soft buttons, notices, own chat bubbles; **Accent Mid** (#5fa592): the in-range segment of the range bar and chart band.
 - **Alert** (#b3362e) on **Alert Soft** (#fbecea): out-of-range values, errors, destructive actions.
 
 **The Red Is a Finding Rule.** Red marks a value outside the lab range (relative to the lab's own reference) or an error. It is never decoration or brand color.
@@ -120,13 +120,13 @@ Staff are desktop first: a 240px white sidebar, then a three-pane inbox (340px l
 
 ## Components
 
-- **Buttons:** 6px radius, 48px high. Primary is ink on white text; soft is Accent Soft with Accent Dark text; ghost is white with a Line Strong border; danger is white with a red border and text. Focus is a solid 2px accent ring.
+- **Buttons:** 8px radius, 48px high. Primary is Accent with white text; soft is Accent Soft with Accent Dark text; ghost is white with a Line Strong border; danger is white with a red border and text. Focus is a solid 2px accent ring.
 - **Lists:** white rows divided by hairlines inside a 10px bordered block. The history list is a ledger: date column, then the entry.
-- **Range bar:** a 3px track, a 5px Accent Mid segment for the lab range, a 14px marker (ink, red when outside). It carries an aria-label with the value and range.
-- **Tabs:** text with a 2px ink underline on the active one; no pills.
-- **Badges and chips:** 6px radius; solid is ink, alert is Alert Soft.
+- **Range bar:** a 3px track, a 5px Accent Mid segment for the lab range, a 14px marker (Accent Dark, red when outside). It carries an aria-label with the value and range.
+- **Tabs:** text with a 2px Accent underline on the active one; no pills.
+- **Badges and chips:** 6px radius; solid is Accent, alert is Alert Soft.
 - **Chat:** own messages on Accent Soft, others on Paper, 10px bubbles; staff internal notes use a dashed border.
-- **Charts:** ink line, dots turn red outside the range, dashed accent reference lines with a pale accent band.
+- **Charts:** dark-green ink line, dots turn red outside the range, dashed accent reference lines with a pale accent band.
 - **Inputs:** white, Line Strong border, 8px radius, 48px high; focus border accent.
 
 ## Do's and Don'ts

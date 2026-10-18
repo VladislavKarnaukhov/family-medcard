@@ -22,8 +22,8 @@ export function RangeBar({ value, low, high, unit = '', status, className = '' }
       <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-md bg-line" />
       <div className="absolute top-1/2 h-[5px] -translate-y-1/2 rounded-md bg-accent-mid" style={{ left: `${from}%`, width: `${Math.max(2, to - from)}%` }} />
       <div
-        className={`absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-md border-2 border-white ${out ? 'bg-alert' : 'bg-ink'}`}
-        style={{ left: `${pos(value)}%`, boxShadow: '0 0 0 1px rgba(22,22,22,0.25)' }}
+        className={`absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-md border-2 border-white ${out ? 'bg-alert' : 'bg-accent-dark'}`}
+        style={{ left: `${pos(value)}%`, boxShadow: '0 0 0 1px rgba(60,48,28,0.25)' }}
       />
     </div>
   )

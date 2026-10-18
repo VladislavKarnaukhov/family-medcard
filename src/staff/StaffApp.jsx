@@ -143,7 +143,7 @@ export default function StaffApp() {
             >
               <Icon name={icon} size={19} />
               <span className="lg:flex-1">{label}</span>
-              {badge[to] > 0 && <span className="rounded bg-ink px-1.5 text-xs font-semibold text-white">{badge[to]}</span>}
+              {badge[to] > 0 && <span className="rounded-md bg-accent px-1.5 text-xs font-semibold text-white">{badge[to]}</span>}
             </a>
           ))}
         </nav>
