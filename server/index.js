@@ -1,4 +1,5 @@
 import express from 'express'
+import compression from 'compression'
 import { createReadStream, existsSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +16,18 @@ const here = dirname(fileURLToPath(import.meta.url))
 const app = express()
 app.disable('x-powered-by')
 if (process.env.TRUST_PROXY) app.set('trust proxy', 1)
+app.use(compression())
 app.use(express.json({ limit: '6mb' }))
+
+// Проверка живости для хостинга и балансировщика: без авторизации, без данных.
+app.get('/healthz', (req, res) => {
+  try {
+    db.prepare('SELECT 1').get()
+    res.json({ ok: true })
+  } catch {
+    res.status(503).json({ ok: false })
+  }
+})
 
 // ---------- общие заголовки и защита ----------
 app.use((req, res, next) => {
@@ -745,7 +757,7 @@ mountConsent(app, { needUser, needStaff, fail, ctxProfile, removeFiles, wipeFami
 
 // ---------- статика (собранное приложение) ----------
 const dist = join(here, '..', 'dist')
-if (existsSync(dist)) app.use(express.static(dist, { index: 'index.html', setHeaders: (r) => r.setHeader('Cache-Control', 'no-cache') }))
+if (existsSync(dist)) app.use(express.static(dist, { index: 'index.html', setHeaders: (r, f) => r.setHeader('Cache-Control', f.includes(`${join('dist', 'assets')}`) ? 'public, max-age=31536000, immutable' : 'no-cache') }))
 
 app.use((req, res) => (req.path.startsWith('/api/') ? fail(res, 404, 'not_found') : res.status(404).send('Не найдено')))
 app.use((err, req, res, next) => {
@@ -757,4 +769,26 @@ app.use((err, req, res, next) => {
 ensureStaff()
 const port = Number(process.env.PORT) || 3000
 const host = process.env.HOST || '127.0.0.1'
-app.listen(port, host, () => console.log(`Близкие: сервер http://${host}:${port}`))
+const server = app.listen(port, host, () => console.log(`Близкие: сервер http://${host}:${port}`))
+
+// Просроченные сессии и коды подтверждения чистим раз в час.
+const sweep = setInterval(() => {
+  try {
+    run('DELETE FROM sessions WHERE expires_at < ?', nowIso())
+    run('DELETE FROM otps WHERE expires_at < ?', nowIso())
+  } catch (e) {
+    console.error('sweep:', e.message)
+  }
+}, 3600000)
+sweep.unref()
+
+function shutdown() {
+  console.log('Останавливаюсь…')
+  server.close(() => {
+    try { db.close() } catch {}
+    process.exit(0)
+  })
+  setTimeout(() => process.exit(1), 10000).unref()
+}
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)

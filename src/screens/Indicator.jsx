@@ -5,7 +5,7 @@ import { indicatorKeys, labelFor, seriesFor } from '../lib/data'
 import { getIndicator } from '../lib/indicators'
 import { fmtDate, fmtNum, fmtShort, refText } from '../lib/format'
 
-const INK = '#161616'
+const INK = '#26332f'
 const THREAD = '#0f6b57'
 const ALERT = '#b3362e'
 const DAY = 86400000
@@ -109,9 +109,9 @@ export default function Indicator({ state, profile, keyName }) {
             <div className="h-72" role="img" aria-label={`График: ${label}, значений ${series.length}`}>
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-                  <CartesianGrid stroke="#e4e4e0" vertical={false} />
-                  <XAxis dataKey="t" type="number" scale="time" domain={[t0 - span, t1 + span]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#62625d' }} tickCount={5} axisLine={{ stroke: '#cfcfca' }} tickLine={false} />
-                  <YAxis domain={[yMin, yMax]} ticks={ticks} tickFormatter={(v) => fmtNum(Number(v.toPrecision(4)))} tick={{ fontSize: 12, fill: '#62625d' }} width={46} axisLine={false} tickLine={false} allowDataOverflow />
+                  <CartesianGrid stroke="#e9e3d7" vertical={false} />
+                  <XAxis dataKey="t" type="number" scale="time" domain={[t0 - span, t1 + span]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#67685f' }} tickCount={5} axisLine={{ stroke: '#d8d0c0' }} tickLine={false} />
+                  <YAxis domain={[yMin, yMax]} ticks={ticks} tickFormatter={(v) => fmtNum(Number(v.toPrecision(4)))} tick={{ fontSize: 12, fill: '#67685f' }} width={46} axisLine={false} tickLine={false} allowDataOverflow />
                   <Tooltip content={<Tip />} />
                   <Area dataKey="band" stroke="none" fill={THREAD} fillOpacity={0.12} activeDot={false} dot={false} isAnimationActive={false} connectNulls />
                   <Line dataKey="refLow" stroke={THREAD} strokeWidth={1.5} strokeDasharray="7 6" dot={false} activeDot={false} connectNulls isAnimationActive={false} legendType="none" />

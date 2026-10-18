@@ -287,7 +287,7 @@ function ContextPanel({ data, reload, staff }) {
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {REQ_STATUS.map(([s, l]) => (
-                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-9 rounded-md px-3 text-sm font-medium ${r.status === s ? 'bg-ink text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
+                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-9 rounded-md px-3 text-sm font-medium ${r.status === s ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
                       {l}
                     </button>
                   ))}

@@ -20,7 +20,7 @@ export default function Board({ me, staff }) {
         title="Поручения"
         subtitle="Что клиенты просят сделать и на каком этапе работа."
         actions={
-          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-11 rounded-md px-5 font-medium transition-colors ${mine ? 'bg-ink text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
+          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-11 rounded-md px-5 font-medium transition-colors ${mine ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-paper'}`}>
             Только мои
           </button>
         }

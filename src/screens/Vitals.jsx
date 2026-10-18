@@ -6,8 +6,8 @@ import { actions, can } from '../lib/store'
 import { fmtDateTime, fmtShort, localISO, pad } from '../lib/format'
 
 const DAY = 86400000
-const INK = '#161616'
-const SLATE = '#9a9a94'
+const INK = '#26332f'
+const SLATE = '#a89f8a'
 
 export function vitalsSince(state, profileId, days) {
   const from = Date.now() - days * DAY
@@ -114,9 +114,9 @@ export default function Vitals({ state, profile }) {
               <div className="h-72" role="img" aria-label={`График давления, записей: ${items.length}`}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={items} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
-                    <CartesianGrid stroke="#e4e4e0" vertical={false} />
-                    <XAxis dataKey="t" type="number" scale="time" domain={[Date.now() - 30 * DAY, Date.now()]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#62625d' }} tickCount={5} axisLine={{ stroke: '#cfcfca' }} tickLine={false} />
-                    <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 12, fill: '#62625d' }} width={38} axisLine={false} tickLine={false} />
+                    <CartesianGrid stroke="#e9e3d7" vertical={false} />
+                    <XAxis dataKey="t" type="number" scale="time" domain={[Date.now() - 30 * DAY, Date.now()]} tickFormatter={fmtShort} tick={{ fontSize: 12, fill: '#67685f' }} tickCount={5} axisLine={{ stroke: '#d8d0c0' }} tickLine={false} />
+                    <YAxis domain={['dataMin - 10', 'dataMax + 10']} tick={{ fontSize: 12, fill: '#67685f' }} width={38} axisLine={false} tickLine={false} />
                     <Tooltip content={<Tip />} />
                     <Legend iconType="plainline" />
                     <Line name="Верхнее" dataKey="systolic" stroke={INK} strokeWidth={2.5} dot={{ r: 3, fill: INK, strokeWidth: 0 }} activeDot={{ r: 6 }} isAnimationActive={false} />

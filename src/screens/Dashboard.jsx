@@ -268,7 +268,7 @@ export default function Dashboard({ state, profile }) {
             <a href="#/assistant" className="block rounded-xl border border-line bg-card p-5 transition-colors hover:border-line-strong">
               <div className="flex items-baseline gap-3">
                 <p className="flex-1 font-semibold">{assistant}</p>
-                {state.unread > 0 && <span className="rounded bg-ink px-2 text-sm font-semibold text-white">{state.unread}</span>}
+                {state.unread > 0 && <span className="rounded-md bg-accent px-2 text-sm font-semibold text-white">{state.unread}</span>}
               </div>
               {lastMsg && (
                 <p className="mt-2 line-clamp-2 text-[0.95rem] text-muted">

@@ -30,7 +30,7 @@ export function Card({ className = '', children, ...p }) {
 }
 
 const BTN = {
-  primary: 'bg-ink text-white hover:bg-[#303030] active:bg-black',
+  primary: 'bg-accent text-white hover:bg-accent-dark active:bg-accent-dark',
   soft: 'bg-accent-soft text-accent-dark hover:bg-[#d8e8e2]',
   ghost: 'border border-line-strong bg-card text-ink hover:bg-paper',
   danger: 'border border-[#e2b9b5] bg-card text-alert hover:bg-alert-soft',
@@ -109,7 +109,7 @@ export function Chip({ tone = 'accent', children, className = '' }) {
     accent: 'bg-accent-soft text-accent-dark',
     alert: 'bg-alert-soft text-alert',
     quiet: 'bg-paper text-muted ring-1 ring-line',
-    solid: 'bg-ink text-white',
+    solid: 'bg-accent text-white',
     outline: 'bg-white text-ink ring-1 ring-line-strong',
   }
   return <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[0.82rem] font-medium ${tones[tone]} ${className}`}>{children}</span>
@@ -122,7 +122,7 @@ export function Avatar({ name = '?', size = 40, tone = 'soft', className = '' })
     .slice(0, 2)
     .join('')
     .toUpperCase()
-  const tones = { soft: 'bg-[#ebebe7] text-ink', solid: 'bg-ink text-white', rail: 'bg-[#ebebe7] text-ink' }
+  const tones = { soft: 'bg-[#efe8da] text-ink', solid: 'bg-accent text-white', rail: 'bg-[#efe8da] text-ink' }
   return (
     <span
       className={`inline-flex shrink-0 items-center justify-center rounded-md font-semibold ${tones[tone]} ${className}`}
@@ -182,7 +182,7 @@ export function Tabs({ value, onChange, items, className = '' }) {
           aria-selected={value === k}
           onClick={() => onChange(k)}
           className={`-mb-px min-h-11 shrink-0 border-b-2 text-[0.95rem] transition-colors ${
-            value === k ? 'border-ink font-semibold text-ink' : 'border-transparent text-muted hover:text-ink'
+            value === k ? 'border-accent font-semibold text-accent-dark' : 'border-transparent text-muted hover:text-ink'
           }`}
         >
           {label}

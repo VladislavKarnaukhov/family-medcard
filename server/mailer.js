@@ -30,11 +30,11 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 // Письмо в стиле продукта: индиго-шапка, один призыв к действию.
 export function layout({ title, lines, cta, footer }) {
-  const body = lines.map((l) => `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#1c2033">${esc(l)}</p>`).join('')
+  const body = lines.map((l) => `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#26332f">${esc(l)}</p>`).join('')
   const button = cta
-    ? `<p style="margin:22px 0 6px"><a href="${esc(cta.url)}" style="display:inline-block;background:#2b3a7a;color:#fff;text-decoration:none;font-weight:600;padding:13px 22px;border-radius:10px">${esc(cta.label)}</a></p><p style="margin:0;font-size:13px;color:#5b6180;word-break:break-all">${esc(cta.url)}</p>`
+    ? `<p style="margin:22px 0 6px"><a href="${esc(cta.url)}" style="display:inline-block;background:#1b6b58;color:#fff;text-decoration:none;font-weight:600;padding:13px 22px;border-radius:10px">${esc(cta.label)}</a></p><p style="margin:0;font-size:13px;color:#5b6180;word-break:break-all">${esc(cta.url)}</p>`
     : ''
-  return `<!doctype html><html lang="ru"><body style="margin:0;background:#eef0f5;font-family:Arial,Helvetica,sans-serif"><div style="max-width:560px;margin:0 auto;padding:24px 16px"><div style="background:#2b3a7a;color:#fff;padding:18px 24px;border-radius:14px 14px 0 0;font-size:20px;font-weight:700">Близкие <span style="font-weight:400;letter-spacing:.2em;font-size:12px;opacity:.7">KIN</span></div><div style="background:#fff;padding:26px 24px;border-radius:0 0 14px 14px"><h1 style="margin:0 0 16px;font-size:21px;color:#1c2033">${esc(title)}</h1>${body}${button}<p style="margin:26px 0 0;font-size:12px;color:#8a8fa8">${esc(footer || 'Сервис не заменяет консультацию врача. Если вы не ожидали это письмо, просто проигнорируйте его.')}</p></div></div></body></html>`
+  return `<!doctype html><html lang="ru"><body style="margin:0;background:#f8f5ef;font-family:Arial,Helvetica,sans-serif"><div style="max-width:560px;margin:0 auto;padding:24px 16px"><div style="background:#1b6b58;color:#fff;padding:18px 24px;border-radius:14px 14px 0 0;font-size:20px;font-weight:700">Близкие</div><div style="background:#fff;padding:26px 24px;border-radius:0 0 14px 14px"><h1 style="margin:0 0 16px;font-size:21px;color:#26332f">${esc(title)}</h1>${body}${button}<p style="margin:26px 0 0;font-size:12px;color:#8a8577">${esc(footer || 'Сервис не заменяет консультацию врача. Если вы не ожидали это письмо, просто проигнорируйте его.')}</p></div></div></body></html>`
 }
 
 export async function sendMail({ to, subject, text, html }) {

@@ -1,33 +1,33 @@
 @import "tailwindcss";
 @import "@fontsource-variable/onest";
 
-/* «Выписка»: строгая медицинская записка. Нейтральная бумага, чёрный текст и действия, один зелёный сигнал для данных. */
+/* «Выписка»: тёплая бумага, мягкий тёмно-зелёный текст без чёрного, один зелёный акцент для действий и данных. */
 @theme {
   --font-sans: "Onest Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 
-  --color-paper: #f6f6f4; /* фон страницы */
-  --color-card: #ffffff;
-  --color-line: #e4e4e0;
-  --color-line-strong: #cfcfca;
-  --color-ink: #161616;
-  --color-muted: #62625d;
+  --color-paper: #f8f5ef; /* фон страницы */
+  --color-card: #fffdf9;
+  --color-line: #e9e3d7;
+  --color-line-strong: #d8d0c0;
+  --color-ink: #26332f;
+  --color-muted: #67685f;
 
-  --color-accent: #0f6b57; /* сигнал: данные, ссылки, фокус */
-  --color-accent-dark: #0a4d3f;
-  --color-accent-soft: #e6f0ec;
+  --color-accent: #1b6b58; /* сигнал: данные, ссылки, фокус */
+  --color-accent-dark: #0f4f40;
+  --color-accent-soft: #e5efe8;
   --color-accent-mid: #5fa592;
 
   --color-alert: #b3362e; /* только значения вне диапазона и ошибки */
   --color-alert-soft: #fbecea;
 
-  --radius-lg: 0.375rem;
-  --radius-xl: 0.5rem;
-  --radius-2xl: 0.625rem;
-  --radius-3xl: 0.75rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 0.875rem;
+  --radius-3xl: 1rem;
 
   --shadow-sm: none;
   --shadow-card: none;
-  --shadow-pop: 0 10px 30px -12px rgba(22, 22, 22, 0.28);
+  --shadow-pop: 0 10px 30px -12px rgba(60, 48, 28, 0.22);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
