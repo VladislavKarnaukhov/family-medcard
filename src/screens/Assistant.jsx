@@ -114,9 +114,9 @@ export default function Assistant({ state, profile }) {
                     )}
                     <div className={`flex items-end gap-2 ${mine ? 'justify-end' : ''}`}>
                       {!mine && <Avatar name={m.author || assistant} size={30} />}
-                      <div className={`max-w-[82%] rounded-2xl px-4 py-2.5 lg:max-w-[70%] ${mine ? 'rounded-br-md bg-ink text-white' : 'rounded-bl-md bg-paper'}`}>
+                      <div className={`max-w-[82%] rounded-xl px-4 py-2.5 lg:max-w-[70%] ${mine ? 'rounded-br-sm bg-accent-soft text-ink' : 'rounded-bl-sm bg-paper'}`}>
                         <p className="whitespace-pre-wrap break-words">{humanize(m.text)}</p>
-                        <p className={`mt-0.5 text-right text-xs ${mine ? 'text-white/70' : 'text-muted'}`}>{fmtDateTime(m.at).split(', ').pop()}</p>
+                        <p className={`mt-0.5 text-right text-xs ${mine ? 'text-muted' : 'text-muted'}`}>{fmtDateTime(m.at).split(', ').pop()}</p>
                       </div>
                     </div>
                   </li>

@@ -148,13 +148,13 @@ function Thread({ data, reload, fid }) {
                 </p>
               )}
               <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 lg:max-w-[72%] ${m.internal ? 'stitch-border bg-white' : mine ? 'rounded-br-md bg-ink text-white' : 'rounded-bl-md bg-white '}`}>
-                  <p className={`mb-0.5 flex items-center gap-1 text-xs font-medium ${mine && !m.internal ? 'text-white/80' : 'text-muted'}`}>
+                <div className={`max-w-[85%] rounded-xl px-4 py-2.5 lg:max-w-[72%] ${m.internal ? 'stitch-border bg-white' : mine ? 'rounded-br-sm bg-accent-soft text-ink' : 'rounded-bl-sm bg-white '}`}>
+                  <p className={`mb-0.5 flex items-center gap-1 text-xs font-medium ${mine && !m.internal ? 'text-muted' : 'text-muted'}`}>
                     {m.internal && <Icon name="lock" size={12} />}
                     {m.internal ? `Внутренняя заметка · ${m.author}` : m.author}
                   </p>
                   <p className="whitespace-pre-wrap break-words">{humanize(m.text)}</p>
-                  <p className={`mt-0.5 text-right text-xs ${mine && !m.internal ? 'text-white/70' : 'text-muted'}`}>{fmtDateTime(m.at).split(', ').pop()}</p>
+                  <p className={`mt-0.5 text-right text-xs ${mine && !m.internal ? 'text-muted' : 'text-muted'}`}>{fmtDateTime(m.at).split(', ').pop()}</p>
                 </div>
               </div>
             </li>
