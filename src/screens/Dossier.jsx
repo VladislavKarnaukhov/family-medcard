@@ -13,7 +13,6 @@ export const DOC_TYPES = {
   insurance: 'Полисы и страховка',
   authorization: 'Согласия и доверенности',
 }
-const TYPE_ICON = { analysis: 'flask', extract: 'file', imaging: 'eye', prescription: 'sheet', vaccine: 'shield', insurance: 'heart', authorization: 'link' }
 const ADDABLE = Object.entries(DOC_TYPES).filter(([k]) => k !== 'analysis')
 
 const STATUS = {
@@ -126,12 +125,9 @@ export default function Dossier({ state, profile }) {
           {items.length === 0 ? 'В досье пока пусто. Добавьте бланк анализа или отправьте документ помощнику.' : 'Документов этого типа нет.'}
         </Empty>
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-card ">
+        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-card">
           {shown.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3.5 lg:px-5">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent">
-                <Icon name={TYPE_ICON[d.type] || 'file'} size={21} />
-              </span>
               <div className="min-w-0 flex-1 basis-56">
                 <p className="truncate font-semibold">{docTitle(d.title)}</p>
                 <p className="text-sm text-muted">
