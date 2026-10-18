@@ -13,7 +13,8 @@
     "seed": "node --env-file-if-exists=.env server/seed.js",
     "backup": "node server/backup.js",
     "share": "node scripts/share.mjs",
-    "serve": "vite build && npm start"
+    "serve": "vite build && npm start",
+    "share:public": "DATA_DIR=server/data/public node scripts/share.mjs"
   },
   "keywords": [],
   "author": "",

@@ -3,6 +3,8 @@ import { parseNum } from './format'
 
 const toText = (n) => (n == null ? '' : String(n).replace('.', ','))
 
+export const SELF_LAB = 'Измерено самостоятельно'
+
 export const emptyRow = () => ({ name: '', value: '', unit: '', refLow: '', refHigh: '' })
 
 export const emptyDraft = (date) => ({ sourceFile: '', date, labName: '', rows: [emptyRow()] })
