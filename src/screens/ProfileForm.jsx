@@ -54,12 +54,15 @@ export default function ProfileForm({ profile, isNew }) {
     birthYear: editing?.birthYear ?? '',
     sex: editing?.sex ?? '',
     notes: editing?.notes ?? '',
+    allergies: editing?.allergies ?? '',
+    emergencyContacts: editing?.emergencyContacts?.length ? editing.emergencyContacts : [],
     basis: editing?.basis ?? '',
     attest: false,
   })
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+  const setC = (i, patch) => setF({ ...f, emergencyContacts: f.emergencyContacts.map((c, j) => (j === i ? { ...c, ...patch } : c)) })
   const year = f.birthYear === '' ? null : Number(f.birthYear)
   const yearBad = year != null && (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear())
   const minor = year != null && year > new Date().getFullYear() - 18
@@ -89,10 +92,33 @@ export default function ProfileForm({ profile, isNew }) {
               </select>
             </Field>
           </div>
-          <Field label="Хронические заболевания и лекарства" hint="Свободный текст: попадёт в сводку для врача. Это сведения о здоровье.">
-            <textarea value={f.notes} onChange={set('notes')} placeholder="Что и в какой дозировке принимает, что уже диагностировано врачом" />
+          <Field label="Хронические заболевания и заметки" hint="Свободный текст: попадёт в сводку для врача. Лекарства лучше вносить в разделе «Лекарства». Это сведения о здоровье.">
+            <textarea value={f.notes} onChange={set('notes')} placeholder="Что уже диагностировано врачом" />
+          </Field>
+          <Field label="Аллергии" hint="На что есть аллергия, как записано врачом или как известно семье.">
+            <input value={f.allergies} onChange={set('allergies')} maxLength={1000} placeholder="Например, пенициллин" />
           </Field>
         </Card>
+
+        {editing && (
+          <Card className="space-y-4">
+            <div>
+              <p className="font-semibold">Контакты для экстренной карточки</p>
+              <p className="mt-1 text-sm text-muted">Укажите людей, которые согласны, чтобы их телефон был в карточке. До трёх контактов.</p>
+            </div>
+            {f.emergencyContacts.map((c, i) => (
+              <div key={i} className="grid gap-3 sm:grid-cols-[1.2fr_1fr_1.2fr_auto]">
+                <input aria-label="Имя" placeholder="Имя" value={c.name} maxLength={80} onChange={(e) => setC(i, { name: e.target.value })} />
+                <input aria-label="Кем приходится" placeholder="Кем приходится" value={c.relation} maxLength={40} onChange={(e) => setC(i, { relation: e.target.value })} />
+                <input aria-label="Телефон" placeholder="+7 900 000-00-00" inputMode="tel" value={c.phone} maxLength={30} onChange={(e) => setC(i, { phone: e.target.value })} />
+                <Button variant="ghost" aria-label="Убрать контакт" icon="trash" onClick={() => setF({ ...f, emergencyContacts: f.emergencyContacts.filter((_, j) => j !== i) })} />
+              </div>
+            ))}
+            {f.emergencyContacts.length < 3 && (
+              <Button variant="soft" icon="plus" onClick={() => setF({ ...f, emergencyContacts: [...f.emergencyContacts, { name: '', relation: '', phone: '' }] })}>Добавить контакт</Button>
+            )}
+          </Card>
+        )}
 
         {isNew && (
           <Card className="space-y-4">

@@ -33,6 +33,7 @@ export function buildState(familyId, a) {
   const profiles = all('SELECT * FROM profiles WHERE family_id = ? ORDER BY rowid', familyId).filter((p) => profileAllowed(a, p.id))
   const pids = profiles.map((p) => p.id)
   const inP = inList(pids)
+  const careGrants = all('SELECT self_profile_id, role_label, profile_ids FROM grants WHERE family_id = ?', familyId)
 
   const labRows = all(`SELECT * FROM lab_results WHERE profile_id IN ${inP} ORDER BY date`, ...pids)
   const lids = labRows.map((l) => l.id)
@@ -42,7 +43,7 @@ export function buildState(familyId, a) {
     me: { access: a.access, selfProfileId: a.grant?.self_profile_id || null },
     assistant: { name: family.staff_id ? get('SELECT name FROM users WHERE id = ?', family.staff_id)?.name : null },
     consent: { ok: consentOk(familyId), stopped: !!family.processing_stopped, deleteAfter: family.delete_after },
-    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes, basis: p.basis, consentStatus: p.consent_status, allergies: p.allergies, notifyBadMood: !!p.notify_bad_mood, ...(a.access === 'share' ? {} : { emergencyContacts: safeJson(p.emergency_contacts) || [] }) })),
+    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes, basis: p.basis, consentStatus: p.consent_status, allergies: p.allergies, notifyBadMood: !!p.notify_bad_mood, hasSelfUser: careGrants.some((g) => g.self_profile_id === p.id), hasCaregiver: careGrants.some((g) => /сиделк/i.test(g.role_label) && profileAllowed({ profileIds: safeJson(g.profile_ids) }, p.id)), ...(a.access === 'share' ? {} : { emergencyContacts: safeJson(p.emergency_contacts) || [] }) })),
     questions: Object.fromEntries(profiles.map((p) => [p.id, p.questions])),
     labResults: labRows.map((l) => ({ id: l.id, profileId: l.profile_id, date: l.date, labName: l.lab_name, sourceFile: l.source_file })),
     measurements: all(`SELECT * FROM measurements WHERE lab_result_id IN ${inList(lids)}`, ...lids).map((m) => ({

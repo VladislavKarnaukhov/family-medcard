@@ -19,6 +19,14 @@ import Legal from './screens/Legal'
 import ConsentGate from './screens/ConsentGate'
 import Privacy, { Stopped } from './screens/Privacy'
 import SubjectConsent from './screens/SubjectConsent'
+import Today, { DueBanner, TodayContent } from './screens/Today'
+import { MedForm, MedsList } from './screens/Meds'
+import { VisitForm, VisitsList } from './screens/Visits'
+import CareNote from './screens/CareNote'
+import Notifications from './screens/Notifications'
+import Emergency, { Sos } from './screens/Emergency'
+import SimpleShell from './components/SimpleShell'
+import { hasMeds } from './lib/care'
 
 const Loading = () => (
   <div className="flex min-h-screen items-center justify-center">
@@ -47,6 +55,7 @@ export default function App() {
         <Legal id={route[1]} />
       </Layout>
     )
+  if (route[0] === 'sos') return <Sos token={route[1]} />
   if (route[0] === 'consent') return <SubjectConsent token={route[1]} />
   if (route[0] === 'reset') return <ResetScreen token={route[1]} />
 
@@ -85,7 +94,7 @@ export default function App() {
   const props = { state, profile }
   const { owner } = can(state)
 
-  if (route[0] === 'privacy')
+  if (route[0] === 'privacy' && !state.user.simpleMode)
     return (
       <Layout route={route} state={state}>
         <Privacy state={state} />
@@ -99,8 +108,59 @@ export default function App() {
     )
   if (owner && !state.consent.ok) return <ConsentGate />
 
+  const profileById = (id) => state.profiles.find((p) => p.id === id) || profile
+  const carePage = () => {
+    const p = profileById(route[1])
+    switch (route[0]) {
+      case 'meds':
+        return route[2] ? <MedForm state={state} profile={p} id={route[2]} /> : <MedsList state={state} profile={p} />
+      case 'visits':
+        return route[2] ? <VisitForm state={state} profile={p} id={route[2]} /> : <VisitsList state={state} profile={p} />
+      case 'care':
+        return <CareNote state={state} profile={p} kind0={route[3]} />
+      default:
+        return null
+    }
+  }
+
+  // Простой режим: «Сегодня» своего профиля, без меню и лишних экранов.
+  if (state.user.simpleMode && profile) {
+    const mine = state.profiles.find((p) => p.id === state.me?.selfProfileId) || profile
+    const allowed = ['meds', 'visits', 'care', 'notifications', 'privacy']
+    return (
+      <>
+        <DueBanner state={state} />
+        <SimpleShell state={state} route={route}>
+          {route[0] === 'notifications' ? (
+            <Notifications state={state} />
+          ) : route[0] === 'privacy' ? (
+            <Privacy state={state} />
+          ) : allowed.includes(route[0]) ? (
+            carePage()
+          ) : (
+            <TodayContent state={state} profile={mine} simple />
+          )}
+        </SimpleShell>
+      </>
+    )
+  }
+
   let screen
   switch (route[0]) {
+    case 'today':
+      screen = <Today {...props} />
+      break
+    case 'meds':
+    case 'visits':
+    case 'care':
+      screen = carePage()
+      break
+    case 'notifications':
+      screen = <Notifications state={state} />
+      break
+    case 'emergency':
+      screen = <Emergency state={state} profile={profileById(route[1])} />
+      break
     case 'profile':
       screen = owner ? <ProfileForm {...props} isNew={route[1] === 'new'} /> : <Dashboard {...props} />
       break
@@ -135,9 +195,13 @@ export default function App() {
       screen = <Dashboard {...props} />
   }
 
+  const startToday = !route[0] && state.me?.access !== 'owner' && hasMeds(state)
   return (
-    <Layout route={route} state={state}>
-      {screen}
-    </Layout>
+    <>
+      <DueBanner state={state} />
+      <Layout route={route} state={state}>
+        {startToday ? <Today {...props} /> : screen}
+      </Layout>
+    </>
   )
 }

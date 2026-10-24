@@ -5,6 +5,45 @@ import { Icon } from '../components/icons'
 import { usePoll } from './hooks'
 import { ageText, docTitle, fmtDate, fmtDateTime, humanize, localISO, SEX } from '../lib/format'
 import { DOC_TYPES } from '../screens/Dossier'
+import { KIND_LABEL, MOOD_LABEL, addDays, fmtDt, localNow } from '../lib/care'
+
+// Блок «Уход»: неотмеченные приёмы за 7 дней, последние записи дневника, ближайший визит.
+function CareSection({ data }) {
+  const now = localNow(data.family?.timezone)
+  const from = addDays(now.date, -7)
+  return (
+    <Section title="Уход">
+      {data.profiles.length === 0 ? (
+        <p className="text-sm text-muted">Профилей пока нет.</p>
+      ) : (
+        <ul className="space-y-4">
+          {data.profiles.map((p) => {
+            const unmarked = data.intakes.filter((i) => i.profileId === p.id && i.status === 'unmarked' && i.scheduledAt >= `${from}T00:00`)
+            const notes = data.careNotes.filter((n) => n.profileId === p.id).slice(0, 5)
+            const next = data.appointments.filter((a) => a.profileId === p.id && a.status === 'planned' && a.at >= now.dt).sort((a, b) => a.at.localeCompare(b.at))[0]
+            const meds = data.medications.filter((m) => m.profileId === p.id && m.status === 'active').length
+            return (
+              <li key={p.id} className="space-y-1.5 text-sm">
+                <p className="font-semibold">{p.name}</p>
+                <p className="text-muted">Лекарств: {meds}. Не отмечено за 7 дней: {unmarked.length}</p>
+                {next && <p>Визит: {next.specialist}, {fmtDt(next.at)}</p>}
+                {notes.length > 0 && (
+                  <ul className="space-y-1 border-l border-line pl-3">
+                    {notes.map((n) => (
+                      <li key={n.id}>
+                        <span className="text-muted">{n.at.slice(5, 10).split('-').reverse().join('.')} {n.at.slice(11)}, {n.bySelf ? n.roleLabel : n.roleLabel}:</span> {KIND_LABEL[n.kind]}{n.mood ? `, ${MOOD_LABEL[n.mood]}` : ''}{n.text ? `. ${n.text}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </Section>
+  )
+}
 
 export const REQ_STATUS = [
   ['accepted', 'Принято'],
@@ -254,6 +293,7 @@ function ContextPanel({ data, reload, staff }) {
 
   return (
     <div>
+      <CareSection data={data} />
       <Section title="Профили" count={data.profiles.length}>
         {data.profiles.length === 0 ? (
           <p className="text-sm text-muted">Профилей пока нет.</p>

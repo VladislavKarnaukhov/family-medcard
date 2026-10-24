@@ -7,6 +7,36 @@ import { latestPoints, isOut } from '../lib/data'
 import { docTitle, fmtDate, fmtDateTime, fmtNum, humanize, refText, ageText, SEX } from '../lib/format'
 import { CONSENT_LABEL } from './ProfileForm'
 import { DOC_TYPES } from './Dossier'
+import { daySchedule, fmtDt, localNow, marked, nextAppointment } from '../lib/care'
+
+function CareBlock({ state, profile, owner, write }) {
+  const date = localNow(state.family?.timezone).date
+  const { rows } = daySchedule(state, profile.id, date)
+  const active = state.medications.filter((m) => m.profileId === profile.id && m.status === 'active')
+  const next = nextAppointment(state, profile.id)
+  const Row = ({ to, title, hint }) => (
+    <li>
+      <a href={'#/' + to} className="flex min-h-14 items-center gap-3 px-5 py-3 transition-colors hover:bg-sunken">
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium">{title}</span>
+          {hint && <span className="block truncate text-sm text-muted">{hint}</span>}
+        </span>
+        <Icon name="chevR" size={16} className="text-muted" />
+      </a>
+    </li>
+  )
+  return (
+    <section aria-labelledby="care-h">
+      <h2 id="care-h" className="mb-4 text-[1.375rem]">Уход</h2>
+      <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet">
+        {rows.length > 0 ? <Row to="today" title={`Сегодня: отмечено ${marked(rows)} из ${rows.length}`} hint="Приёмы лекарств и дневник дня" /> : null}
+        <Row to={`meds/${profile.id}`} title="Лекарства" hint={active.length ? active.map((m) => m.name).slice(0, 3).join(', ') : 'Пока не добавлены'} />
+        <Row to={`visits/${profile.id}`} title="Визиты к врачу" hint={next ? `${next.specialist}, ${fmtDt(next.at)}` : 'Запланированных нет'} />
+        {owner && <Row to={`emergency/${profile.id}`} title="Экстренная карточка" hint={state.emergency[profile.id] ? 'Ссылка и QR-код созданы' : 'QR-код для скорой'} />}
+      </ul>
+    </section>
+  )
+}
 
 const STEPS = [
   ['user', 'Создайте профиль', 'Свой, мамы или ребёнка. Для другого человека понадобится его согласие или подтверждение, что вы законный представитель.'],
@@ -263,6 +293,8 @@ export default function Dashboard({ state, profile }) {
               </ul>
             )}
           </section>
+
+          <CareBlock state={state} profile={profile} owner={owner} write={write} />
 
           {owner && (
             <a href="#/assistant" className="lift block rounded-2xl bg-card p-6 shadow-sheet">
