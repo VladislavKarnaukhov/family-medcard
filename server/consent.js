@@ -167,6 +167,30 @@ export function mountConsent(app, { needUser, needStaff, fail, ctxProfile, remov
     res.json({ ok: true })
   })
 
+  // --- пользователь «Сам(а)» подтверждает своё согласие кодом на свою почту в одном потоке с принятием приглашения
+  const selfProfile = (req, res) => {
+    const g = get('SELECT * FROM grants WHERE user_id = ? AND self_profile_id = ?', req.user.id, req.params.id)
+    if (!g) return fail(res, 403, 'forbidden'), null
+    return g
+  }
+  app.post('/api/profiles/:id/self-consent/start', needUser, async (req, res) => {
+    if (!selfProfile(req, res)) return
+    return startOtp(`self:${req.user.id}:${req.params.id}`, req.user.email, res)
+  })
+  app.post('/api/profiles/:id/self-consent/sign', needUser, (req, res) => {
+    const g = selfProfile(req, res)
+    if (!g) return
+    if (req.body.agree !== true) return fail(res, 400, 'Подтвердите согласие')
+    const err = checkOtp(`self:${req.user.id}:${req.params.id}`, req.body.code)
+    if (err) return fail(res, 400, err)
+    tx(() => {
+      recordConsent(req, { userId: req.user.id, familyId: g.family_id, profileId: req.params.id, docId: 'consent_subject', method: 'otp', subjectName: req.user.name, subjectContact: req.user.email })
+      run("UPDATE profiles SET consent_status = 'confirmed' WHERE id = ?", req.params.id)
+      log(g.family_id, req.user, req.params.id, 'Человек подтвердил своё согласие при входе')
+    })
+    res.json({ ok: true })
+  })
+
   // --- запросы субъектов данных (ст. 14, 20, 21 152-ФЗ): срок ответа 10 рабочих дней, берём 14 календарных
   const hits = new Map()
   app.post('/api/data-requests', (req, res) => {

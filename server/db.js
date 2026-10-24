@@ -217,6 +217,108 @@ addColumn('users', 'disabled', 'INTEGER NOT NULL DEFAULT 0')
 addColumn('families', 'client_read_at', 'TEXT')
 addColumn('families', 'notified_at', 'TEXT')
 
+// ---------- уход: лекарства, приёмы, дневник, визиты, уведомления, экстренная карточка ----------
+addColumn('families', 'timezone', "TEXT NOT NULL DEFAULT 'Europe/Moscow'")
+addColumn('profiles', 'allergies', "TEXT NOT NULL DEFAULT ''")
+addColumn('profiles', 'emergency_contacts', "TEXT NOT NULL DEFAULT '[]'")   // JSON [{name, relation, phone}]
+addColumn('profiles', 'notify_bad_mood', 'INTEGER NOT NULL DEFAULT 0')
+addColumn('users', 'email_events', "TEXT NOT NULL DEFAULT ''")             // instant | daily | off; пусто = по роли
+addColumn('users', 'email_intake', 'INTEGER NOT NULL DEFAULT 0')
+addColumn('users', 'simple_mode', 'INTEGER NOT NULL DEFAULT 0')
+addColumn('users', 'emailed_at', 'TEXT')
+addColumn('users', 'digest_date', 'TEXT')
+addColumn('grants', 'self_profile_id', 'TEXT REFERENCES profiles(id) ON DELETE CASCADE')
+addColumn('invites', 'self_profile_id', 'TEXT')
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS medications (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  form TEXT NOT NULL DEFAULT '',
+  dose TEXT NOT NULL DEFAULT '',
+  times TEXT NOT NULL DEFAULT '[]',
+  days TEXT,
+  start_date TEXT NOT NULL,
+  end_date TEXT,
+  prescribed_by TEXT NOT NULL DEFAULT '',
+  note TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'active',
+  stopped_at TEXT,
+  created_at TEXT NOT NULL,
+  created_by TEXT
+);
+CREATE TABLE IF NOT EXISTS intakes (
+  id TEXT PRIMARY KEY,
+  medication_id TEXT NOT NULL REFERENCES medications(id) ON DELETE CASCADE,
+  profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  scheduled_at TEXT,
+  status TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  marked_by_id TEXT,
+  marked_by_name TEXT,
+  marked_by_self INTEGER NOT NULL DEFAULT 0,
+  marked_at TEXT,
+  UNIQUE (medication_id, scheduled_at)
+);
+CREATE TABLE IF NOT EXISTS care_notes (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  at TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  text TEXT NOT NULL DEFAULT '',
+  mood TEXT,
+  needs_doctor TEXT,
+  author_id TEXT,
+  author_name TEXT NOT NULL,
+  author_role TEXT NOT NULL DEFAULT '',
+  by_self INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL,
+  updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS appointments (
+  id TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  at TEXT NOT NULL,
+  specialist TEXT NOT NULL,
+  address TEXT NOT NULL DEFAULT '',
+  purpose TEXT NOT NULL DEFAULT '',
+  companion TEXT NOT NULL DEFAULT '',
+  bring TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'planned',
+  result_note TEXT NOT NULL DEFAULT '',
+  document_ids TEXT NOT NULL DEFAULT '[]',
+  request_id TEXT REFERENCES requests(id) ON DELETE SET NULL,
+  reminded_at TEXT,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  profile_id TEXT,
+  kind TEXT NOT NULL,
+  title TEXT NOT NULL,
+  link TEXT NOT NULL DEFAULT '',
+  ref_id TEXT,
+  created_at TEXT NOT NULL,
+  read_at TEXT,
+  emailed_at TEXT,
+  UNIQUE (user_id, kind, ref_id)
+);
+CREATE TABLE IF NOT EXISTS emergency_links (
+  token TEXT PRIMARY KEY,
+  profile_id TEXT NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL,
+  revoked_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_intakes_profile ON intakes(profile_id, scheduled_at);
+CREATE INDEX IF NOT EXISTS idx_notes_profile ON care_notes(profile_id, at);
+CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, read_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_grants_self ON grants(self_profile_id) WHERE self_profile_id IS NOT NULL;
+`)
+
 export const tx = (fn) => {
   db.exec('BEGIN')
   try {

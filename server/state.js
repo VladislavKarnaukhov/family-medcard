@@ -1,5 +1,6 @@
 // Сбор состояния семьи для клиента с учётом прав доступа.
 import { all, get, inList, safeJson, today } from './util.js'
+import { careState } from './care.js'
 
 export function familyAccess(user, familyId) {
   if (!user) return null
@@ -37,11 +38,11 @@ export function buildState(familyId, a) {
   const lids = labRows.map((l) => l.id)
 
   const state = {
-    family: { id: family.id, name: family.name },
-    me: { access: a.access },
+    family: { id: family.id, name: family.name, timezone: family.timezone },
+    me: { access: a.access, selfProfileId: a.grant?.self_profile_id || null },
     assistant: { name: family.staff_id ? get('SELECT name FROM users WHERE id = ?', family.staff_id)?.name : null },
     consent: { ok: consentOk(familyId), stopped: !!family.processing_stopped, deleteAfter: family.delete_after },
-    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes, basis: p.basis, consentStatus: p.consent_status })),
+    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes, basis: p.basis, consentStatus: p.consent_status, allergies: p.allergies, notifyBadMood: !!p.notify_bad_mood, ...(a.access === 'share' ? {} : { emergencyContacts: safeJson(p.emergency_contacts) || [] }) })),
     questions: Object.fromEntries(profiles.map((p) => [p.id, p.questions])),
     labResults: labRows.map((l) => ({ id: l.id, profileId: l.profile_id, date: l.date, labName: l.lab_name, sourceFile: l.source_file })),
     measurements: all(`SELECT * FROM measurements WHERE lab_result_id IN ${inList(lids)}`, ...lids).map((m) => ({
@@ -77,6 +78,8 @@ export function buildState(familyId, a) {
       fileName: d.file_name,
       note: d.note,
     })),
+    ...careState(profiles, a, family),
+    emergency: {},
     requests: [],
     messages: [],
     members: [],
@@ -134,6 +137,12 @@ export function buildState(familyId, a) {
       action: l.action,
       profileId: l.profile_id,
     }))
+    for (const l of all('SELECT * FROM emergency_links WHERE family_id = ? AND revoked_at IS NULL', familyId)) state.emergency[l.profile_id] = { token: l.token, createdAt: l.created_at }
+  }
+
+  // Сам человек видит журнал просмотров только своего профиля (право субъекта данных). Переписку и поручения ему не отдаём.
+  if (a.grant?.self_profile_id) {
+    state.accessLog = all('SELECT * FROM access_log WHERE family_id = ? AND profile_id = ? ORDER BY at DESC LIMIT 60', familyId, a.grant.self_profile_id).map((l) => ({ id: l.id, at: l.at, who: l.who, action: l.action, profileId: l.profile_id }))
   }
 
   return state
