@@ -32,7 +32,7 @@ function CopyLink({ link }) {
 
 export default function Circle({ state, profile }) {
   const [adding, setAdding] = useState(false)
-  const [f, setF] = useState({ role: ROLES[0], access: 'view', profileIds: [], accessDays: '', email: '' })
+  const [f, setF] = useState({ preset: '', role: ROLES[0], access: 'view', profileIds: [], accessDays: '', email: '' })
   const [invite, setInvite] = useState(null)
   const [link, setLink] = useState('')
   const [days, setDays] = useState(7)
@@ -65,9 +65,11 @@ export default function Circle({ state, profile }) {
   const createInvite = () =>
     run(async () => {
       const r = await actions.inviteMember({
+        preset: f.preset || undefined,
+        profileId: f.preset === 'self' ? profile.id : undefined,
         role: f.role,
         access: f.access,
-        profileIds: selected.length === state.profiles.length ? [] : selected,
+        profileIds: f.preset === 'self' ? [profile.id] : selected.length === state.profiles.length ? [] : selected,
         accessDays: f.accessDays ? Number(f.accessDays) : null,
         email: f.email.trim() || undefined,
       })
@@ -145,7 +147,15 @@ export default function Circle({ state, profile }) {
           <div className="pt-4">
             {adding ? (
               <Card className="space-y-4">
+                <Field label="Кого приглашаете" hint={f.preset === 'self' ? `Сам человек будет видеть и отмечать только свой профиль «${profile.name}»: лекарства, дневник, визиты. Переписки с помощником и других профилей он не увидит.` : f.preset === 'caregiver' ? 'Сиделка видит выбранные профили, отмечает приёмы и ведёт дневник. Переписки и поручений не видит.' : undefined}>
+                  <select value={f.preset} onChange={(e) => setF({ ...f, preset: e.target.value, access: e.target.value ? 'add' : f.access })}>
+                    <option value="">Близкого человека</option>
+                    <option value="self">Самого человека («{profile.name}»)</option>
+                    <option value="caregiver">Сиделку</option>
+                  </select>
+                </Field>
                 <div className="grid gap-4 sm:grid-cols-2">
+                  {!f.preset && (
                   <Field label="Кто это">
                     <select value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>
                       {ROLES.map((r) => (
@@ -153,6 +163,8 @@ export default function Circle({ state, profile }) {
                       ))}
                     </select>
                   </Field>
+                  )}
+                  {f.preset !== 'self' && (
                   <Field label="Срок доступа после принятия">
                     <select value={f.accessDays} onChange={(e) => setF({ ...f, accessDays: e.target.value })}>
                       <option value="">Без срока</option>
@@ -161,16 +173,20 @@ export default function Circle({ state, profile }) {
                       <option value="90">90 дней</option>
                     </select>
                   </Field>
+                  )}
                 </div>
+                {!f.preset && (
                 <Field label="Что может делать">
                   <select value={f.access} onChange={(e) => setF({ ...f, access: e.target.value })}>
                     <option value="view">{ACCESS.view}</option>
                     <option value="add">{ACCESS.add}</option>
                   </select>
                 </Field>
+                )}
                 <Field label="Email (необязательно)" hint="Если указать, мы отправим приглашение письмом.">
                   <input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} placeholder="name@example.com" />
                 </Field>
+                {f.preset !== 'self' && (
                 <fieldset>
                   <legend className="mb-1.5 text-sm font-medium">К каким профилям</legend>
                   <div className="flex flex-wrap gap-2">
@@ -185,6 +201,7 @@ export default function Circle({ state, profile }) {
                     })}
                   </div>
                 </fieldset>
+                )}
                 <div className="rounded-xl bg-paper p-4">
                   <Toggle checked={okInvite} onChange={setOkInvite}>
                     Подтверждаю, что владелец данных (или его законный представитель) согласен на этот доступ. <DocLink id="consent_circle">Документ</DocLink>

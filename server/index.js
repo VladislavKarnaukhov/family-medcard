@@ -11,6 +11,8 @@ import { aiEnabled, recognizeWithClaude } from './recognize.js'
 import { ensureStaff } from './seed.js'
 import { appUrl, isProd, layout, sendMailSoon } from './mailer.js'
 import { mountAccount } from './account.js'
+import { mountCare, notifView } from './care.js'
+import { startScheduler } from './scheduler.js'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const app = express()
@@ -81,8 +83,13 @@ function mePayload(user) {
       ? []
       : all('SELECT g.*, f.name FROM grants g JOIN families f ON f.id = g.family_id WHERE g.user_id = ? ORDER BY g.created_at', user.id)
           .filter((g) => !g.expires_at || g.expires_at >= today())
-          .map((g) => ({ id: g.family_id, name: g.name, access: g.access, roleLabel: g.role_label, expiresAt: g.expires_at }))
-  return { user: { id: user.id, name: user.name, email: user.email, role: user.role, isAdmin: !!user.is_admin }, families }
+          .map((g) => ({ id: g.family_id, name: g.name, access: g.access, roleLabel: g.role_label, expiresAt: g.expires_at, selfProfileId: g.self_profile_id || null }))
+  const pref = get('SELECT email_events, email_intake, simple_mode FROM users WHERE id = ?', user.id)
+  const isOwnerAny = families.some((f) => f.access === 'owner')
+  return {
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, isAdmin: !!user.is_admin, simpleMode: !!pref?.simple_mode, emailEvents: pref?.email_events || (isOwnerAny ? 'instant' : 'off'), emailIntake: !!pref?.email_intake },
+    families,
+  }
 }
 
 // ---------- авторизация ----------
@@ -135,6 +142,12 @@ function acceptInvite(user, tok) {
     inv.access_days ? plusDays(inv.access_days) : null,
     nowIso(),
   )
+  if (inv.self_profile_id) {
+    // «Сам(а)»: пользователь связывается со своим профилем, для него включается простой режим.
+    if (get('SELECT 1 FROM grants WHERE self_profile_id = ?', inv.self_profile_id)) throw Object.assign(new Error('taken'), { code: 409 })
+    run('UPDATE grants SET self_profile_id = ? WHERE family_id = ? AND user_id = ?', inv.self_profile_id, inv.family_id, user.id)
+    run('UPDATE users SET simple_mode = 1 WHERE id = ?', user.id)
+  }
   run('UPDATE invites SET accepted_by = ?, accepted_at = ? WHERE token = ?', user.id, nowIso(), tok)
   log(inv.family_id, user, null, `Принял(а) приглашение (${inv.role_label})`)
   return inv.family_id
@@ -168,6 +181,7 @@ app.post('/api/auth/register', (req, res) => {
     res.json(mePayload(user))
   } catch (e) {
     if (e.code === 410) return fail(res, 410, 'Приглашение недействительно или истекло')
+    if (e.code === 409) return fail(res, 409, 'Это приглашение уже использовано')
     throw e
   }
 })
@@ -201,7 +215,10 @@ app.get('/api/invites/:token', (req, res) => {
   const profiles = ids
     ? all(`SELECT name FROM profiles WHERE id IN ${inList(ids)}`, ...ids).map((p) => p.name)
     : all('SELECT name FROM profiles WHERE family_id = ?', inv.family_id).map((p) => p.name)
-  res.json({ familyName: inv.family_name, inviter: inv.inviter, role: inv.role_label, access: inv.access, accessDays: inv.access_days, profiles })
+  const self = inv.self_profile_id ? get('SELECT name, consent_status FROM profiles WHERE id = ?', inv.self_profile_id) : null
+  // Кто увидит данные: владелец, помощник сервиса и уже приглашённые близкие. Для приглашения «Сам(а)» это показывается человеку явно.
+  const viewers = all("SELECT u.name, g.role_label FROM grants g JOIN users u ON u.id = g.user_id WHERE g.family_id = ? AND g.self_profile_id IS NULL ORDER BY g.created_at", inv.family_id).map((g) => `${g.name} (${g.role_label})`)
+  res.json({ familyName: inv.family_name, inviter: inv.inviter, role: inv.role_label, access: inv.access, accessDays: inv.access_days, profiles, self: !!self, selfProfile: self?.name || null, selfConfirmed: self ? self.consent_status === 'confirmed' : null, viewers })
 })
 
 app.post('/api/invites/:token/accept', needUser, (req, res) => {
@@ -238,20 +255,29 @@ function ctxFamily(req, res, need = 'read', opts) {
 app.post('/api/families/:fid/invites', needUser, (req, res) => {
   const a = ctxFamily(req, res, 'owner')
   if (!a) return
-  const access = req.body.access === 'add' ? 'add' : 'view'
-  const role = str(req.body.role, 40) || 'Близкий'
-  const ids = Array.isArray(req.body.profileIds) && req.body.profileIds.length ? req.body.profileIds.map(String) : null
+  const preset = ['self', 'caregiver'].includes(req.body.preset) ? req.body.preset : null
+  const access = preset || req.body.access === 'add' ? 'add' : 'view'
+  const role = preset === 'self' ? 'Сам(а)' : preset === 'caregiver' ? 'Сиделка' : str(req.body.role, 40) || 'Близкий'
+  let ids = Array.isArray(req.body.profileIds) && req.body.profileIds.length ? req.body.profileIds.map(String) : null
+  let selfProfileId = null
+  if (preset === 'self') {
+    selfProfileId = str(req.body.profileId, 80) || (ids && ids.length === 1 ? ids[0] : '')
+    const sp = get('SELECT id FROM profiles WHERE id = ? AND family_id = ?', selfProfileId, req.params.fid)
+    if (!sp) return fail(res, 400, 'Выберите профиль человека')
+    if (get('SELECT 1 FROM grants WHERE self_profile_id = ?', sp.id) || get('SELECT 1 FROM invites WHERE self_profile_id = ? AND accepted_at IS NULL AND expires_at > ?', sp.id, nowIso())) return fail(res, 409, 'У этого профиля уже есть вход или отправлено приглашение')
+    ids = [sp.id]
+  }
   if (ids) {
     const ok = all(`SELECT id FROM profiles WHERE family_id = ? AND id IN ${inList(ids)}`, req.params.fid, ...ids).length
     if (ok !== ids.length) return fail(res, 400, 'Неверные профили')
   }
-  const days = [7, 30, 90].includes(Number(req.body.accessDays)) ? Number(req.body.accessDays) : null
+  const days = preset === 'self' ? null : [7, 30, 90].includes(Number(req.body.accessDays)) ? Number(req.body.accessDays) : null
   if (req.body.consentConfirmed !== true) return fail(res, 400, 'Подтвердите согласие на предоставление доступа')
   const covered = ids || all('SELECT id FROM profiles WHERE family_id = ?', req.params.fid).map((p) => p.id)
   for (const pid of covered) recordConsent(req, { userId: req.user.id, familyId: req.params.fid, profileId: pid, docId: 'consent_circle', method: 'attestation', subjectContact: role })
   const tok = token(18)
   run(
-    'INSERT INTO invites (token, family_id, created_by, role_label, access, profile_ids, access_days, expires_at) VALUES (?,?,?,?,?,?,?,?)',
+    'INSERT INTO invites (token, family_id, created_by, role_label, access, profile_ids, access_days, expires_at, self_profile_id) VALUES (?,?,?,?,?,?,?,?,?)',
     tok,
     req.params.fid,
     req.user.id,
@@ -260,6 +286,7 @@ app.post('/api/families/:fid/invites', needUser, (req, res) => {
     ids ? JSON.stringify(ids) : null,
     days,
     new Date(Date.now() + 14 * 86400000).toISOString(),
+    selfProfileId,
   )
   log(req.params.fid, req.user, null, `Создано приглашение: ${role}`)
   const to = str(req.body.email, 200).toLowerCase()
@@ -306,7 +333,10 @@ app.get('/api/families/:fid/state', needUser, (req, res) => {
     const seen = get('SELECT id FROM access_log WHERE family_id = ? AND user_id = ? AND action = ? AND at > ?', req.params.fid, req.user.id, 'Открыл(а) данные', since)
     if (!seen) log(req.params.fid, req.user, null, 'Открыл(а) данные')
   }
-  res.json(buildState(req.params.fid, a))
+  const state = buildState(req.params.fid, a)
+  state.notifications = all('SELECT * FROM notifications WHERE user_id = ? AND family_id = ? ORDER BY created_at DESC LIMIT 50', req.user.id, req.params.fid).map(notifView)
+  state.unreadNotifications = get('SELECT COUNT(*) c FROM notifications WHERE user_id = ? AND family_id = ? AND read_at IS NULL', req.user.id, req.params.fid).c
+  res.json(state)
 })
 
 function ctxProfile(req, res, pid, need = 'read', opts) {
@@ -350,7 +380,8 @@ app.put('/api/profiles/:id', needUser, (req, res) => {
   if (!name) return fail(res, 400, 'Укажите имя')
   const nby = year(req.body.birthYear)
   if (nby && nby > new Date().getFullYear() - 18 && c.p.basis !== 'guardian_child') return fail(res, 400, 'Данные несовершеннолетнего вносит законный представитель')
-  run('UPDATE profiles SET name = ?, birth_year = ?, sex = ?, notes = ? WHERE id = ?', name, year(req.body.birthYear), sex(req.body.sex), str(req.body.notes, 4000), c.p.id)
+  const contacts = Array.isArray(req.body.emergencyContacts) ? req.body.emergencyContacts.slice(0, 3).map((x) => ({ name: str(x?.name, 80), relation: str(x?.relation, 40), phone: str(x?.phone, 30) })).filter((x) => x.name && x.phone) : safeJson(c.p.emergency_contacts) || []
+  run('UPDATE profiles SET name = ?, birth_year = ?, sex = ?, notes = ?, allergies = ?, emergency_contacts = ? WHERE id = ?', name, year(req.body.birthYear), sex(req.body.sex), str(req.body.notes, 4000), req.body.allergies === undefined ? c.p.allergies : str(req.body.allergies, 1000), JSON.stringify(contacts), c.p.id)
   res.json({ ok: true })
 })
 
@@ -774,6 +805,7 @@ app.post('/api/recognize', needUser, express.raw({ type: () => true, limit: '25m
 
 mountAccount(app, { needUser, needStaff, fail })
 mountConsent(app, { needUser, needStaff, fail, ctxProfile, removeFiles, wipeFamily })
+mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAccess, tooMany, bump })
 
 // ---------- статика (собранное приложение) ----------
 const dist = join(here, '..', 'dist')
@@ -787,6 +819,7 @@ app.use((err, req, res, next) => {
 })
 
 ensureStaff()
+startScheduler()
 const port = Number(process.env.PORT) || 3000
 const host = process.env.HOST || '127.0.0.1'
 const server = app.listen(port, host, () => console.log(`Близкие: сервер http://${host}:${port}`))

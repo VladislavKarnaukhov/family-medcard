@@ -1,8 +1,8 @@
 // Иконки: библиотека Phosphor, один вес. Имена те же, что использовали экраны.
 import {
-  ArrowDown, ArrowUp, Camera, CaretDown, CaretLeft, CaretRight, ChartLineUp, ChatCircleText, Check, Clock, DotsThree,
+  ArrowDown, ArrowUp, Bell, Camera, CaretDown, CaretLeft, CaretRight, ChartLineUp, ChatCircleText, Check, Clock, DotsThree,
   DownloadSimple, Envelope, Eye, File, FileText, Flask, FolderSimple, Gear, Heart, House, Kanban, LinkSimple, Lock,
-  MagnifyingGlass, Paperclip, PaperPlaneRight, PencilSimple, Plus, Printer, Pulse, ShieldCheck, SignOut, Trash, Tray,
+  MagnifyingGlass, Paperclip, PaperPlaneRight, PencilSimple, Pill, Plus, Printer, Pulse, QrCode, ShieldCheck, SignOut, Trash, Tray,
   UploadSimple, User, UsersThree, Warning, X,
 } from '@phosphor-icons/react'
 
@@ -47,6 +47,9 @@ const MAP = {
   arrowUp: ArrowUp,
   arrowDown: ArrowDown,
   paperclip: Paperclip,
+  bell: Bell,
+  pill: Pill,
+  qr: QrCode,
 }
 
 export function Icon({ name, size = 20, className = '', ...p }) {

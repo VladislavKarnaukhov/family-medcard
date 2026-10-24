@@ -36,6 +36,7 @@ function Block({ title, children }) {
 }
 
 export default function Summary({ state, profile, readOnly = false }) {
+  const meds = (state.medications || []).filter((m) => m.profileId === profile?.id && m.status === 'active')
   const [period, setPeriod] = useState(() => (PERIODS.some((p) => p[0] === new URLSearchParams(location.search).get('days')) ? new URLSearchParams(location.search).get('days') : '180'))
   const [hint, setHint] = useState(false)
   if (!profile) return <Empty icon="sheet">Сначала создайте профиль.</Empty>
@@ -93,7 +94,18 @@ export default function Summary({ state, profile, readOnly = false }) {
           </p>
           {profile.notes && (
             <p className="mt-2 text-sm">
-              <strong>Хронические заболевания и лекарства (со слов):</strong> {profile.notes}
+              <strong>Хронические заболевания (со слов):</strong> {profile.notes}
+            </p>
+          )}
+          {profile.allergies && (
+            <p className="mt-1 text-sm">
+              <strong>Аллергии:</strong> {profile.allergies}
+            </p>
+          )}
+          {meds.length > 0 && (
+            <p className="mt-1 text-sm">
+              <strong>Принимает сейчас:</strong>{' '}
+              {meds.map((m) => [m.name, m.dose, m.times.length ? m.times.join(', ') : 'по необходимости'].filter(Boolean).join(', ')).join('; ')}
             </p>
           )}
         </header>

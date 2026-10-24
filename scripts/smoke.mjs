@@ -99,6 +99,186 @@ try {
     assert.ok(all.some((x) => x.title === 'Бланк теста'), 'file in all files')
     cookie = client
   })
+
+  // ---------- уход за близким ----------
+  const owner = cookie
+  const asUser = async (jar, fn) => {
+    const keep = cookie
+    cookie = jar
+    try { return await fn() } finally { cookie = keep }
+  }
+  const register = async (name, email, inviteToken) => {
+    cookie = ''
+    const r = await call('POST', '/api/auth/register', { name, email, password: 'long-enough-1', consents: { terms: true, consent_pd: true }, inviteToken })
+    assert.equal(r.status, 200, 'register ' + email + ' ' + r.status)
+    const jar = cookie
+    cookie = owner
+    return jar
+  }
+  process.env.DATA_DIR = dir
+  const { tick } = await import('../server/scheduler.js')
+  const { db } = await import('../server/db.js')
+  const { tzNow, addDays } = await import('../server/timeutil.js')
+  const count = (t, where = '1=1') => db.prepare(`SELECT COUNT(*) c FROM ${t} WHERE ${where}`).get().c
+  let momId, medId, intakeAt, momJar, viewerJar, emergencyToken
+  const today = tzNow('Europe/Moscow').date
+
+  await step('mom profile and a medication', async () => {
+    const r = await call('POST', `/api/families/${fid}/profiles`, { name: 'Мама', basis: 'adult', attest: true, birthYear: 1950, sex: 'f' })
+    assert.equal(r.status, 200)
+    momId = r.json.id
+    assert.equal((await call('PUT', `/api/profiles/${momId}`, { name: 'Мама', birthYear: 1950, sex: 'f', notes: 'Гипертония', allergies: 'Пенициллин', emergencyContacts: [{ name: 'Ольга', relation: 'дочь', phone: '+7 900 000-00-00' }] })).status, 200)
+    const m = await call('POST', `/api/profiles/${momId}/medications`, { name: 'Тестовое лекарство', dose: '1 таблетка', times: ['00:00'], startDate: addDays(today, -3) })
+    assert.equal(m.status, 200, JSON.stringify(m.json))
+    medId = m.json.id
+    db.prepare("UPDATE medications SET created_at = '2020-01-01T00:00:00.000Z' WHERE id = ?").run(medId)
+    const st = (await call('GET', `/api/families/${fid}/state`)).json
+    assert.equal(st.medications.length, 1)
+    assert.equal(st.profiles.find((p) => p.id === momId).allergies, 'Пенициллин')
+    intakeAt = `${addDays(today, -1)}T00:00`
+  })
+
+  await step('unmarked intake notifies the owner once, restart-safe', async () => {
+    tick()
+    tick()
+    const n = count('notifications', "kind = 'unmarked_intake'")
+    assert.ok(n >= 1, 'notification created')
+    assert.equal(count('intakes', "status = 'unmarked' AND scheduled_at = '" + intakeAt + "'"), 1)
+    const before = count('notifications')
+    tick()
+    assert.equal(count('notifications'), before, 'no duplicates')
+    const list = (await call('GET', '/api/notifications')).json
+    assert.ok(list.some((x) => x.kind === 'unmarked_intake'))
+    assert.ok(list.every((x) => !/Тестовое/.test(x.title)), 'no medication name in notification text')
+  })
+
+  await step('self invite: mom registers, simple mode, own consent', async () => {
+    const inv = await call('POST', `/api/families/${fid}/invites`, { preset: 'self', profileId: momId, consentConfirmed: true })
+    assert.equal(inv.status, 200, JSON.stringify(inv.json))
+    assert.equal((await call('POST', `/api/families/${fid}/invites`, { preset: 'self', profileId: momId, consentConfirmed: true })).status, 409)
+    momJar = await register('Мама Тестова', 'mom@example.test', inv.json.token)
+    await asUser(momJar, async () => {
+      const me = (await call('GET', '/api/me')).json
+      assert.equal(me.families[0].selfProfileId, momId)
+      assert.equal(me.user.simpleMode, true)
+      const start = await call('POST', `/api/profiles/${momId}/self-consent/start`, {})
+      assert.ok(start.json.devCode)
+      assert.equal((await call('POST', `/api/profiles/${momId}/self-consent/sign`, { agree: true, code: start.json.devCode })).status, 200)
+    })
+    assert.equal(db.prepare('SELECT consent_status s FROM profiles WHERE id = ?').get(momId).s, 'confirmed')
+  })
+
+  await step('mom sees only her profile, no chat/requests/circle; own access log', async () => {
+    await asUser(momJar, async () => {
+      const st = (await call('GET', `/api/families/${(await call('GET', '/api/me')).json.families[0].id}/state`)).json
+      assert.equal(st.profiles.length, 1)
+      assert.equal(st.messages.length, 0)
+      assert.equal(st.requests.length, 0)
+      assert.equal(st.members.length, 0)
+      assert.ok(st.accessLog.every((l) => l.profileId === momId))
+      assert.equal((await call('POST', `/api/families/${fid}/invites`, { preset: 'caregiver', consentConfirmed: true })).status, 403)
+      assert.equal((await call('POST', `/api/families/${fid}/messages`, { text: 'x' })).status >= 400, true)
+    })
+  })
+
+  await step('mom marks an intake herself; marked_by_self is set by the server', async () => {
+    await asUser(momJar, async () => {
+      const r = await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken', bySelf: false })
+      assert.equal(r.status, 200, JSON.stringify(r.json))
+      assert.equal(r.json.bySelf, true)
+      const again = await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken' })
+      assert.equal(again.status, 200)
+      assert.equal(count('intakes', "medication_id = '" + medId + "' AND scheduled_at = '" + intakeAt + "'"), 1, 'no duplicate')
+      assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: `${today}T03:33`, status: 'taken' })).status, 400)
+    })
+    const st = (await call('GET', `/api/families/${fid}/state`)).json
+    assert.ok(st.intakes.some((i) => i.scheduledAt === intakeAt && i.bySelf && i.status === 'taken'))
+  })
+
+  await step('fall note notifies the owner; bad mood only if allowed', async () => {
+    const before = count('notifications', "kind = 'fall'")
+    await asUser(momJar, async () => {
+      assert.equal((await call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'fall', text: 'Упала в коридоре', needsDoctor: 'unknown' })).status, 200)
+      assert.equal((await call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'wellbeing', mood: 'bad' })).status, 200)
+    })
+    assert.ok(count('notifications', "kind = 'fall'") > before)
+    assert.equal(count('notifications', "kind = 'wellbeing_bad'"), 0, 'off by default')
+    await asUser(momJar, async () => assert.equal((await call('PUT', `/api/profiles/${momId}/notify-bad-mood`, { on: true })).status, 200))
+    await asUser(momJar, async () => call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'wellbeing', mood: 'bad' }))
+    assert.equal(count('notifications', "kind = 'wellbeing_bad'"), 1)
+  })
+
+  await step('view-only relative cannot mark or write (403 on the server)', async () => {
+    const inv = await call('POST', `/api/families/${fid}/invites`, { access: 'view', role: 'Брат', profileIds: [momId], consentConfirmed: true })
+    viewerJar = await register('Брат Тестов', 'bro@example.test', inv.json.token)
+    await asUser(viewerJar, async () => {
+      assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken' })).status, 403)
+      assert.equal((await call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'other', text: 'x' })).status, 403)
+      assert.equal((await call('POST', `/api/profiles/${momId}/medications`, { name: 'x' })).status, 403)
+      const me = (await call('GET', '/api/me')).json
+      const st = (await call('GET', `/api/families/${me.families[0].id}/state`)).json
+      assert.ok(st.medications.length >= 1, 'can read')
+    })
+  })
+
+  await step('appointment and request to the assistant', async () => {
+    const at = `${addDays(today, 1)}T12:00`
+    const a = await call('POST', `/api/profiles/${momId}/appointments`, { at, specialist: 'Кардиолог', purpose: 'Планово' })
+    assert.equal(a.status, 200)
+    const r = await call('POST', `/api/appointments/${a.json.id}/request`, {})
+    assert.equal(r.status, 200)
+    assert.equal(count('requests', "title LIKE 'Подготовить визит%'"), 1)
+    tick()
+    assert.ok(count('notifications', "kind = 'appointment_soon'") >= 1, 'reminder inside 24h')
+  })
+
+  await step('emergency card: only the card fields, revocation gives 410', async () => {
+    assert.equal((await call('POST', `/api/profiles/${momId}/emergency`, {})).status, 400, 'needs consent')
+    const r = await call('POST', `/api/profiles/${momId}/emergency`, { consentConfirmed: true, contactsConfirmed: true })
+    assert.equal(r.status, 200)
+    emergencyToken = r.json.token
+    const pub = await fetch(`${base}/api/emergency/${emergencyToken}`)
+    assert.equal(pub.status, 200)
+    const j = await pub.json()
+    assert.deepEqual(Object.keys(j).sort(), ['allergies', 'birthYear', 'conditions', 'contacts', 'medications', 'name'])
+    assert.equal(j.allergies, 'Пенициллин')
+    assert.equal(j.medications[0].name, 'Тестовое лекарство')
+    assert.ok(!JSON.stringify(j).match(/labResults|measurements|careNotes|documents|vitals/))
+    assert.ok((await call('GET', `/api/families/${fid}/state`)).json.accessLog.some((l) => l.action === 'Открыта экстренная карточка'))
+    assert.equal((await call('DELETE', `/api/profiles/${momId}/emergency`)).status, 200)
+    assert.equal((await fetch(`${base}/api/emergency/${emergencyToken}`)).status, 410)
+  })
+
+  await step('share link for the doctor shows medications and allergies, not the diary', async () => {
+    const sh = await call('POST', `/api/profiles/${momId}/share`, { days: 1, consentConfirmed: true })
+    const j = await (await fetch(`${base}/api/share/${sh.json.token}`)).json()
+    assert.ok(j.medications.length >= 1)
+    assert.equal(j.profiles[0].allergies, 'Пенициллин')
+    assert.equal(j.careNotes.length, 0)
+    assert.equal(j.appointments.length, 0)
+    assert.equal(j.profiles[0].emergencyContacts, undefined)
+  })
+
+  await step('after consent revoked, new care writes return 423', async () => {
+    const r = await call('POST', '/api/consents/health/revoke', {})
+    assert.equal(r.status, 200)
+    assert.equal((await call('POST', `/api/profiles/${momId}/medications`, { name: 'Ещё' })).status, 423)
+    assert.equal((await call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'other', text: 'x' })).status, 423)
+    const start = await call('POST', '/api/consents/health/start', {})
+    await call('POST', '/api/consents/health/sign', { agree: true, code: start.json.devCode })
+  })
+
+  await step('deleting the owner account removes all care data', async () => {
+    assert.ok(count('medications') > 0 && count('notifications') > 0)
+    const r = await call('DELETE', '/api/me/account', { password: 'long-enough-1' })
+    assert.equal(r.status, 200, JSON.stringify(r.json))
+    for (const t of ['medications', 'intakes', 'care_notes', 'appointments', 'notifications', 'emergency_links']) assert.equal(count(t), 0, t)
+    cookie = ''
+    await call('POST', '/api/auth/register', { name: 'Тест', email: 't@example.test', password: 'long-enough-1', consents: { terms: true, consent_pd: true } })
+    const st = await call('POST', '/api/consents/health/start', {})
+    await call('POST', '/api/consents/health/sign', { agree: true, code: st.json.devCode })
+  })
+
   await step('wrong password rejected', async () => {
     cookie = ''
     assert.equal((await call('POST', '/api/auth/login', { email: 't@example.test', password: 'nope-nope-1' })).status, 401)

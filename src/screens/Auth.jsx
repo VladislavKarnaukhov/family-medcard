@@ -3,8 +3,9 @@ import { Button, Card, ErrorText, Field, Notice, Toggle } from '../components/ui
 import { Footer, Wordmark } from '../components/Layout'
 import { RangeBar } from '../components/RangeBar'
 import { api } from '../lib/api'
-import { actions } from '../lib/store'
+import { actions, useStore } from '../lib/store'
 import { DocLink } from './Legal'
+import { OtpSign } from './ConsentGate'
 
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
@@ -211,6 +212,8 @@ export function ResetScreen({ token, staff = false }) {
 }
 
 export function InviteScreen({ token, user }) {
+  const store = useStore()
+  const [step, setStep] = useState('')
   const [info, setInfo] = useState(null)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
@@ -223,7 +226,8 @@ export function InviteScreen({ token, user }) {
     setBusy(true)
     try {
       await actions.acceptInvite(token)
-      window.location.hash = '#/'
+      if (info.self && !info.selfConfirmed) setStep('consent')
+      else window.location.hash = '#/'
     } catch (e) {
       setErr(e.message)
       setBusy(false)
@@ -244,6 +248,41 @@ export function InviteScreen({ token, user }) {
     return (
       <AuthShell>
         <p className="text-muted">Загружаем приглашение…</p>
+      </AuthShell>
+    )
+
+  if (step === 'consent' && store.me?.selfProfileId)
+    return (
+      <AuthShell wide>
+        <h1 className="mb-2 text-[1.75rem]">Ваше согласие</h1>
+        <p className="mb-5 text-muted">Данные о вашем здоровье вносятся в сервис. Подтвердите, что вы согласны. Код придёт на вашу почту ({store.user?.email}). Согласие можно отозвать в любой момент в разделе «Мои данные».</p>
+        <Card>
+          <OtpSign docId="consent_subject" startUrl={`/api/profiles/${store.me.selfProfileId}/self-consent/start`} signUrl={`/api/profiles/${store.me.selfProfileId}/self-consent/sign`} onDone={() => (window.location.hash = '#/')} agreeText="Я прочитал(а) документ и согласен(на) на обработку данных о состоянии моего здоровья в этом сервисе." />
+        </Card>
+        <button className="mt-4 min-h-11 font-medium text-muted hover:underline" onClick={() => (window.location.hash = '#/')}>Подтвердить позже</button>
+      </AuthShell>
+    )
+
+  if (info.self)
+    return (
+      <AuthShell wide>
+        <h1 className="mb-4 text-[2rem] leading-tight">{info.inviter} приглашает вас в «Близкие»</h1>
+        <Card className="mb-5 space-y-3 text-lg">
+          <p>Это сервис, где вы сможете отмечать, что приняли лекарства, и записывать, как прошёл день. Родные увидят это и смогут вам помочь.</p>
+          <p>Кто увидит ваши данные: {info.viewers.join(', ')}, а также помощник сервиса. Каждое открытие записывается в журнал, который видите и вы.</p>
+          <p className="text-muted">Согласие можно отозвать в любой момент в разделе «Мои данные».</p>
+        </Card>
+        <ErrorText>{err}</ErrorText>
+        {user ? (
+          <Button big disabled={busy} onClick={accept}>
+            Продолжить как {user.name}
+          </Button>
+        ) : (
+          <Card className="!p-6">
+            <p className="mb-4 text-muted">Создайте вход, чтобы продолжить. Пароль нужен один раз, дальше вы останетесь в системе.</p>
+            <AuthForm invite={token} startMode="register" onDone={() => (info.selfConfirmed ? (window.location.hash = '#/') : setStep('consent'))} />
+          </Card>
+        )}
       </AuthShell>
     )
 

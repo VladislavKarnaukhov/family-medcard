@@ -1,6 +1,7 @@
 import { actions, can } from '../lib/store'
 import { Avatar, Tabs, go } from './ui'
 import { Icon } from './icons'
+import { hasMeds } from '../lib/care'
 
 const NAV = [
   ['', 'Главная', 'home'],
@@ -14,7 +15,17 @@ const NAV_MORE = [
   ['circle', 'Круг заботы', 'users', 'owner'],
   ['privacy', 'Мои данные', 'shield'],
 ]
-const ALIAS = { add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '' }
+const ALIAS = { add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '', meds: 'today', visits: 'today', care: 'today', emergency: '' }
+const TODAY = ['today', 'Сегодня', 'pill']
+const careLinks = (state) => {
+  const id = state.activeProfileId
+  return id ? [['meds/' + id, 'Лекарства', 'pill'], ['visits/' + id, 'Визиты к врачу', 'clock'], ['emergency/' + id, 'Экстренная карточка', 'qr', 'owner']] : []
+}
+
+const mainNav = (state) => {
+  const nav = NAV.filter((i) => !i[3] || can(state).owner)
+  return hasMeds(state) ? [TODAY, ...nav] : nav
+}
 
 export function Wordmark() {
   return (
@@ -80,7 +91,7 @@ function UserMenu({ state }) {
           </label>
         )}
         <p className="px-2 pb-1 text-sm text-muted">{state.user.email}</p>
-        {NAV_MORE.filter((i) => !i[3] || can(state).owner).map(([r, label, icon]) => (
+        {[['summary', 'Сводка', 'sheet'], ...careLinks(state), ...NAV_MORE].filter((i) => !i[3] || can(state).owner).map(([r, label, icon]) => (
           <a key={r} href={'#/' + r} className="flex min-h-11 items-center gap-3 rounded-md px-2 hover:bg-sunken">
             <Icon name={icon} size={18} className="text-muted" />
             {label}
@@ -113,7 +124,7 @@ function RailLink({ to, label, icon, active, badge }) {
 
 function Rail({ state, active }) {
   const owner = can(state).owner
-  const items = [...NAV, ...NAV_MORE].filter((i) => !i[3] || owner)
+  const items = [...mainNav(state), ...careLinks(state).filter((i) => !i[3] || owner), ...NAV_MORE.filter((i) => !i[3] || owner), ['notifications', 'События', 'bell']]
   return (
     <aside className="no-print sticky top-0 hidden h-screen w-[252px] shrink-0 flex-col bg-sunken px-4 py-7 lg:flex">
       <div className="px-3">
@@ -121,7 +132,7 @@ function Rail({ state, active }) {
       </div>
       <nav className="mt-8 space-y-0.5" aria-label="Основная навигация">
         {items.map(([r, label, icon]) => (
-          <RailLink key={r} to={r} label={label} icon={icon} active={active === r} badge={r === 'assistant' ? state.unread : 0} />
+          <RailLink key={r} to={r} label={label} icon={icon} active={active === r.split('/')[0]} badge={r === 'assistant' ? state.unread : r === 'notifications' ? state.unreadNotifications : 0} />
         ))}
       </nav>
 
@@ -181,7 +192,7 @@ function Rail({ state, active }) {
 }
 
 function BottomNav({ state, active }) {
-  const tabs = NAV.filter((t) => !t[3] || can(state).owner)
+  const tabs = mainNav(state).slice(0, 5)
   return (
     <nav className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/90 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Основная навигация">
       <ul className="mx-auto flex max-w-xl">
@@ -225,7 +236,13 @@ export default function Layout({ route = [], state, bare, children }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="no-print flex items-center justify-between gap-3 border-b border-line bg-paper/90 px-4 py-2.5 backdrop-blur lg:hidden">
           <Wordmark />
-          <UserMenu state={state} />
+          <div className="flex items-center gap-1">
+            <a href="#/notifications" aria-label="События" className="relative flex h-11 w-11 items-center justify-center rounded-full hover:bg-sunken">
+              <Icon name="bell" size={22} />
+              {state.unreadNotifications > 0 && <span className="absolute right-1 top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{state.unreadNotifications}</span>}
+            </a>
+            <UserMenu state={state} />
+          </div>
         </header>
         <main className="flex-1 px-4 pb-28 pt-5 lg:px-14 lg:pb-14 lg:pt-12 print:p-0">
           {state.profiles.length > 0 && route[0] !== 'profile' && (

@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Button, Card, Empty, ErrorText, Field, H, Notice, PageHeader } from '../components/ui'
+import { Button, Card, Empty, ErrorText, Field, H, Notice, PageHeader, Toggle } from '../components/ui'
 import { Icon } from '../components/icons'
 import { api } from '../lib/api'
 import { actions, can, refresh } from '../lib/store'
 import { DOCS } from '../legal/docs.js'
 import { fmtDate, fmtDateTime } from '../lib/format'
+import { TIMEZONES } from '../lib/care'
 import { DocLink } from './Legal'
 import { OtpSign } from './ConsentGate'
 
@@ -30,6 +31,88 @@ function ConsentList({ rows, empty }) {
             {c.subject && c.method === 'otp' && ` · подписал(а): ${c.subject}`}
           </p>
           {c.revokedAt && <p className="text-sm font-medium text-alert">Отозвано {fmtDateTime(c.revokedAt)}</p>}
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function Settings({ state }) {
+  const { owner, self } = can(state)
+  const u = state.user
+  const [sound, setSound] = useState(() => {
+    try {
+      return localStorage.getItem('blizkie-sound') === '1'
+    } catch {
+      return false
+    }
+  })
+  const [err, setErr] = useState('')
+  const selfProfile = state.profiles.find((p) => p.id === state.me?.selfProfileId)
+  const moodProfile = selfProfile || (owner ? state.profiles.find((p) => !p.hasSelfUser) : null)
+  const guard = (fn) => async (...a) => {
+    setErr('')
+    try {
+      await fn(...a)
+    } catch (e) {
+      setErr(e.message)
+    }
+  }
+  return (
+    <Card className="space-y-6">
+      <div className="space-y-3">
+        <Field label="Письма о событиях" hint="В письмах нет сведений о здоровье: только факт события и ссылка.">
+          <select value={u.emailEvents} onChange={guard((e) => actions.setEmailEvents(e.target.value, u.emailIntake))}>
+            <option value="instant">Сразу, не чаще раза в 15 минут</option>
+            <option value="daily">Раз в день сводкой</option>
+            <option value="off">Не присылать</option>
+          </select>
+        </Field>
+        {(self || state.profiles.some((p) => p.hasSelfUser === false)) && (
+          <Toggle checked={u.emailIntake} onChange={guard((v) => actions.setEmailIntake(v))}>
+            Напоминать о приёме лекарств письмом в назначенное время
+          </Toggle>
+        )}
+        <Toggle checked={sound} onChange={(v) => { setSound(v); try { localStorage.setItem('blizkie-sound', v ? '1' : '0') } catch { /* хранилище недоступно */ } }}>
+          Короткий звук при напоминании на открытом сайте
+        </Toggle>
+        <p className="text-sm text-muted">Напоминания приходят, когда сайт открыт, или письмом.</p>
+      </div>
+      <div className="border-t border-line pt-5">
+        <Toggle checked={u.simpleMode} onChange={guard((v) => actions.setSimpleMode(v))}>
+          Простой режим: крупный шрифт, один экран «Сегодня»
+        </Toggle>
+      </div>
+      {moodProfile && (
+        <div className="border-t border-line pt-5">
+          <Toggle checked={moodProfile.notifyBadMood} onChange={guard((v) => actions.setNotifyBadMood(moodProfile.id, v))}>
+            Сообщать близким, если {self ? 'я отмечаю' : `${moodProfile.name} отмечает`} самочувствие «Плохо»
+          </Toggle>
+        </div>
+      )}
+      {owner && (
+        <div className="border-t border-line pt-5">
+          <Field label="Часовой пояс семьи" hint="По нему считаются времена приёма лекарств и визитов.">
+            <select value={state.family?.timezone || 'Europe/Moscow'} onChange={guard((e) => actions.setTimezone(e.target.value))}>
+              {TIMEZONES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            </select>
+          </Field>
+        </div>
+      )}
+      <ErrorText>{err}</ErrorText>
+    </Card>
+  )
+}
+
+function ViewLog({ state }) {
+  const log = state.accessLog.slice(0, 15)
+  if (!log.length) return <p className="text-muted">Пока записей нет.</p>
+  return (
+    <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet">
+      {log.map((l) => (
+        <li key={l.id} className="flex flex-wrap items-baseline justify-between gap-x-4 px-5 py-3">
+          <p className="text-[0.95rem]"><span className="font-medium">{l.who}</span><span className="text-muted">: {l.action}</span></p>
+          <p className="text-sm text-muted">{fmtDateTime(l.at)}</p>
         </li>
       ))}
     </ul>
@@ -150,6 +233,16 @@ export default function Privacy({ state }) {
 
       <H>Аккаунт</H>
       <Account state={state} />
+
+      <H>Уведомления и режимы</H>
+      <Settings state={state} />
+
+      {can(state).self && (
+        <>
+          <H>Кто открывал мои данные</H>
+          <ViewLog state={state} />
+        </>
+      )}
 
       <H>Документы</H>
       <ul className="grid gap-2 sm:grid-cols-2">

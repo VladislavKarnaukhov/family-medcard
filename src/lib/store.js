@@ -18,6 +18,13 @@ const EMPTY_DATA = {
   members: [],
   invites: [],
   accessLog: [],
+  medications: [],
+  intakes: [],
+  careNotes: [],
+  appointments: [],
+  notifications: [],
+  unreadNotifications: 0,
+  emergency: {},
   questions: {},
   unread: 0,
 }
@@ -59,6 +66,7 @@ const ls = {
 export const can = (s) => ({
   write: ['owner', 'add'].includes(s.me?.access),
   owner: s.me?.access === 'owner',
+  self: !!s.me?.selfProfileId,
 })
 
 function pickActive(profiles, familyId, want) {
@@ -145,7 +153,7 @@ export const actions = {
   },
 
   saveProfile: async (p) => {
-    const body = { name: p.name, birthYear: p.birthYear, sex: p.sex, notes: p.notes, basis: p.basis, attest: p.attest }
+    const body = { name: p.name, birthYear: p.birthYear, sex: p.sex, notes: p.notes, basis: p.basis, attest: p.attest, allergies: p.allergies, emergencyContacts: p.emergencyContacts }
     let id = p.id
     if (id) await api('PUT', `/api/profiles/${id}`, body)
     else id = (await api('POST', `/api/families/${state.familyId}/profiles`, body)).id
@@ -225,6 +233,52 @@ export const actions = {
     await refresh()
     return `${location.origin}/#/share/${token}`
   },
+
+  // ---------- уход ----------
+  saveMed: async (profileId, m) => {
+    const body = { name: m.name, form: m.form, dose: m.dose, times: m.times, days: m.days, startDate: m.startDate, endDate: m.endDate || null, prescribedBy: m.prescribedBy, note: m.note }
+    const r = m.id ? await api('PUT', `/api/medications/${m.id}`, body) : await api('POST', `/api/profiles/${profileId}/medications`, body)
+    await refresh()
+    return r
+  },
+  setMedStatus: act((id, status) => api('PUT', `/api/medications/${id}`, { status })),
+  deleteMed: act((id) => api('DELETE', `/api/medications/${id}`)),
+  markIntake: act((medId, scheduledAt, status, reason = '') => api('POST', `/api/medications/${medId}/intakes`, { scheduledAt, status, reason })),
+  addNote: act((profileId, n) => api('POST', `/api/profiles/${profileId}/care-notes`, n)),
+  updateNote: act((id, n) => api('PUT', `/api/care-notes/${id}`, n)),
+  deleteNote: act((id) => api('DELETE', `/api/care-notes/${id}`)),
+  saveVisit: async (profileId, v) => {
+    const body = { at: v.at, specialist: v.specialist, address: v.address, purpose: v.purpose, companion: v.companion, bring: v.bring, status: v.status, resultNote: v.resultNote, documentIds: v.documentIds }
+    const r = v.id ? await api('PUT', `/api/appointments/${v.id}`, body) : await api('POST', `/api/profiles/${profileId}/appointments`, body)
+    await refresh()
+    return r
+  },
+  deleteVisit: act((id) => api('DELETE', `/api/appointments/${id}`)),
+  requestVisit: act((id) => api('POST', `/api/appointments/${id}/request`, {})),
+  async readNotifications(ids) {
+    commit({ notifications: state.notifications.map((n) => (!ids || ids.includes(n.id) ? { ...n, read: true } : n)), unreadNotifications: ids ? Math.max(0, state.unreadNotifications - ids.length) : 0 })
+    await api('POST', '/api/notifications/read', ids ? { ids } : {}).catch(() => {})
+  },
+  async setEmailEvents(events, intake) {
+    await api('PUT', '/api/me/email-events', { events, intake })
+    commit({ user: { ...state.user, emailEvents: events, emailIntake: intake } })
+  },
+  async setEmailIntake(on) {
+    await api('PUT', '/api/me/email-events', { events: state.user.emailEvents, intake: on })
+    commit({ user: { ...state.user, emailIntake: on } })
+  },
+  async setSimpleMode(on) {
+    await api('PUT', '/api/me/simple-mode', { on })
+    commit({ user: { ...state.user, simpleMode: on } })
+  },
+  setNotifyBadMood: act((profileId, on) => api('PUT', `/api/profiles/${profileId}/notify-bad-mood`, { on })),
+  setTimezone: act((timezone) => api('PUT', `/api/families/${state.familyId}/timezone`, { timezone })),
+  async createEmergency(profileId, contactsConfirmed) {
+    const r = await api('POST', `/api/profiles/${profileId}/emergency`, { consentConfirmed: true, contactsConfirmed })
+    await refresh()
+    return r
+  },
+  revokeEmergency: act((profileId) => api('DELETE', `/api/profiles/${profileId}/emergency`)),
 
   async deleteAccount(password) {
     await api('DELETE', '/api/me/account', { password })
