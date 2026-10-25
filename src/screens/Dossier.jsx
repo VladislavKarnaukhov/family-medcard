@@ -26,7 +26,7 @@ export default function Dossier({ state, profile }) {
   const [f, setF] = useState({ type: 'extract', title: '', date: localISO(), file: null })
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const { write, owner } = can(state)
+  const { write, owner } = can(state, profile)
 
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
 

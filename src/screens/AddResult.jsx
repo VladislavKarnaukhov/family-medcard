@@ -33,7 +33,7 @@ export default function AddResult({ state, profile }) {
         Сначала создайте профиль.
       </Empty>
     )
-  if (!can(state).write) return <Empty icon="lock">У вас доступ только для просмотра.</Empty>
+  if (!can(state, profile).write) return <Empty icon="lock">У вас доступ только для просмотра.</Empty>
 
   const addFiles = (list) => setFiles((f) => [...f, ...Array.from(list)])
 

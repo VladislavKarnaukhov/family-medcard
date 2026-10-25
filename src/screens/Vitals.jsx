@@ -45,7 +45,7 @@ export default function Vitals({ state, profile }) {
   const [touched, setTouched] = useState(false)
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const { write } = can(state)
+  const { write } = can(state, profile)
 
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
 

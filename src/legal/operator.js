@@ -10,4 +10,4 @@ export const OPERATOR = {
   notifier: '[ПРОВАЙДЕР ОТПРАВКИ КОДОВ ПОДТВЕРЖДЕНИЯ]',
 }
 
-export const LEGAL_VERSION = '2026-10-24-draft'
+export const LEGAL_VERSION = '2026-10-25-draft'

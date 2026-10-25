@@ -292,6 +292,23 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
     res.json({ ok: true })
   })
 
+  // Показ своих результатов другим участникам общей карты. Решает сам человек; владелец решает только за свой профиль «Это мои данные».
+  app.put('/api/profiles/:id/share-peers', needUser, (req, res) => {
+    const c = ctxProfile(req, res, req.params.id, 'write')
+    if (!c) return
+    const self = c.a.grant?.self_profile_id === c.p.id
+    const ownerOwn = isOwner(c.a) && c.p.basis === 'self'
+    if (!self && !ownerOwn) return fail(res, 403, 'Это решает сам человек')
+    if (req.body.on) {
+      if (req.body.consentConfirmed !== true) return fail(res, 400, 'Подтвердите согласие')
+      if (c.p.consent_status === 'attested') return fail(res, 400, 'Сначала нужно подтвердить согласие на обработку данных')
+      recordConsent(req, { userId: req.user.id, familyId: c.p.family_id, profileId: c.p.id, docId: 'consent_peers', method: 'attestation' })
+    }
+    run('UPDATE profiles SET share_peers = ? WHERE id = ?', req.body.on ? 1 : 0, c.p.id)
+    log(c.p.family_id, req.user, c.p.id, req.body.on ? 'Включён показ результатов участникам общей карты' : 'Выключен показ результатов участникам общей карты')
+    res.json({ ok: true })
+  })
+
   app.put('/api/families/:fid/timezone', needUser, (req, res) => {
     if (!ctxFamily(req, res, 'owner')) return
     const tz = str(req.body.timezone, 60)
