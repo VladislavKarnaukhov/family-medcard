@@ -184,7 +184,7 @@ function NoteLine({ n, state, simple }) {
 export function TodayContent({ state, profile, simple = false }) {
   useNow()
   const tz = state.family?.timezone || 'Europe/Moscow'
-  const { write } = can(state)
+  const { write } = can(state, profile)
   const now = localNow(tz)
   const { rows, prn } = daySchedule(state, profile.id, now.date)
   const next = nextAppointment(state, profile.id)

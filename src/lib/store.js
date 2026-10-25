@@ -63,8 +63,8 @@ const ls = {
   },
 }
 
-export const can = (s) => ({
-  write: ['owner', 'add'].includes(s.me?.access),
+export const can = (s, profile) => ({
+  write: ['owner', 'add'].includes(s.me?.access) && !profile?.peer,
   owner: s.me?.access === 'owner',
   self: !!s.me?.selfProfileId,
 })
@@ -271,6 +271,7 @@ export const actions = {
     await api('PUT', '/api/me/simple-mode', { on })
     commit({ user: { ...state.user, simpleMode: on } })
   },
+  setSharePeers: act((profileId, on) => api('PUT', `/api/profiles/${profileId}/share-peers`, { on, consentConfirmed: on })),
   setNotifyBadMood: act((profileId, on) => api('PUT', `/api/profiles/${profileId}/notify-bad-mood`, { on })),
   setTimezone: act((timezone) => api('PUT', `/api/families/${state.familyId}/timezone`, { timezone })),
   async createEmergency(profileId, contactsConfirmed) {

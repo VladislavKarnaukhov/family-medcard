@@ -8,7 +8,15 @@ export function familyAccess(user, familyId) {
   const g = get('SELECT * FROM grants WHERE family_id = ? AND user_id = ?', familyId, user.id)
   if (!g) return null
   if (g.expires_at && g.expires_at < today()) return null
-  return { access: g.access, profileIds: safeJson(g.profile_ids), grant: g }
+  // Общая карта: участники с собственным входом видят результаты друг друга, только если оба разрешили показ.
+  let peerIds = []
+  if (g.self_profile_id) {
+    const mine = get('SELECT share_peers, consent_status FROM profiles WHERE id = ?', g.self_profile_id)
+    if (mine?.share_peers && mine.consent_status === 'confirmed') {
+      peerIds = all("SELECT id FROM profiles WHERE family_id = ? AND id != ? AND share_peers = 1 AND consent_status IN ('confirmed', 'self')", familyId, g.self_profile_id).map((p) => p.id)
+    }
+  }
+  return { access: g.access, profileIds: safeJson(g.profile_ids), grant: g, peerIds }
 }
 
 // Действует ли подписанное согласие владельца семьи на обработку данных о здоровье.
@@ -30,12 +38,16 @@ export function buildState(familyId, a) {
   const staff = a.access === 'staff'
   const owner = a.access === 'owner'
   const family = get('SELECT * FROM families WHERE id = ?', familyId)
-  const profiles = all('SELECT * FROM profiles WHERE family_id = ? ORDER BY rowid', familyId).filter((p) => profileAllowed(a, p.id))
+  const everyone = all('SELECT * FROM profiles WHERE family_id = ? ORDER BY rowid', familyId)
+  const profiles = everyone.filter((p) => profileAllowed(a, p.id))
+  const peers = everyone.filter((p) => !profileAllowed(a, p.id) && a.peerIds?.includes(p.id))
   const pids = profiles.map((p) => p.id)
   const inP = inList(pids)
+  const seenIds = [...pids, ...peers.map((p) => p.id)]
+  const inSeen = inList(seenIds)
   const careGrants = all('SELECT self_profile_id, role_label, profile_ids FROM grants WHERE family_id = ?', familyId)
 
-  const labRows = all(`SELECT * FROM lab_results WHERE profile_id IN ${inP} ORDER BY date`, ...pids)
+  const labRows = all(`SELECT * FROM lab_results WHERE profile_id IN ${inSeen} ORDER BY date`, ...seenIds)
   const lids = labRows.map((l) => l.id)
 
   const state = {
@@ -43,7 +55,7 @@ export function buildState(familyId, a) {
     me: { access: a.access, selfProfileId: a.grant?.self_profile_id || null },
     assistant: { name: family.staff_id ? get('SELECT name FROM users WHERE id = ?', family.staff_id)?.name : null },
     consent: { ok: consentOk(familyId), stopped: !!family.processing_stopped, deleteAfter: family.delete_after },
-    profiles: profiles.map((p) => ({ id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: p.notes, basis: p.basis, consentStatus: p.consent_status, allergies: p.allergies, notifyBadMood: !!p.notify_bad_mood, hasSelfUser: careGrants.some((g) => g.self_profile_id === p.id), hasCaregiver: careGrants.some((g) => /сиделк/i.test(g.role_label) && profileAllowed({ profileIds: safeJson(g.profile_ids) }, p.id)), ...(a.access === 'share' ? {} : { emergencyContacts: safeJson(p.emergency_contacts) || [] }) })),
+    profiles: [...profiles, ...peers].map((p) => ({ peer: peers.includes(p), sharePeers: !!p.share_peers, id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: peers.includes(p) ? '' : p.notes, basis: p.basis, consentStatus: p.consent_status, allergies: peers.includes(p) ? '' : p.allergies, notifyBadMood: !!p.notify_bad_mood, hasSelfUser: careGrants.some((g) => g.self_profile_id === p.id), hasCaregiver: careGrants.some((g) => /сиделк/i.test(g.role_label) && profileAllowed({ profileIds: safeJson(g.profile_ids) }, p.id)), ...(a.access === 'share' ? {} : { emergencyContacts: peers.includes(p) ? [] : safeJson(p.emergency_contacts) || [] }) })),
     questions: Object.fromEntries(profiles.map((p) => [p.id, p.questions])),
     labResults: labRows.map((l) => ({ id: l.id, profileId: l.profile_id, date: l.date, labName: l.lab_name, sourceFile: l.source_file })),
     measurements: all(`SELECT * FROM measurements WHERE lab_result_id IN ${inList(lids)}`, ...lids).map((m) => ({
@@ -58,7 +70,7 @@ export function buildState(familyId, a) {
       normalizedUnit: m.normalized_unit,
       indicatorKey: m.indicator_key,
     })),
-    vitals: all(`SELECT * FROM vitals WHERE profile_id IN ${inP} ORDER BY datetime`, ...pids).map((v) => ({
+    vitals: all(`SELECT * FROM vitals WHERE profile_id IN ${inSeen} ORDER BY datetime`, ...seenIds).map((v) => ({
       id: v.id,
       profileId: v.profile_id,
       datetime: v.datetime,

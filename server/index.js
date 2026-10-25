@@ -333,6 +333,13 @@ app.get('/api/families/:fid/state', needUser, (req, res) => {
     const seen = get('SELECT id FROM access_log WHERE family_id = ? AND user_id = ? AND action = ? AND at > ?', req.params.fid, req.user.id, 'Открыл(а) данные', since)
     if (!seen) log(req.params.fid, req.user, null, 'Открыл(а) данные')
   }
+  // Участники общей карты видят результаты друг друга; каждое открытие пишется в журнал (не чаще раза в 30 минут).
+  if (a.peerIds?.length) {
+    const since = new Date(Date.now() - 30 * 60000).toISOString()
+    for (const pid of a.peerIds) {
+      if (!get('SELECT id FROM access_log WHERE profile_id = ? AND user_id = ? AND action = ? AND at > ?', pid, req.user.id, 'Участник общей карты открыл(а) результаты', since)) log(req.params.fid, req.user, pid, 'Участник общей карты открыл(а) результаты')
+    }
+  }
   const state = buildState(req.params.fid, a)
   state.notifications = all('SELECT * FROM notifications WHERE user_id = ? AND family_id = ? ORDER BY created_at DESC LIMIT 50', req.user.id, req.params.fid).map(notifView)
   state.unreadNotifications = get('SELECT COUNT(*) c FROM notifications WHERE user_id = ? AND family_id = ? AND read_at IS NULL', req.user.id, req.params.fid).c

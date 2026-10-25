@@ -49,7 +49,7 @@ export default function Summary({ state, profile, readOnly = false }) {
   const vit = vitalsSince(state, profile.id, days)
   const questions = state.questions[profile.id] || ''
   const sexText = SEX[profile.sex || '']
-  const editable = !readOnly && can(state).write
+  const editable = !readOnly && can(state, profile).write
   const periodLabel = PERIODS.find((p) => p[0] === period)[1].toLowerCase()
 
   const pdf = () => {

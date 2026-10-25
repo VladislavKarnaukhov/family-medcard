@@ -208,6 +208,49 @@ try {
     assert.equal(count('notifications', "kind = 'wellbeing_bad'"), 1)
   })
 
+  await step('shared card: two people see each other results only when both allowed', async () => {
+    const dadId = (await call('POST', `/api/families/${fid}/profiles`, { name: 'Папа', basis: 'adult', attest: true, birthYear: 1950, sex: 'm' })).json.id
+    const inv = await call('POST', `/api/families/${fid}/invites`, { preset: 'self', profileId: dadId, consentConfirmed: true })
+    const dadJar = await register('Папа Тестов', 'dad@example.test', inv.json.token)
+    await asUser(dadJar, async () => {
+      const s1 = await call('POST', `/api/profiles/${dadId}/self-consent/start`, {})
+      assert.equal((await call('POST', `/api/profiles/${dadId}/self-consent/sign`, { agree: true, code: s1.json.devCode })).status, 200)
+    })
+    assert.equal((await call('POST', `/api/profiles/${momId}/lab-results`, { date: '2026-10-20', labName: 'Тест', rows: [{ name: 'Глюкоза', value: 6.1, unit: 'ммоль/л' }] })).status, 200)
+    const famOf = async () => (await call('GET', '/api/me')).json.families[0].id
+    const dadState = () => asUser(dadJar, async () => (await call('GET', `/api/families/${await famOf()}/state`)).json)
+    let st = await dadState()
+    assert.deepEqual(st.profiles.map((p) => p.name), ['Папа'], 'nothing shared yet')
+    // мама разрешает показ, папа ещё нет: папа ничего не видит
+    await asUser(momJar, async () => {
+      assert.equal((await call('PUT', `/api/profiles/${momId}/share-peers`, { on: true })).status, 400, 'needs consent')
+      assert.equal((await call('PUT', `/api/profiles/${momId}/share-peers`, { on: true, consentConfirmed: true })).status, 200)
+    })
+    st = await dadState()
+    assert.deepEqual(st.profiles.map((p) => p.name), ['Папа'], 'mutual only')
+    // папа тоже разрешает: теперь видят друг друга
+    await asUser(dadJar, async () => assert.equal((await call('PUT', `/api/profiles/${dadId}/share-peers`, { on: true, consentConfirmed: true })).status, 200))
+    st = await dadState()
+    const peer = st.profiles.find((p) => p.id === momId)
+    assert.ok(peer && peer.peer, 'mom visible to dad')
+    assert.equal(st.labResults.filter((l) => l.profileId === momId).length, 1, 'results visible')
+    assert.equal(st.medications.filter((m) => m.profileId === momId).length, 0, 'no medications')
+    assert.equal(st.careNotes.filter((n) => n.profileId === momId).length, 0, 'no diary')
+    assert.equal(st.documents.filter((d) => d.profileId === momId).length, 0, 'no documents')
+    assert.equal(peer.notes, '')
+    // читать можно, писать в чужой профиль нельзя
+    await asUser(dadJar, async () => {
+      assert.ok((await call('POST', `/api/profiles/${momId}/lab-results`, { date: '2026-10-21', labName: 'X', rows: [{ name: 'Глюкоза', value: 5, unit: 'ммоль/л' }] })).status >= 400)
+      assert.ok((await call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'other', text: 'x' })).status >= 400)
+    })
+    assert.ok(count('access_log', "action = 'Участник общей карты открыл(а) результаты'") >= 1, 'view is logged')
+    // выключение у мамы скрывает её результаты у папы
+    await asUser(momJar, async () => assert.equal((await call('PUT', `/api/profiles/${momId}/share-peers`, { on: false })).status, 200))
+    st = await dadState()
+    assert.deepEqual(st.profiles.map((p) => p.name), ['Папа'])
+    await asUser(momJar, async () => call('PUT', `/api/profiles/${momId}/share-peers`, { on: false }))
+  })
+
   await step('view-only relative cannot mark or write (403 on the server)', async () => {
     const inv = await call('POST', `/api/families/${fid}/invites`, { access: 'view', role: 'Брат', profileIds: [momId], consentConfirmed: true })
     viewerJar = await register('Брат Тестов', 'bro@example.test', inv.json.token)

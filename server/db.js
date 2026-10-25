@@ -227,6 +227,7 @@ addColumn('users', 'email_intake', 'INTEGER NOT NULL DEFAULT 0')
 addColumn('users', 'simple_mode', 'INTEGER NOT NULL DEFAULT 0')
 addColumn('users', 'emailed_at', 'TEXT')
 addColumn('users', 'digest_date', 'TEXT')
+addColumn('profiles', 'share_peers', 'INTEGER NOT NULL DEFAULT 0')   // показывать результаты другим участникам общей карты, которые тоже разрешили
 addColumn('grants', 'self_profile_id', 'TEXT REFERENCES profiles(id) ON DELETE CASCADE')
 addColumn('invites', 'self_profile_id', 'TEXT')
 

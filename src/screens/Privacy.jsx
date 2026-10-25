@@ -49,6 +49,8 @@ function Settings({ state }) {
   })
   const [err, setErr] = useState('')
   const selfProfile = state.profiles.find((p) => p.id === state.me?.selfProfileId)
+  const shareProfile = selfProfile || (owner ? state.profiles.find((p) => p.basis === 'self') : null)
+  const [peerOk, setPeerOk] = useState(false)
   const moodProfile = selfProfile || (owner ? state.profiles.find((p) => !p.hasSelfUser) : null)
   const guard = (fn) => async (...a) => {
     setErr('')
@@ -88,6 +90,23 @@ function Settings({ state }) {
           <Toggle checked={moodProfile.notifyBadMood} onChange={guard((v) => actions.setNotifyBadMood(moodProfile.id, v))}>
             Сообщать близким, если {self ? 'я отмечаю' : `${moodProfile.name} отмечает`} самочувствие «Плохо»
           </Toggle>
+        </div>
+      )}
+      {shareProfile && (
+        <div className="space-y-3 border-t border-line pt-5">
+          <p className="font-medium">Общая карта</p>
+          <p className="text-sm text-muted">Участники общей карты со своим входом могут видеть анализы, показатели и замеры давления друг друга. Показ взаимный: вы видите чужие результаты, только если разрешили показ своих. Дневник, лекарства и документы не показываются.</p>
+          {shareProfile.sharePeers ? (
+            <Button variant="ghost" onClick={guard(() => actions.setSharePeers(shareProfile.id, false))}>Выключить показ моих результатов</Button>
+          ) : (
+            <>
+              <Toggle checked={peerOk} onChange={setPeerOk}>
+                Разрешаю показывать мои результаты другим участникам общей карты. <DocLink id="consent_peers">Документ</DocLink>
+              </Toggle>
+              <Button disabled={!peerOk || shareProfile.consentStatus === 'attested'} onClick={guard(() => actions.setSharePeers(shareProfile.id, true))}>Включить показ</Button>
+              {shareProfile.consentStatus === 'attested' && <p className="text-sm text-muted">Сначала подтвердите согласие на обработку данных.</p>}
+            </>
+          )}
         </div>
       )}
       {owner && (

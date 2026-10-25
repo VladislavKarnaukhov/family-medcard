@@ -103,7 +103,7 @@ function Timeline({ events, write }) {
 }
 
 export default function Dashboard({ state, profile }) {
-  const { owner, write } = can(state)
+  const { owner, write } = can(state, profile)
 
   const model = useMemo(() => {
     if (!profile) return null
@@ -237,7 +237,13 @@ export default function Dashboard({ state, profile }) {
         }
       />
 
-      {!owner && me && (
+      {profile.peer && (
+        <p className="mb-6 rounded-xl bg-accent-soft px-4 py-3 text-[0.95rem]">
+          {profile.name} разрешил(а) показ результатов участникам общей карты. Вы видите анализы, показатели и замеры давления, только для просмотра.
+        </p>
+      )}
+
+      {!owner && me && !profile.peer && (
         <p className="mb-6 rounded-lg bg-accent-soft px-4 py-3 text-[0.95rem]">
           Вы в круге заботы: {me.roleLabel}. {write ? 'Можно просматривать данные и добавлять документы.' : 'Доступ только для просмотра.'}
           {me.expiresAt ? ` Доступ до ${fmtDate(me.expiresAt)}.` : ''}
@@ -294,7 +300,7 @@ export default function Dashboard({ state, profile }) {
             )}
           </section>
 
-          <CareBlock state={state} profile={profile} owner={owner} write={write} />
+          {!profile.peer && <CareBlock state={state} profile={profile} owner={owner} write={write} />}
 
           {owner && (
             <a href="#/assistant" className="lift block rounded-2xl bg-card p-6 shadow-sheet">
