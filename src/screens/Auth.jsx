@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Card, ErrorText, Field, Notice, Toggle } from '../components/ui'
 import { Footer, Wordmark } from '../components/Layout'
-import { RangeBar } from '../components/RangeBar'
 import { api } from '../lib/api'
 import { actions, useStore } from '../lib/store'
 import { DocLink } from './Legal'
@@ -10,7 +9,7 @@ import { OtpSign } from './ConsentGate'
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
 // Вход и регистрация: на компьютере слева текстовая колонка с примером строки результата, справа форма.
-export function AuthShell({ children, wide = false, headline = 'Забота без тревоги', sentence = 'Расписание приёма, отметки и сводка для врача в одном месте. Вы видите, что принято сегодня, а доступ остаётся у вас.', brand = '', sample = true }) {
+export function AuthShell({ children, wide = false, headline = 'Забота без тревоги', sentence = '', brand = '' }) {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col lg:flex-row">
@@ -21,20 +20,7 @@ export function AuthShell({ children, wide = false, headline = 'Забота б�
           </div>
           <div className="mt-auto hidden max-w-[26rem] lg:block">
             <h2 className="text-[2.75rem] leading-[1.05] tracking-[-0.04em]">{headline}</h2>
-            <p className="mt-4 text-[1.05rem] text-muted">{sentence}</p>
-            {sample && (
-              <div className="mt-10 border-t border-line pt-4" aria-label="Пример строки на экране «Сегодня»">
-                <p className="mb-2 text-xs text-muted">Пример экрана «Сегодня»</p>
-                <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-semibold">Утро · Метформин, 500 мг</p>
-                  <p className="text-sm font-medium text-accent-dark">Принято в 08:12</p>
-                </div>
-                <div className="mt-3 flex items-baseline justify-between gap-3">
-                  <p className="font-semibold">Вечер · Метформин, 500 мг</p>
-                  <p className="text-sm text-muted">в 20:00</p>
-                </div>
-              </div>
-            )}
+            {sentence && <p className="mt-4 text-[1.05rem] text-muted">{sentence}</p>}
           </div>
           <p className="mt-4 text-lg font-medium lg:hidden">{headline}</p>
         </section>
@@ -51,7 +37,6 @@ export const STAFF_SHELL = {
   headline: 'Рабочее место помощников',
   sentence: 'Очередь диалогов, внесение показателей из бланков и поручения клиентов. Каждое открытие семьи записывается в журнал владельца.',
   brand: 'Сотрудники',
-  sample: false,
 }
 
 export function AuthForm({ invite, onDone, startMode }) {
