@@ -20,6 +20,7 @@ import ConsentGate from './screens/ConsentGate'
 import Privacy, { Stopped } from './screens/Privacy'
 import SubjectConsent from './screens/SubjectConsent'
 import Today, { DueBanner, TodayContent } from './screens/Today'
+import Diary from './screens/Diary'
 import { MedForm, MedsList } from './screens/Meds'
 import { VisitForm, VisitsList } from './screens/Visits'
 import CareNote from './screens/CareNote'
@@ -116,6 +117,8 @@ export default function App() {
         return route[2] ? <MedForm state={state} profile={p} id={route[2]} /> : <MedsList state={state} profile={p} />
       case 'visits':
         return route[2] ? <VisitForm state={state} profile={p} id={route[2]} /> : <VisitsList state={state} profile={p} />
+      case 'diary':
+        return <Diary state={state} profile={p} />
       case 'care':
         return <CareNote state={state} profile={p} kind0={route[3]} />
       default:
@@ -126,7 +129,7 @@ export default function App() {
   // Простой режим: «Сегодня» своего профиля, без меню и лишних экранов.
   if (state.user.simpleMode && profile) {
     const mine = state.profiles.find((p) => p.id === state.me?.selfProfileId) || profile
-    const allowed = ['meds', 'visits', 'care', 'notifications', 'privacy']
+    const allowed = ['meds', 'visits', 'care', 'diary', 'notifications', 'privacy']
     return (
       <>
         <DueBanner state={state} />
@@ -153,6 +156,7 @@ export default function App() {
     case 'meds':
     case 'visits':
     case 'care':
+    case 'diary':
       screen = carePage()
       break
     case 'notifications':

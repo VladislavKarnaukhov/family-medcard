@@ -158,7 +158,7 @@ export function DayFeed({ state, profile, date, simple }) {
   )
 }
 
-function NoteLine({ n, state, simple }) {
+export function NoteLine({ n, state, simple }) {
   const mine = state.user && n.authorId === state.user.id
   const editable = mine && Date.now() - Date.parse(n.createdAt) < 86400000
   return (
