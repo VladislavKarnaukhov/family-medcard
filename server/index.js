@@ -9,10 +9,12 @@ import { buildState, canWrite, consentOk, consentStatus, familyAccess, isOwner, 
 import { mountConsent, recordConsent } from './consent.js'
 import { aiEnabled, recognizeWithClaude } from './recognize.js'
 import { ensureStaff } from './seed.js'
-import { appUrl, isProd, layout, sendMailSoon } from './mailer.js'
+import { appUrl, assertMailConfigured, isProd, layout, sendMailSoon } from './mailer.js'
 import { mountAccount } from './account.js'
 import { mountCare, notifView } from './care.js'
 import { startScheduler } from './scheduler.js'
+
+assertMailConfigured()
 
 const here = dirname(fileURLToPath(import.meta.url))
 const app = express()
