@@ -12,6 +12,7 @@
     "start": "NODE_ENV=production node --env-file-if-exists=.env server/index.js",
     "seed": "node --env-file-if-exists=.env server/seed.js",
     "backup": "node server/backup.js",
+    "restore": "node scripts/restore.mjs",
     "share": "node scripts/share.mjs",
     "serve": "vite build && npm start",
     "share:public": "DATA_DIR=server/data/public node scripts/share.mjs",
