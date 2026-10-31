@@ -29,9 +29,11 @@ export function tick(now = new Date()) {
             if (selfUser && local.dt < addMinutes(sched, UNMARKED_AFTER)) {
               const made = notify({ familyId: f.id, profileId: p.id, kind: 'intake_due', title: 'Время принять лекарство', link: '#/today', refId: `${p.id}|${sched}`, userIds: [selfUser.user_id] })
               const u = made.length && get('SELECT email_intake FROM users WHERE id = ?', selfUser.user_id)
-              if (u?.email_intake) {
+              // Не чаще одного письма о приёме в 15 минут на человека, даже если время приёма у нескольких лекарств.
+              const recent = get("SELECT 1 FROM notifications WHERE user_id = ? AND kind = 'intake_due' AND emailed_at > ?", selfUser.user_id, new Date(now.getTime() - 15 * 60000).toISOString())
+              if (u?.email_intake && !recent) {
                 deliverMail(selfUser.user_id, 'Время принять лекарство', 'Пора отметить приём лекарства.', '#/today')
-                run('UPDATE notifications SET emailed_at = ? WHERE id = ?', nowIso(), made[0].id)
+                run('UPDATE notifications SET emailed_at = ? WHERE id = ?', now.toISOString(), made[0].id)
               }
             }
             // Через час без отметки приём становится «не отмечен».
