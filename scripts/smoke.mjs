@@ -541,6 +541,23 @@ try {
     assert.equal((await call('DELETE', '/api/me/account', { password: 'long-enough-1' })).status, 200)
   })
 
+  await step('/health answers, bad JSON is a 400 not a 500, errors go to a private log without bodies (M-47)', async () => {
+    const h = await call('GET', '/health')
+    assert.equal(h.json.ok, true)
+    const bad = await fetch(base + '/api/auth/login', { method: 'POST', headers: { 'x-app': '1', 'content-type': 'application/json' }, body: '{oops' })
+    assert.equal(bad.status, 400)
+    const { logError } = await import('../server/errlog.js')
+    const origErr = console.error
+    console.error = () => {}
+    logError(new Error('проверка журнала'), { method: 'POST', path: '/api/x', body: { password: 'секрет' } })
+    console.error = origErr
+    const f = join(dir, 'errors.log')
+    assert.equal(statSync(f).mode & 0o777, 0o600)
+    const t = readFileSync(f, 'utf8')
+    assert.match(t, /проверка журнала/)
+    assert.ok(!t.includes('секрет'))
+  })
+
   await step('unknown page gives a friendly 404, API 404 stays JSON (M-46)', async () => {
     const page = await call('GET', '/no/such/page')
     assert.equal(page.status, 404)
