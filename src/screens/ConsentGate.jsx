@@ -71,6 +71,27 @@ export function OtpSign({ docId, startUrl, signUrl, extra = {}, onDone, startBod
   )
 }
 
+// Экран «Сам(а)»: пока человек не подтвердил своё согласие, работать с профилем нельзя.
+export function SelfConsentGate({ profileId }) {
+  return (
+    <AuthShell wide>
+      <h1 className="mb-2 text-[1.75rem]">Ваше согласие</h1>
+      <p className="mb-5 text-muted">Данные о вашем здоровье вносятся в сервис. Чтобы отмечать лекарства и писать в дневник, подтвердите согласие: код придёт на вашу почту.</p>
+      <Card className="!p-6">
+        <OtpSign docId="consent_subject" startUrl={`/api/profiles/${profileId}/self-consent/start`} signUrl={`/api/profiles/${profileId}/self-consent/sign`} onDone={refresh} agreeText="Я прочитал(а) документ и даю согласие на обработку данных о моём здоровье." />
+      </Card>
+      <div className="mt-3 flex gap-5">
+        <a className="inline-flex min-h-12 items-center font-medium text-accent-dark hover:underline" href="#/privacy">
+          Мои данные и согласия
+        </a>
+        <button className="min-h-12 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
+          Выйти
+        </button>
+      </div>
+    </AuthShell>
+  )
+}
+
 export default function ConsentGate({ outdated = false }) {
   return (
     <AuthShell wide>

@@ -364,6 +364,21 @@ try {
     })
   })
 
+  await step('self user cannot write until they sign their own consent (M-31)', async () => {
+    const auntId = (await call('POST', `/api/families/${fid}/profiles`, { name: 'Тётя', basis: 'adult', attest: true, birthYear: 1952, sex: 'f' })).json.id
+    const inv = await call('POST', `/api/families/${fid}/invites`, { preset: 'self', profileId: auntId, consentConfirmed: true })
+    const auntJar = await register('Тётя Тестова', 'aunt@example.test', inv.json.token)
+    await asUser(auntJar, async () => {
+      const w = await call('POST', `/api/profiles/${auntId}/care-notes`, { kind: 'other', text: 'до согласия' })
+      assert.equal(w.status, 403)
+      assert.equal(w.json.code, 'self_consent_required')
+      assert.equal((await call('GET', `/api/families/${fid}/state`)).status, 200, 'reading still works')
+      const st = await call('POST', `/api/profiles/${auntId}/self-consent/start`, {})
+      assert.equal((await call('POST', `/api/profiles/${auntId}/self-consent/sign`, { agree: true, code: st.json.devCode })).status, 200)
+      assert.equal((await call('POST', `/api/profiles/${auntId}/care-notes`, { kind: 'other', text: 'после согласия' })).status, 200)
+    })
+  })
+
   await step('appointment and request to the assistant', async () => {
     const at = `${addDays(today, 1)}T12:00`
     const a = await call('POST', `/api/profiles/${momId}/appointments`, { at, specialist: 'Кардиолог', purpose: 'Планово' })
