@@ -229,6 +229,15 @@ export const actions = {
   revokeInvite: act((token) => api('DELETE', `/api/invites/${token}`)),
   removeMember: act((id) => api('DELETE', `/api/families/${state.familyId}/members/${id}`)),
 
+  sendFeedback: (text) => api('POST', '/api/feedback', { text }),
+  async answerSurvey(a) {
+    await api('POST', '/api/survey', a)
+    commit({ user: { ...state.user, surveyDue: false } })
+  },
+  async dismissSurvey() {
+    await api('POST', '/api/survey/dismiss', {})
+    commit({ user: { ...state.user, surveyDue: false } })
+  },
   revokeShareLink: act((token) => api('DELETE', `/api/share/${token}`)),
 
   async createShareLink(profileId, days) {

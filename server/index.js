@@ -14,6 +14,7 @@ import { mountAccount, sendVerification } from './account.js'
 import { mountCare, notifView } from './care.js'
 import { startScheduler } from './scheduler.js'
 import { startBackups } from './backup.js'
+import { mountFeedback, surveyDue } from './feedback.js'
 
 assertMailConfigured()
 
@@ -90,7 +91,7 @@ function mePayload(user) {
   const pref = get('SELECT email_events, email_intake, simple_mode, email_verified_at FROM users WHERE id = ?', user.id)
   const isOwnerAny = families.some((f) => f.access === 'owner')
   return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role, isAdmin: !!user.is_admin, simpleMode: !!pref?.simple_mode, emailVerified: user.role === 'staff' || !!pref?.email_verified_at, emailEvents: pref?.email_events || (isOwnerAny ? 'instant' : 'off'), emailIntake: !!pref?.email_intake },
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, isAdmin: !!user.is_admin, simpleMode: !!pref?.simple_mode, emailVerified: user.role === 'staff' || !!pref?.email_verified_at, surveyDue: surveyDue({ ...user, created_at: user.created_at || get('SELECT created_at FROM users WHERE id = ?', user.id)?.created_at }), emailEvents: pref?.email_events || (isOwnerAny ? 'instant' : 'off'), emailIntake: !!pref?.email_intake },
     families,
   }
 }
@@ -853,6 +854,7 @@ app.post('/api/recognize', needUser, express.raw({ type: () => true, limit: '25m
 })
 
 mountAccount(app, { needUser, needStaff, fail })
+mountFeedback(app, { needUser, needStaff, fail })
 mountConsent(app, { needUser, needStaff, fail, ctxProfile, removeFiles, wipeFamily })
 mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAccess, tooMany, bump })
 

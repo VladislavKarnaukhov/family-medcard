@@ -512,6 +512,24 @@ try {
     assert.equal(api404.json.error, 'not_found')
   })
 
+  await step('feedback message is stored, survey appears on day 14 and is answered once (M-52, M-53)', async () => {
+    await call('POST', '/api/auth/logout', {})
+    await call('POST', '/api/auth/register', { name: 'Отзыв Тестов', email: 'fb@example.test', password: 'long-enough-1', consents: { terms: true, consent_pd: true } })
+    assert.equal((await call('POST', '/api/feedback', { text: '' })).status, 400)
+    assert.equal((await call('POST', '/api/feedback', { text: 'Не нашла, где менять время приёма' })).status, 200)
+    assert.equal((await call('GET', '/api/me')).json.user.surveyDue, false, 'not before day 14')
+    db.prepare("UPDATE users SET created_at = ? WHERE email = 'fb@example.test'").run(`${addDays(today, -15)}T00:00:00.000Z`)
+    assert.equal((await call('GET', '/api/me')).json.user.surveyDue, true, 'due after 14 days')
+    assert.equal((await call('POST', '/api/survey', { ease: 9 })).status, 400)
+    assert.equal((await call('POST', '/api/survey', { ease: 4, recommend: true, blocker: 'Забываю открыть' })).status, 200)
+    assert.equal((await call('POST', '/api/survey', { ease: 5 })).status, 409, 'once')
+    assert.equal((await call('GET', '/api/me')).json.user.surveyDue, false)
+    assert.equal(count('feedback', "kind = 'message'"), 1)
+    assert.equal(count('events', "name = 'feedback_sent'"), 1)
+    assert.equal((await call('DELETE', '/api/me/account', { password: 'long-enough-1' })).status, 200)
+    assert.equal(count('feedback', "kind IN ('message','survey')"), 0, 'removed with the account')
+  })
+
   await step('wrong password rejected', async () => {
     cookie = ''
     assert.equal((await call('POST', '/api/auth/login', { email: 't@example.test', password: 'nope-nope-1' })).status, 401)
