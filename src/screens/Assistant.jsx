@@ -93,8 +93,8 @@ export default function Assistant({ state, profile }) {
         </div>
       </header>
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="min-w-0 lg:order-1" aria-label="Переписка">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="min-w-0 xl:order-1" aria-label="Переписка">
           <div className="flex min-h-[26rem] flex-col rounded-2xl bg-card shadow-sheet ">
             <ul className="flex-1 space-y-1 px-4 py-5 lg:max-h-[calc(100vh-22rem)] lg:overflow-y-auto lg:px-6" aria-live="polite">
               {state.messages.length === 0 && <li className="py-10 text-center text-muted">Сообщений пока нет. Напишите помощнику или выберите поручение.</li>}
@@ -147,7 +147,7 @@ export default function Assistant({ state, profile }) {
           </div>
         </section>
 
-        <aside className="space-y-8 lg:order-2">
+        <aside className="space-y-8 xl:order-2">
           <section>
             <h2 className="mb-1 text-lg">Поручить</h2>
             <p className="mb-3 text-sm text-muted">Для профиля «{profile?.name ?? '—'}»</p>

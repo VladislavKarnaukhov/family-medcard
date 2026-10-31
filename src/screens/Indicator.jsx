@@ -96,7 +96,7 @@ export default function Indicator({ state, profile, keyName }) {
         }
       />
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="min-w-0">
           <Card className="!px-3 lg:!px-5">
             <div className="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1 px-1">
@@ -167,7 +167,7 @@ export default function Indicator({ state, profile, keyName }) {
           </ul>
         </div>
 
-        <aside className="space-y-4 lg:sticky lg:top-8 lg:self-start">
+        <aside className="space-y-4 xl:sticky xl:top-8 xl:self-start">
           <Card>
             <h2 className="mb-2 text-lg">Что это за показатель</h2>
             <p>{ind?.about || 'Показатель из вашего бланка. Справочного описания в сервисе пока нет.'}</p>

@@ -351,7 +351,7 @@ export default function Layout({ route = [], state, bare, children }) {
             <UserMenu key={route.join("/")} state={state} />
           </div>
         </header>
-        <main className="flex-1 px-4 pb-28 pt-5 lg:px-14 lg:pb-14 lg:pt-12 print:p-0">
+        <main className="flex-1 px-4 pb-28 pt-5 lg:px-8 lg:pb-14 lg:pt-12 xl:px-14 print:p-0">
           <VerifyBanner state={state} />
           <SurveyBanner state={state} />
           {state.profiles.length > 0 && route[0] !== 'profile' && (

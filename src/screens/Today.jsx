@@ -330,22 +330,44 @@ export function DueBanner({ state }) {
     }
   }, [key, sound])
   const shown = due.length ? due : late
-  if (!shown.length || bannerOnScreen(window.location.hash, state.user?.simpleMode)) return null
+  const shownKey = (due.length ? 'due:' : 'late:') + shown.map((d) => d.r.at + d.r.med.id).join('|')
+  const [hiddenKey, setHiddenKey] = useState(() => {
+    try {
+      return sessionStorage.getItem('blizkie-banner-hidden')
+    } catch {
+      return null
+    }
+  })
+  if (!shown.length || hiddenKey === shownKey || bannerOnScreen(window.location.hash, state.user?.simpleMode)) return null
+  const hide = () => {
+    setHiddenKey(shownKey)
+    try {
+      sessionStorage.setItem('blizkie-banner-hidden', shownKey)
+    } catch {
+      /* хранилище недоступно */
+    }
+  }
   const d = shown[0]
   return (
-    <div role="alert" className="no-print fixed inset-x-3 top-3 z-40 mx-auto max-w-[560px] rounded-2xl bg-card p-5 shadow-pop ring-1 ring-line lg:inset-x-auto lg:bottom-6 lg:right-6 lg:top-auto lg:mx-0 lg:w-[400px]">
-      <p className="text-lg font-semibold">{due.length ? 'Время принять лекарство' : 'Приём не отмечен'}</p>
-      <p className="mt-0.5 text-muted">
-        {d.r.time}: {d.r.med.name}
-        {state.profiles.length > 1 ? `, ${d.p.name}` : ''}
-        {shown.length > 1 ? ` и ещё ${shown.length - 1}` : ''}
-        {due.length ? '' : '. Вы приняли?'}
-      </p>
-      <div className="mt-4 flex flex-wrap gap-3">
-        <Button className="!min-h-14 flex-1" icon="check" onClick={() => actions.markIntake(d.r.med.id, d.r.at, 'taken')}>
+    <div role="status" className="no-print fixed inset-x-3 bottom-[5rem] z-40 mx-auto max-w-[560px] rounded-2xl bg-card p-4 shadow-pop ring-1 ring-line lg:inset-x-auto lg:bottom-6 lg:right-6 lg:mx-0 lg:w-[400px]">
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">{due.length ? 'Время принять лекарство' : 'Приём не отмечен'}</p>
+          <p className="truncate text-[0.95rem] text-muted">
+            {d.r.time}: {d.r.med.name}
+            {state.profiles.length > 1 ? `, ${d.p.name}` : ''}
+            {shown.length > 1 ? ` и ещё ${shown.length - 1}` : ''}
+          </p>
+        </div>
+        <button type="button" aria-label="Скрыть напоминание" onClick={hide} className="-mr-2 -mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-sunken">
+          <Icon name="x" size={18} />
+        </button>
+      </div>
+      <div className="mt-1 flex gap-3">
+        <Button className="flex-1" icon="check" onClick={() => actions.markIntake(d.r.med.id, d.r.at, 'taken')}>
           Принял(а)
         </Button>
-        <Button className="!min-h-14 flex-1" variant="ghost" onClick={() => go('today')}>
+        <Button className="flex-1" variant="ghost" onClick={() => go('today')}>
           Открыть
         </Button>
       </div>

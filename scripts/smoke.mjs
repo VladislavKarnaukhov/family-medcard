@@ -576,6 +576,22 @@ try {
     for (const id of [a, b, c]) await call('DELETE', `/api/profiles/${id}`)
   })
 
+  await step('layout guards: two-column pages start at xl (content is only ~700 px wide at lg), explicit single column below, fixed lab table, reminder above the bottom bar', async () => {
+    const read = (f) => readFileSync(f, 'utf8')
+    for (const f of ['Dashboard', 'Indicator', 'Vitals', 'Assistant', 'Circle', 'EditResult', 'AddResult']) {
+      const s = read(`src/screens/${f}.jsx`)
+      assert.ok(!/lg:grid-cols-\[/.test(s), `${f}: no two-column grid at lg`)
+      assert.ok(/grid-cols-1 gap-8/.test(s), `${f}: explicit single column (no auto track that grows with a wide table)`)
+    }
+    const dash = read('src/screens/Dashboard.jsx')
+    assert.match(dash, /table-fixed/, 'lab table cannot outgrow its column')
+    assert.match(dash, /grid-cols-1 gap-x-4 py-3 sm:grid-cols-\[5rem/, 'on a phone the date sits above the lab table')
+    const today = read('src/screens/Today.jsx')
+    assert.ok(!/fixed inset-x-3 top-3/.test(today), 'reminder no longer covers the top of the page')
+    assert.match(today, /bottom-\[5rem\]/)
+    assert.match(today, /blizkie-banner-hidden/, 'reminder can be dismissed')
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
