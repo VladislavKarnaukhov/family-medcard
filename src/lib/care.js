@@ -76,6 +76,12 @@ export function daySchedule(state, profileId, date) {
   return { rows, prn }
 }
 
+// Что показать в плашке: приёмы «время принять»; если таких нет, то сегодняшние неотмеченные (спокойная формулировка, без «пропущено»).
+export function bannerRows(rows) {
+  const due = rows.filter((r) => r.state === 'due')
+  return due.length ? { kind: 'due', rows: due } : { kind: 'late', rows: rows.filter((r) => r.state === 'unmarked') }
+}
+
 export const marked = (rows) => rows.filter((r) => r.state === 'taken' || r.state === 'skipped').length
 
 export function nextAppointment(state, profileId) {

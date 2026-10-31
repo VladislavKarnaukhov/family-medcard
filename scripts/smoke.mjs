@@ -352,6 +352,16 @@ try {
     assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken' })).status, 200)
   })
 
+  await step('banner picks due slots first, else today\'s unmarked ones (M-08)', async () => {
+    const { bannerRows } = await import('../src/lib/care.js')
+    const r = (state) => ({ state })
+    assert.deepEqual(bannerRows([r('later'), r('due'), r('unmarked')]).kind, 'due')
+    const late = bannerRows([r('taken'), r('unmarked'), r('later')])
+    assert.equal(late.kind, 'late')
+    assert.equal(late.rows.length, 1)
+    assert.equal(bannerRows([r('taken'), r('skipped'), r('later')]).rows.length, 0)
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {

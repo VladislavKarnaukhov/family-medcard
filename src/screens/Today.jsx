@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button, Chip, Empty, ErrorText, H, PageHeader, go } from '../components/ui'
 import { Icon } from '../components/icons'
 import { actions, can } from '../lib/store'
-import { KIND_LABEL, MOOD_LABEL, NEEDS, daySchedule, fmtDt, isMarker, localNow, marked, nextAppointment } from '../lib/care'
+import { KIND_LABEL, MOOD_LABEL, NEEDS, bannerRows, daySchedule, fmtDt, isMarker, localNow, marked, nextAppointment } from '../lib/care'
 
 export function useNow(ms = 30000) {
   const [n, setN] = useState(Date.now())
@@ -298,10 +298,11 @@ export function DueBanner({ state }) {
   const tzx = state.family?.timezone || 'Europe/Moscow'
   const now = localNow(tzx)
   const due = []
+  const late = []
   for (const p of state.profiles) {
     if (!isMarker(state, p) || !can(state).write) continue
-    const { rows } = daySchedule(state, p.id, now.date)
-    for (const r of rows) if (r.state === 'due') due.push({ p, r })
+    const b = bannerRows(daySchedule(state, p.id, now.date).rows)
+    for (const r of b.rows) (b.kind === 'due' ? due : late).push({ p, r })
   }
   const key = due.map((d) => d.r.at + d.r.med.id).join('|')
   useEffect(() => {
@@ -317,15 +318,17 @@ export function DueBanner({ state }) {
       /* звук недоступен */
     }
   }, [key, sound])
-  if (!due.length) return null
-  const d = due[0]
+  const shown = due.length ? due : late
+  if (!shown.length) return null
+  const d = shown[0]
   return (
     <div role="alert" className="no-print fixed inset-x-3 top-3 z-40 mx-auto max-w-[560px] rounded-2xl bg-card p-5 shadow-pop ring-1 ring-line">
-      <p className="text-lg font-semibold">Время принять лекарство</p>
+      <p className="text-lg font-semibold">{due.length ? 'Время принять лекарство' : 'Приём не отмечен'}</p>
       <p className="mt-0.5 text-muted">
         {d.r.time}: {d.r.med.name}
         {state.profiles.length > 1 ? `, ${d.p.name}` : ''}
-        {due.length > 1 ? ` и ещё ${due.length - 1}` : ''}
+        {shown.length > 1 ? ` и ещё ${shown.length - 1}` : ''}
+        {due.length ? '' : '. Вы приняли?'}
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
         <Button className="!min-h-14 flex-1" icon="check" onClick={() => actions.markIntake(d.r.med.id, d.r.at, 'taken')}>
