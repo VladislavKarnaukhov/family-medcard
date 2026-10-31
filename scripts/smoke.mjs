@@ -605,6 +605,7 @@ try {
     const emergency = readFileSync('src/screens/Emergency.jsx', 'utf8')
     assert.match(emergency, /<CardView c=\{card\} as="h2"/, 'one h1 per page')
     assert.match(readFileSync('src/screens/Summary.jsx', 'utf8'), /aria-label="Мои вопросы врачу"/)
+    assert.match(readFileSync('src/lib/store.js', 'utf8'), /!state\.user\.emailVerified[\s\S]{0,160}\/api\/me/, 'verification banner refreshes itself')
   })
 
   await step('another family cannot see or change this family (isolation)', async () => {

@@ -70,6 +70,8 @@ export default function ProfileForm({ profile, isNew }) {
   const basisBad = isNew && (!f.basis || (minor && f.basis !== 'guardian_child'))
   const attestNeeded = isNew && f.basis && f.basis !== 'self'
   const valid = f.name.trim() && !yearBad && !basisBad && (!attestNeeded || f.attest)
+  // Что мешает сохранить: показываем причину рядом с неактивной кнопкой.
+  const why = !f.name.trim() ? 'Укажите имя.' : yearBad ? 'Проверьте год рождения.' : basisBad ? (minor && f.basis && f.basis !== 'guardian_child' ? 'По году рождения это несовершеннолетний: выберите «Данные ребёнка».' : 'Выберите, чьи это данные.') : attestNeeded && !f.attest ? 'Подтвердите согласие или полномочия.' : ''
 
   if (!isNew && !profile) return <p className="py-6 text-muted">Профиль не найден.</p>
 
@@ -147,6 +149,7 @@ export default function ProfileForm({ profile, isNew }) {
         )}
 
         <ErrorText>{err}</ErrorText>
+        {!valid && why && <p className="text-sm text-muted">{why}</p>}
         <div className="flex flex-wrap gap-3">
           <Button
             icon="check"
