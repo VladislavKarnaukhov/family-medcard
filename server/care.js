@@ -379,7 +379,7 @@ export function careState(profiles, a, family) {
   const share = a.access === 'share'
   const tz = family.timezone || DEFAULT_TZ
   const local = tzNow(tz)
-  const since = addDays(local.date, -30)
+  const since = addDays(local.date, -90)
   const meds = all(`SELECT * FROM medications WHERE profile_id IN ${inP} ORDER BY created_at`, ...pids)
   const out = {
     medications: meds
@@ -393,7 +393,7 @@ export function careState(profiles, a, family) {
   out.intakes = all(`SELECT * FROM intakes WHERE profile_id IN ${inP} AND (scheduled_at >= ? OR marked_at >= ?) ORDER BY scheduled_at`, ...pids, since, `${since}T00:00`).map((i) => ({ id: i.id, medicationId: i.medication_id, profileId: i.profile_id, scheduledAt: i.scheduled_at, status: i.status, reason: i.reason, by: i.marked_by_name, bySelf: !!i.marked_by_self, markedAt: i.marked_at }))
   const sexOf = Object.fromEntries(profiles.map((p) => [p.id, p.sex]))
   const labels = Object.fromEntries(all('SELECT user_id, role_label FROM grants WHERE family_id = ?', family.id).map((g) => [g.user_id, g.role_label]))
-  out.careNotes = all(`SELECT * FROM care_notes WHERE profile_id IN ${inP} AND at >= ? ORDER BY at DESC`, ...pids, `${since}T00:00`).map((n) => ({
+  out.careNotes = all(`SELECT * FROM care_notes WHERE profile_id IN ${inP} AND at >= ? ORDER BY at DESC`, ...pids, `${addDays(local.date, -90)}T00:00`).map((n) => ({
     id: n.id,
     profileId: n.profile_id,
     at: n.at,

@@ -215,6 +215,15 @@ try {
     await call('DELETE', `/api/medications/${ownerAdd.json.id}`)
   })
 
+  await step('state carries 90 days of diary notes and intakes for the diary screen', async () => {
+    const old = `${addDays(today, -60)}T09:00`
+    db.prepare("INSERT INTO care_notes (id, profile_id, at, kind, text, author_id, author_name, author_role, by_self, created_at) VALUES ('old-note', ?, ?, 'other', 'давняя запись', 'x', 'Тест', 'owner', 0, ?)").run(momId, old, old)
+    const st = (await call('GET', `/api/families/${fid}/state`)).json
+    assert.ok(st.careNotes.some((n) => n.id === 'old-note'))
+    assert.ok(!st.careNotes.some((n) => n.at < `${addDays(today, -90)}T00:00`))
+    db.prepare("DELETE FROM care_notes WHERE id = 'old-note'").run()
+  })
+
   await step('fall note notifies the owner; bad mood only if allowed', async () => {
     const before = count('notifications', "kind = 'fall'")
     await asUser(momJar, async () => {

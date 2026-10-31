@@ -15,11 +15,11 @@ const NAV_MORE = [
   ['circle', 'Круг заботы', 'users', 'owner'],
   ['privacy', 'Мои данные', 'shield'],
 ]
-const ALIAS = { add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '', meds: 'today', visits: 'today', care: 'today', emergency: '' }
+const ALIAS = { add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '', meds: 'today', visits: 'today', care: 'today', diary: 'today', emergency: '' }
 const TODAY = ['today', 'Сегодня', 'pill']
 const careLinks = (state) => {
   const id = state.activeProfileId
-  return id ? [['meds/' + id, 'Лекарства', 'pill'], ['visits/' + id, 'Визиты к врачу', 'clock'], ['emergency/' + id, 'Экстренная карточка', 'qr', 'owner']] : []
+  return id ? [['meds/' + id, 'Лекарства', 'pill'], ['visits/' + id, 'Визиты к врачу', 'clock'], ['diary/' + id, 'Дневник', 'file'], ['emergency/' + id, 'Экстренная карточка', 'qr', 'owner']] : []
 }
 
 const mainNav = (state) => {
