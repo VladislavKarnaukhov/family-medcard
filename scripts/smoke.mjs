@@ -285,6 +285,12 @@ try {
     for (const id of ids) db.prepare('DELETE FROM medications WHERE id = ?').run(id)
   })
 
+  await step('first mark of an intake is written to the access log with who marked it (M-09)', async () => {
+    const row = db.prepare("SELECT who, action FROM access_log WHERE action LIKE 'Отмечен приём:%' AND who LIKE 'Мама%' LIMIT 1").get()
+    assert.ok(row, 'log row by mom')
+    assert.match(row.action, /Тестовое лекарство/)
+  })
+
   await step('fall note notifies the owner; bad mood only if allowed', async () => {
     const before = count('notifications', "kind = 'fall'")
     await asUser(momJar, async () => {
