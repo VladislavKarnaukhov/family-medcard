@@ -170,6 +170,22 @@ export default function AuthScreen() {
   )
 }
 
+export function VerifyScreen({ token }) {
+  const [res, setRes] = useState(null)
+  useEffect(() => {
+    api('POST', '/api/auth/verify', { token }).then(() => setRes({ ok: true })).catch((e) => setRes({ err: e.message }))
+  }, [token])
+  return (
+    <AuthShell>
+      <h1 className="mb-3 text-[1.75rem]">Подтверждение почты</h1>
+      {!res ? <p className="text-muted">Проверяем ссылку…</p> : res.ok ? <Notice>Адрес подтверждён. Спасибо!</Notice> : <ErrorText>{res.err}</ErrorText>}
+      <a className="mt-4 inline-flex min-h-12 items-center font-medium text-accent-dark hover:underline" href="#/">
+        Перейти в приложение
+      </a>
+    </AuthShell>
+  )
+}
+
 export function ResetScreen({ token, staff = false }) {
   const [pw, setPw] = useState('')
   const [err, setErr] = useState('')

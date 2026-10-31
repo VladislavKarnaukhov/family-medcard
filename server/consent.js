@@ -101,6 +101,7 @@ export function mountConsent(app, { needUser, needStaff, fail, ctxProfile, remov
     tx(() => {
       recordConsent(req, { userId: req.user.id, familyId: f.id, docId: 'consent_health', method: 'otp', subjectName: req.user.name, subjectContact: req.user.email })
       run('UPDATE families SET processing_stopped = 0, delete_after = NULL WHERE id = ?', f.id)
+      run('UPDATE users SET email_verified_at = ? WHERE id = ? AND email_verified_at IS NULL', nowIso(), req.user.id)
       log(f.id, req.user, null, 'Подписано согласие на обработку данных о здоровье')
       track('consent_health', { userId: req.user.id, familyId: f.id, role: 'owner' })
     })
@@ -187,6 +188,7 @@ export function mountConsent(app, { needUser, needStaff, fail, ctxProfile, remov
     tx(() => {
       recordConsent(req, { userId: req.user.id, familyId: g.family_id, profileId: req.params.id, docId: 'consent_subject', method: 'otp', subjectName: req.user.name, subjectContact: req.user.email })
       run("UPDATE profiles SET consent_status = 'confirmed' WHERE id = ?", req.params.id)
+      run('UPDATE users SET email_verified_at = ? WHERE id = ? AND email_verified_at IS NULL', nowIso(), req.user.id)
       log(g.family_id, req.user, req.params.id, 'Человек подтвердил своё согласие при входе')
     })
     res.json({ ok: true })

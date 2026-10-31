@@ -483,6 +483,26 @@ try {
     h.close()
   })
 
+  await step('email verification: link sets the flag, bad token gives 410, resend is limited (M-45)', async () => {
+    await call('POST', '/api/auth/logout', {})
+    const reg = await call('POST', '/api/auth/register', { name: 'Почта Тестова', email: 'verify@example.test', password: 'long-enough-1', consents: { terms: true, consent_pd: true } })
+    assert.equal(reg.status, 200)
+    assert.equal(reg.json.user.emailVerified, false)
+    const outbox = readFileSync(join(dir, 'outbox.log'), 'utf8')
+    assert.match(outbox, /to=verify@example\.test subject=Подтвердите адрес почты/)
+    assert.equal((await call('POST', '/api/auth/verify', { token: 'nope' })).status, 410)
+    const { createHash } = await import('node:crypto')
+    const uid = db.prepare("SELECT id FROM users WHERE email = 'verify@example.test'").get().id
+    assert.equal(db.prepare('SELECT COUNT(*) c FROM email_verifications WHERE user_id = ?').get(uid).c, 1)
+    // токен в журнале замаскирован, поэтому подменяем хеш известным значением
+    db.prepare('UPDATE email_verifications SET token_hash = ? WHERE user_id = ?').run(createHash('sha256').update('known-token').digest('hex'), uid)
+    assert.equal((await call('POST', '/api/auth/verify', { token: 'known-token' })).status, 200)
+    assert.equal((await call('GET', '/api/me')).json.user.emailVerified, true)
+    assert.equal((await call('POST', '/api/me/resend-verification', {})).json.verified, true)
+    assert.equal((await call('POST', '/api/auth/verify', { token: 'known-token' })).status, 410, 'one-time')
+    assert.equal((await call('DELETE', '/api/me/account', { password: 'long-enough-1' })).status, 200)
+  })
+
   await step('wrong password rejected', async () => {
     cookie = ''
     assert.equal((await call('POST', '/api/auth/login', { email: 't@example.test', password: 'nope-nope-1' })).status, 401)
