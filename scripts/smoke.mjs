@@ -592,6 +592,21 @@ try {
     assert.match(today, /blizkie-banner-hidden/, 'reminder can be dismissed')
   })
 
+  await step('people never see raw error codes; labels and headings stay accessible', async () => {
+    const { humanError } = await import('../src/lib/api.js')
+    for (const code of ['not_found', 'forbidden', 'auth', 'bad_request']) assert.match(humanError(code, 400), /[а-яё]/i, code)
+    assert.equal(humanError('Неверный пароль', 401), 'Неверный пароль', 'server messages in Russian pass through')
+    assert.match(humanError(undefined, 502), /Сервер/)
+    assert.match(humanError(undefined, 400), /Не удалось/)
+    // каждая ошибка, которую сервер отдаёт человеку, написана по-русски (коды not_found/forbidden/auth/bad_request переводит клиент)
+    const server = ['index.js', 'care.js', 'consent.js', 'account.js', 'feedback.js'].map((f) => readFileSync('server/' + f, 'utf8')).join('\n')
+    const english = [...server.matchAll(/fail\(res, \d+, '([^']+)'\)/g)].map((m) => m[1]).filter((m) => !/[а-яё]/i.test(m) && !['not_found', 'forbidden'].includes(m))
+    assert.deepEqual(english, [], 'untranslated server errors: ' + english.join(', '))
+    const emergency = readFileSync('src/screens/Emergency.jsx', 'utf8')
+    assert.match(emergency, /<CardView c=\{card\} as="h2"/, 'one h1 per page')
+    assert.match(readFileSync('src/screens/Summary.jsx', 'utf8'), /aria-label="Мои вопросы врачу"/)
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {

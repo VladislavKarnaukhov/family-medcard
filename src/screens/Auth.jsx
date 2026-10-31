@@ -13,16 +13,18 @@ export function AuthShell({ children, wide = false, headline = 'Забота б�
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col lg:flex-row">
-        <section className="bg-sunken px-6 pb-6 pt-6 lg:flex lg:w-[46%] lg:max-w-[620px] lg:flex-col lg:px-16 lg:py-14">
-          <div className="flex items-center gap-3">
+        <section className="relative overflow-hidden bg-sunken px-6 pb-6 pt-6 lg:flex lg:w-[46%] lg:max-w-[620px] lg:flex-col lg:px-16 lg:py-14">
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-44 -right-40 hidden h-[36rem] w-[36rem] rounded-full bg-accent-soft lg:block" />
+          <div aria-hidden="true" className="pointer-events-none absolute -bottom-20 -right-16 hidden h-[22rem] w-[22rem] rounded-full bg-accent-mid/25 lg:block" />
+          <div className="relative flex items-center gap-3">
             <Wordmark />
             {brand && <span className="rounded border border-line px-2 py-0.5 text-xs text-muted">{brand}</span>}
           </div>
-          <div className="mt-auto hidden max-w-[26rem] lg:block">
-            <h2 className="text-[2.75rem] leading-[1.05] tracking-[-0.04em]">{headline}</h2>
+          <div className="relative my-auto hidden max-w-[26rem] lg:block">
+            <h2 className="text-[3rem] leading-[1.04] tracking-[-0.04em]">{headline}</h2>
             {sentence && <p className="mt-4 text-[1.05rem] text-muted">{sentence}</p>}
           </div>
-          <p className="mt-4 text-lg font-medium lg:hidden">{headline}</p>
+          <p className="relative mt-4 text-lg font-medium lg:hidden">{headline}</p>
         </section>
         <section className="flex flex-1 items-start justify-center px-4 py-8 lg:items-center lg:px-12">
           <div className={`w-full ${wide ? 'max-w-[560px]' : 'max-w-[440px]'}`}>{children}</div>

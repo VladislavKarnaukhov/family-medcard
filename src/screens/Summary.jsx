@@ -271,7 +271,7 @@ export default function Summary({ state, profile, readOnly = false }) {
         </Block>
 
         <Block title="Мои вопросы врачу">
-          {editable && <textarea className="no-print" value={questions} onChange={(e) => actions.setQuestions(profile.id, e.target.value)} placeholder="Запишите вопросы, чтобы не забыть на приёме" />}
+          {editable && <textarea className="no-print" aria-label="Мои вопросы врачу" value={questions} onChange={(e) => actions.setQuestions(profile.id, e.target.value)} placeholder="Запишите вопросы, чтобы не забыть на приёме" />}
           <div className={`${editable ? 'print-only' : ''} whitespace-pre-wrap text-sm`}>
             {questions.trim() ? (
               questions

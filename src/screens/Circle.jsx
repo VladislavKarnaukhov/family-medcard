@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Avatar, Button, Card, Chip, Empty, ErrorText, Field, H, Notice, PageHeader, Toggle } from '../components/ui'
+import { Avatar, Button, Card, Empty, ErrorText, Field, H, PageHeader, Toggle } from '../components/ui'
 import { Icon } from '../components/icons'
 import { actions } from '../lib/store'
 import { docTitle, fmtDate, fmtDateTime } from '../lib/format'

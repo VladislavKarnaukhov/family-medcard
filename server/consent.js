@@ -2,7 +2,7 @@
 import { unlinkSync } from 'node:fs'
 import { createHash, randomInt } from 'node:crypto'
 import { join } from 'node:path'
-import { DATA_DIR, UPLOAD_DIR, tx } from './db.js'
+import { UPLOAD_DIR, tx } from './db.js'
 import { DOCS, plainText } from '../src/legal/docs.js'
 import { all, track, checkPassword, get, log, nowIso, plusDays, run, str, token, uuid } from './util.js'
 import { buildState, consentOk } from './state.js'

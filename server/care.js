@@ -3,7 +3,7 @@
 import { all, track, get, inList, log, nowIso, plusDays, ruDate, run, safeJson, str, token, uuid } from './util.js'
 import { recordConsent } from './consent.js'
 import { consentOk, isOwner } from './state.js'
-import { DEFAULT_TZ, addDays, addMinutes, isDate, isDt, isTime, isoWeekday, medActiveOn, tzNow, validTz } from './timeutil.js'
+import { DEFAULT_TZ, addDays, addMinutes, isDate, isDt, isTime, medActiveOn, tzNow, validTz } from './timeutil.js'
 import { notify } from './notify.js'
 
 const FORMS = ['таблетка', 'капсула', 'капли', 'укол', 'мазь', 'ингаляция', 'другое']

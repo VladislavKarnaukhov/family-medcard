@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, ErrorText, Field, Notice, Toggle } from '../components/ui'
 import { api } from '../lib/api'
-import { actions, refresh, useStore } from '../lib/store'
+import { actions, refresh } from '../lib/store'
 import { AuthShell } from './Auth'
 import { DocLink } from './Legal'
 
