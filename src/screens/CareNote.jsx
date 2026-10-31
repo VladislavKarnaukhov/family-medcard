@@ -48,7 +48,7 @@ export default function CareNote({ state, profile, kind0 }) {
             <p className="mt-1.5 text-sm text-muted">Это ваш ответ, сервис его не оценивает. При необходимости вызовите скорую.</p>
           </fieldset>
         )}
-        <p className="text-sm text-muted">{fall ? 'После сохранения о записи узнают владелец и помощник.' : ''}</p>
+        <p className="text-sm text-muted">{fall ? 'После сохранения о записи узнает владелец профиля.' : ''}</p>
         <ErrorText>{err}</ErrorText>
         <div className="flex gap-3">
           <Button icon="check" disabled={busy || !text.trim()} onClick={save}>Сохранить</Button>

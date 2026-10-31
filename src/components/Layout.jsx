@@ -11,7 +11,7 @@ const NAV = [
   ['', 'Главная', 'home'],
   ['dossier', 'Документы', 'folder'],
   ['indicators', 'Показатели', 'chart'],
-  ['assistant', 'Помощник', 'chat', 'owner'],
+  ['assistant', 'Помощник', 'chat', 'owner', 'concierge'],
   ['summary', 'Сводка', 'sheet'],
 ]
 const NAV_MORE = [
@@ -27,7 +27,7 @@ const careLinks = (state) => {
 }
 
 const mainNav = (state) => {
-  const nav = NAV.filter((i) => !i[3] || can(state).owner)
+  const nav = NAV.filter((i) => (!i[3] || can(state).owner) && (i[4] !== 'concierge' || state.concierge))
   return hasMeds(state) ? [TODAY, ...nav] : nav
 }
 

@@ -2,6 +2,7 @@
 import { all, get, inList, safeJson, today } from './util.js'
 import { careState } from './care.js'
 import { DOCS } from '../src/legal/docs.js'
+import { conciergeOn } from './util.js'
 
 export function familyAccess(user, familyId) {
   if (!user) return null
@@ -60,6 +61,7 @@ export function buildState(familyId, a) {
   const state = {
     family: { id: family.id, name: family.name, timezone: family.timezone },
     me: { access: a.access, selfProfileId: a.grant?.self_profile_id || null, caregiver: !a.grant?.self_profile_id && a.access === 'add' && /сиделк/i.test(a.grant?.role_label || '') },
+    concierge: conciergeOn(),
     assistant: { name: family.staff_id ? get('SELECT name FROM users WHERE id = ?', family.staff_id)?.name : null },
     consent: { ok: consentOk(familyId), outdated: consentStatus(familyId) === 'outdated', stopped: !!family.processing_stopped, deleteAfter: family.delete_after },
     profiles: [...profiles, ...peers].map((p) => ({ peer: peers.includes(p), sharePeers: !!p.share_peers, id: p.id, name: p.name, birthYear: p.birth_year, birthDate: p.birth_date || null, sex: p.sex, notes: peers.includes(p) ? '' : p.notes, basis: p.basis, consentStatus: p.consent_status, allergies: peers.includes(p) ? '' : p.allergies, notifyBadMood: !!p.notify_bad_mood, hasSelfUser: careGrants.some((g) => g.self_profile_id === p.id), hasCaregiver: careGrants.some((g) => /сиделк/i.test(g.role_label) && profileAllowed({ profileIds: safeJson(g.profile_ids) }, p.id)), ...(a.access === 'share' ? {} : { emergencyContacts: peers.includes(p) ? [] : safeJson(p.emergency_contacts) || [] }) })),
@@ -117,7 +119,7 @@ export function buildState(familyId, a) {
       due: r.due,
       assignee: r.assignee,
     }))
-    state.unread = get("SELECT COUNT(*) c FROM messages WHERE family_id = ? AND author_kind = 'staff' AND internal = 0 AND created_at > ?", familyId, family.client_read_at || '').c
+    state.unread = !conciergeOn() ? 0 : get("SELECT COUNT(*) c FROM messages WHERE family_id = ? AND author_kind = 'staff' AND internal = 0 AND created_at > ?", familyId, family.client_read_at || '').c
     state.messages = all(`SELECT * FROM messages WHERE family_id = ? ${staff ? '' : 'AND internal = 0'} ORDER BY created_at`, familyId).map((m) => ({
       id: m.id,
       from: m.author_kind === 'staff' ? 'assistant' : 'client',

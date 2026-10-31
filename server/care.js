@@ -1,6 +1,6 @@
 // Уход за близким: лекарства, отметки приёма, дневник, визиты, уведомления, экстренная карточка.
 // Все маршруты записи идут через ctxProfile/ctxFamily (шлюз согласия). Наружу camelCase, в базе snake_case.
-import { all, track, get, inList, log, nowIso, plusDays, ruDate, run, safeJson, str, token, uuid } from './util.js'
+import { all, conciergeOn, track, get, inList, log, nowIso, plusDays, ruDate, run, safeJson, str, token, uuid } from './util.js'
 import { recordConsent } from './consent.js'
 import { consentOk, isOwner } from './state.js'
 import { DEFAULT_TZ, addDays, addMinutes, isDate, isDt, isTime, medActiveOn, tzNow, validTz } from './timeutil.js'
@@ -264,6 +264,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
 
   // Поручение помощнику: тот же механизм, что у обычных поручений.
   app.post('/api/appointments/:id/request', needUser, (req, res) => {
+    if (!conciergeOn()) return res.status(403).json({ error: 'Помощник отключён в этой версии сервиса', code: 'concierge_off' })
     const x = apptCtx(req, res, 'owner')
     if (!x) return
     if (x.a.request_id && get('SELECT 1 FROM requests WHERE id = ?', x.a.request_id)) return fail(res, 409, 'Поручение по этому визиту уже создано')

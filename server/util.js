@@ -43,6 +43,9 @@ export const numOrNull = (v) => (v == null || v === '' || !Number.isFinite(Numbe
 export const inList = (ids) => (ids.length ? `(${ids.map(() => '?').join(',')})` : '(NULL)')
 
 // События для измерения MVP: только имя, время, кто и в какой семье. Содержимого записей (лекарства, тексты, показатели) здесь нет.
+// Живой помощник (консьерж): в MVP выключен, включается CONCIERGE=1. Рабочее место сотрудников и очередь документов остаются.
+export const conciergeOn = () => process.env.CONCIERGE === '1'
+
 export function track(name, { userId = null, familyId = null, role = null } = {}) {
   try {
     run('INSERT INTO events (id, at, name, user_id, family_id, role) VALUES (?,?,?,?,?,?)', uuid(), nowIso(), name, userId, familyId, role)

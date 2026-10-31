@@ -128,12 +128,12 @@ export function VisitForm({ state, profile, id }) {
         {existing && (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-line pt-5">
             <a className="inline-flex min-h-12 items-center gap-2 font-medium text-accent-dark hover:underline" href="#/summary"><Icon name="sheet" size={18} /> Сводка к визиту</a>
-            {owner && !existing.requestId && !sent && (
+            {state.concierge && owner && !existing.requestId && !sent && (
               <button className="inline-flex min-h-12 items-center gap-2 font-medium text-accent-dark hover:underline" onClick={() => run(async () => { await actions.requestVisit(existing.id); setSent(true) })}>
                 <Icon name="chat" size={18} /> Поручить помощнику
               </button>
             )}
-            {(existing.requestId || sent) && <p className="text-sm text-muted">Поручение помощнику создано.</p>}
+            {state.concierge && (existing.requestId || sent) && <p className="text-sm text-muted">Поручение помощнику создано.</p>}
             {owner && (
               <button className="min-h-12 font-medium text-alert hover:underline" onClick={() => confirm('Удалить визит?') && run(() => actions.deleteVisit(existing.id), list)}>Удалить</button>
             )}

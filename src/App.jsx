@@ -190,7 +190,7 @@ export default function App() {
       screen = <Indicator {...props} keyName={decodeURIComponent(route[1] || '')} />
       break
     case 'assistant':
-      screen = owner ? <Assistant {...props} /> : <Dashboard {...props} />
+      screen = owner && state.concierge ? <Assistant {...props} /> : <Dashboard {...props} />
       break
     case 'dossier':
       screen = <Dossier {...props} />

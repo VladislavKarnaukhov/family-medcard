@@ -106,7 +106,7 @@ export default function AddResult({ state, profile }) {
       setDrafts(res.map(toDraft))
       setCur(0)
     } catch (e) {
-      setError(e.status === 422 ? e.message : 'Не удалось распознать бланк. Отправьте его помощнику или внесите показатели вручную.')
+      setError(e.status === 422 ? e.message : 'Не удалось распознать бланк. Внесите показатели вручную.')
     } finally {
       setBusy(false)
     }
@@ -185,7 +185,7 @@ export default function AddResult({ state, profile }) {
           <div className="grid gap-3 sm:grid-cols-2">
             {can(state).owner && (
               <Button big icon="chat" disabled={!files.length || busy || saving} onClick={sendToAssistant}>
-                {saving ? 'Отправляем…' : 'Отправить помощнику'}
+                {saving ? 'Отправляем…' : 'Отправить на внесение'}
               </Button>
             )}
             <Button big variant={can(state).owner ? 'ghost' : 'primary'} disabled={!files.length || busy || saving} onClick={run}>
@@ -193,7 +193,7 @@ export default function AddResult({ state, profile }) {
             </Button>
           </div>
           <p className="text-sm text-muted">
-            {can(state).owner ? 'Помощник внесёт показатели за вас и сообщит в переписке. ' : ''}
+            {can(state).owner && state.concierge ? 'Помощник внесёт показатели за вас и сообщит в переписке. ' : ''}
             Если вносите сами, вы проверите таблицу рядом с бланком перед сохранением. Файл при этом тоже попадёт к помощнику и останется в документах.
           </p>
           <div className="rounded-2xl bg-sunken p-5">

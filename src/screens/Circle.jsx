@@ -105,10 +105,10 @@ export default function Circle({ state, profile }) {
               </li>
             ))}
             <li className="flex items-center gap-4 bg-paper/60 px-4 py-3.5">
-              <Avatar name={state.assistant?.name || 'Помощник'} size={42} tone="solid" />
+              <Avatar name={state.concierge ? state.assistant?.name || 'Помощник' : 'Сервис'} size={42} tone="solid" />
               <div>
-                <p className="font-semibold">{state.assistant?.name || 'Помощник'}</p>
-                <p className="text-sm text-muted">Помощник сервиса. Видит данные, чтобы вносить документы и выполнять поручения. Каждое открытие попадает в журнал.</p>
+                <p className="font-semibold">{state.concierge ? state.assistant?.name || 'Помощник' : 'Сотрудники сервиса'}</p>
+                <p className="text-sm text-muted">{state.concierge ? 'Помощник сервиса. Видит данные, чтобы вносить документы и выполнять поручения. Каждое открытие попадает в журнал.' : 'Видят данные только тогда, когда вы сами отправили документ на внесение или написали в поддержку. Каждое открытие попадает в журнал.'}</p>
               </div>
             </li>
           </ul>

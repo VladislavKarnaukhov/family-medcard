@@ -4,7 +4,7 @@ import { createReadStream, existsSync, unlinkSync, writeFileSync } from 'node:fs
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, tx, UPLOAD_DIR } from './db.js'
-import { ruDate, all, track, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
+import { ruDate, all, track, conciergeOn, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
 import { buildState, canWrite, consentOk, consentStatus, familyAccess, isOwner, profileAllowed } from './state.js'
 import { mountConsent, recordConsent } from './consent.js'
 import { aiEnabled, recognizeWithClaude } from './recognize.js'
@@ -110,7 +110,7 @@ const bump = (key, ok) => {
 }
 
 function createFamily(user) {
-  const staff = get(
+  const staff = !conciergeOn() ? null : get(
     `SELECT u.id, u.name, COUNT(f.id) c FROM users u LEFT JOIN families f ON f.staff_id = u.id WHERE u.role = 'staff' GROUP BY u.id ORDER BY c LIMIT 1`,
   )
   const fid = uuid()
@@ -617,7 +617,10 @@ app.delete('/api/documents/:id', needUser, (req, res) => {
 })
 
 // ---------- переписка и поручения ----------
+const noConcierge = (res) => res.status(403).json({ error: 'Помощник отключён в этой версии сервиса', code: 'concierge_off' })
+
 app.post('/api/families/:fid/messages', needUser, (req, res) => {
+  if (!conciergeOn()) return noConcierge(res)
   const a = ctxFamily(req, res, 'owner', { consent: false })
   if (!a) return
   const text = str(req.body.text, 4000)
@@ -633,6 +636,7 @@ app.post('/api/families/:fid/read', needUser, (req, res) => {
 })
 
 app.post('/api/families/:fid/requests', needUser, (req, res) => {
+  if (!conciergeOn()) return noConcierge(res)
   const a = ctxFamily(req, res, 'owner')
   if (!a) return
   const title = str(req.body.title, 200)
