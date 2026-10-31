@@ -39,9 +39,10 @@ function Row({ row, onChange, onDelete }) {
           <input value={row.name} onChange={set('name')} className={cell} placeholder="Название как на бланке" />
         </Field>
         {!known && <p className="mt-1 text-xs text-muted">Нет в справочнике: график построится по названию.</p>}
+        {row.low && <p className="mt-1 text-xs text-accent-dark">Проверьте по бланку{row.source ? `: «${row.source}»` : ''}</p>}
       </div>
       <Field label={<span className="lg:sr-only">Значение</span>}>
-        <input inputMode="decimal" value={row.value} onChange={set('value')} aria-invalid={bad} className={`${cell} ${bad ? '!border-alert' : ''}`} placeholder="Значение" />
+        <input inputMode="decimal" value={row.value} onChange={set('value')} aria-invalid={bad} className={`${cell} ${bad ? '!border-alert' : row.low ? '!border-accent-mid' : ''}`} placeholder="Значение" />
       </Field>
       <Field label={<span className="lg:sr-only">Единица</span>}>
         <input value={row.unit} onChange={set('unit')} className={cell} placeholder="Единица" />

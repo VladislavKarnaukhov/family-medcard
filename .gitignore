@@ -9,3 +9,5 @@ server/data
 .impeccable/review/
 .impeccable/mocks/
 .impeccable/build/
+
+public/ocr/

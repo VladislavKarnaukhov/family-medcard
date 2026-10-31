@@ -15,7 +15,7 @@ export const toDraft = (r) => ({
   sourceFile: r.sourceFile || '',
   date: r.date,
   labName: r.labName || '',
-  rows: r.rows.map((x) => ({ name: x.name, value: toText(x.value), unit: x.unit || '', refLow: toText(x.refLow), refHigh: toText(x.refHigh) })),
+  rows: r.rows.map((x) => ({ name: x.name, value: toText(x.value), unit: x.unit || '', refLow: toText(x.refLow), refHigh: toText(x.refHigh), ...(x.confidence === 'low' ? { low: true, source: x.source || x.note || '' } : {}) })),
 })
 
 // Набор показателей для ручного ввода (общий анализ крови, биохимия…): строки готовы, пустые при сохранении пропускаются.
