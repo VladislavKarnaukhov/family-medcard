@@ -11,6 +11,8 @@ ENV NODE_ENV=production HOST=0.0.0.0 PORT=3000 DATA_DIR=/data TRUST_PROXY=1
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY server ./server
+# Сервер читает тексты документов из src/legal (общий код с клиентом).
+COPY src/legal ./src/legal
 COPY --from=build /app/dist ./dist
 VOLUME /data
 EXPOSE 3000
