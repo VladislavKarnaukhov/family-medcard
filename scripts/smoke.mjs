@@ -453,6 +453,12 @@ try {
     assert.equal(simpleSplit([r('taken', 1)]).rest.length, 1)
   })
 
+  await step('login hero uses the agreed calm wording', async () => {
+    const t = readFileSync('src/screens/Auth.jsx', 'utf8')
+    assert.ok(t.includes('Лекарства близких под спокойным присмотром'))
+    assert.ok(!/Заведите маму/i.test(t))
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
