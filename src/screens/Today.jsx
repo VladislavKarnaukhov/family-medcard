@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button, Chip, Empty, ErrorText, H, PageHeader, go } from '../components/ui'
 import { Icon } from '../components/icons'
 import { actions, can } from '../lib/store'
-import { KIND_LABEL, MOOD_LABEL, NEEDS, bannerRows, daySchedule, fmtDt, isMarker, localNow, marked, nextAppointment } from '../lib/care'
+import { KIND_LABEL, MOOD_LABEL, NEEDS, bannerOnScreen, bannerRows, daySchedule, fmtDt, isMarker, localNow, marked, nextAppointment } from '../lib/care'
 
 export function useNow(ms = 30000) {
   const [n, setN] = useState(Date.now())
@@ -319,7 +319,7 @@ export function DueBanner({ state }) {
     }
   }, [key, sound])
   const shown = due.length ? due : late
-  if (!shown.length) return null
+  if (!shown.length || bannerOnScreen(window.location.hash, state.user?.simpleMode)) return null
   const d = shown[0]
   return (
     <div role="alert" className="no-print fixed inset-x-3 top-3 z-40 mx-auto max-w-[560px] rounded-2xl bg-card p-5 shadow-pop ring-1 ring-line">
