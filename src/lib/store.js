@@ -66,6 +66,7 @@ const ls = {
 export const can = (s, profile) => ({
   write: ['owner', 'add'].includes(s.me?.access) && !profile?.peer,
   owner: s.me?.access === 'owner',
+  meds: ['owner', 'add'].includes(s.me?.access) && !s.me?.caregiver,
   self: !!s.me?.selfProfileId,
 })
 
