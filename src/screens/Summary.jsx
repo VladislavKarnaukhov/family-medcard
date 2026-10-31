@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Empty, Notice, PageHeader, Tabs } from '../components/ui'
 import { actions, can } from '../lib/store'
 import { latestPoints, isOut } from '../lib/data'
@@ -65,6 +65,9 @@ export default function Summary({ state, profile, readOnly = false }) {
   const meds = (state.medications || []).filter((m) => m.profileId === profile?.id && m.status === 'active')
   const [period, setPeriod] = useState(() => (PERIODS.some((p) => p[0] === new URLSearchParams(location.search).get('days')) ? new URLSearchParams(location.search).get('days') : '180'))
   const [hint, setHint] = useState(false)
+  useEffect(() => {
+    if (!readOnly) actions.track('summary_viewed')
+  }, [readOnly])
   if (!profile) return <Empty icon="sheet">Сначала создайте профиль.</Empty>
 
   const days = Number(period)

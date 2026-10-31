@@ -4,7 +4,7 @@ import { createHash, randomInt } from 'node:crypto'
 import { join } from 'node:path'
 import { DATA_DIR, UPLOAD_DIR, tx } from './db.js'
 import { DOCS, plainText } from '../src/legal/docs.js'
-import { all, checkPassword, get, log, nowIso, plusDays, run, str, token, uuid } from './util.js'
+import { all, track, checkPassword, get, log, nowIso, plusDays, run, str, token, uuid } from './util.js'
 import { buildState, consentOk } from './state.js'
 import { isProd, layout, mailEnabled, sendMail } from './mailer.js'
 
@@ -102,6 +102,7 @@ export function mountConsent(app, { needUser, needStaff, fail, ctxProfile, remov
       recordConsent(req, { userId: req.user.id, familyId: f.id, docId: 'consent_health', method: 'otp', subjectName: req.user.name, subjectContact: req.user.email })
       run('UPDATE families SET processing_stopped = 0, delete_after = NULL WHERE id = ?', f.id)
       log(f.id, req.user, null, 'Подписано согласие на обработку данных о здоровье')
+      track('consent_health', { userId: req.user.id, familyId: f.id, role: 'owner' })
     })
     res.json({ ok: true })
   })
@@ -236,6 +237,7 @@ export function mountConsent(app, { needUser, needStaff, fail, ctxProfile, remov
         run('DELETE FROM families WHERE id = ?', f.id)
       }
       run('UPDATE data_requests SET user_id = NULL WHERE user_id = ?', req.user.id)
+      run('DELETE FROM events WHERE user_id = ?', req.user.id)
       run('DELETE FROM users WHERE id = ?', req.user.id)
     })
     res.setHeader('Set-Cookie', 'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0')

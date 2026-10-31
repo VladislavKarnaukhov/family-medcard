@@ -272,6 +272,7 @@ export const actions = {
     await api('PUT', '/api/me/simple-mode', { on })
     commit({ user: { ...state.user, simpleMode: on } })
   },
+  track: (name) => api('POST', '/api/events', { name, familyId: state.familyId }).catch(() => {}),
   setSharePeers: act((profileId, on) => api('PUT', `/api/profiles/${profileId}/share-peers`, { on, consentConfirmed: on })),
   setNotifyBadMood: act((profileId, on) => api('PUT', `/api/profiles/${profileId}/notify-bad-mood`, { on })),
   setTimezone: act((timezone) => api('PUT', `/api/families/${state.familyId}/timezone`, { timezone })),

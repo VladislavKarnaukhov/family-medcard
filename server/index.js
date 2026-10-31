@@ -4,7 +4,7 @@ import { createReadStream, existsSync, unlinkSync, writeFileSync } from 'node:fs
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, tx, UPLOAD_DIR } from './db.js'
-import { ruDate, all, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
+import { ruDate, all, track, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
 import { buildState, canWrite, consentOk, consentStatus, familyAccess, isOwner, profileAllowed } from './state.js'
 import { mountConsent, recordConsent } from './consent.js'
 import { aiEnabled, recognizeWithClaude } from './recognize.js'
@@ -152,6 +152,7 @@ function acceptInvite(user, tok) {
   }
   run('UPDATE invites SET accepted_by = ?, accepted_at = ? WHERE token = ?', user.id, nowIso(), tok)
   log(inv.family_id, user, null, `Принял(а) приглашение (${inv.role_label})`)
+  track('invite_accepted', { userId: user.id, familyId: inv.family_id, role: inv.self_profile_id ? 'self' : /сиделк/i.test(inv.role_label) ? 'caregiver' : 'relative' })
   return inv.family_id
 }
 
@@ -176,7 +177,7 @@ app.post('/api/auth/register', (req, res) => {
       recordConsent(req, { userId: id, docId: 'terms', method: 'checkbox' })
       recordConsent(req, { userId: id, docId: 'consent_pd', method: 'checkbox' })
       if (req.body.inviteToken) acceptInvite(u, str(req.body.inviteToken, 100))
-      else createFamily(u)
+      else track('signup', { userId: id, familyId: createFamily(u), role: 'owner' })
       return u
     })
     startSession(res, user.id)
@@ -297,6 +298,7 @@ app.post('/api/families/:fid/invites', needUser, (req, res) => {
     selfProfileId,
   )
   log(req.params.fid, req.user, null, `Создано приглашение: ${role}`)
+  track('invite_created', { userId: req.user.id, familyId: req.params.fid, role: preset || 'relative' })
   const to = str(req.body.email, 200).toLowerCase()
   let emailed = false
   if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) {
@@ -385,6 +387,7 @@ app.post('/api/families/:fid/profiles', needUser, (req, res) => {
     if (basis !== 'self') recordConsent(req, { userId: req.user.id, familyId: req.params.fid, profileId: id, docId: basis === 'adult' ? 'consent_adult' : 'consent_guardian', method: 'attestation', subjectName: name })
   })
   log(req.params.fid, req.user, id, `Создан профиль «${name}»`)
+  track('profile_created', { userId: req.user.id, familyId: req.params.fid, role: 'owner' })
   res.json({ id })
 })
 
@@ -610,6 +613,17 @@ app.post('/api/families/:fid/requests', needUser, (req, res) => {
 })
 
 // ---------- ссылка для врача ----------
+// События интерфейса, которые сервер сам не видит. Только из списка, без содержимого.
+const CLIENT_EVENTS = ['summary_viewed']
+app.post('/api/events', needUser, (req, res) => {
+  const name = String(req.body.name || '')
+  if (!CLIENT_EVENTS.includes(name)) return fail(res, 400, 'Неизвестное событие')
+  const a = familyAccess(req.user, String(req.body.familyId || ''))
+  if (!a) return fail(res, 404, 'not_found')
+  track(name, { userId: req.user.id, familyId: req.body.familyId, role: a.access })
+  res.json({ ok: true })
+})
+
 app.post('/api/profiles/:id/share', needUser, (req, res) => {
   const c = ctxProfile(req, res, req.params.id, 'owner')
   if (!c) return
@@ -619,6 +633,7 @@ app.post('/api/profiles/:id/share', needUser, (req, res) => {
   const t = token(18)
   run('INSERT INTO share_links (token, profile_id, family_id, expires_at, created_at) VALUES (?,?,?,?,?)', t, c.p.id, c.p.family_id, new Date(Date.now() + days * 86400000).toISOString(), nowIso())
   log(c.p.family_id, req.user, c.p.id, `Создана ссылка для врача на ${days} дн.`)
+  track('share_created', { userId: req.user.id, familyId: c.p.family_id, role: 'owner' })
   res.json({ token: t })
 })
 
@@ -626,6 +641,7 @@ app.get('/api/share/:token', (req, res) => {
   const s = get('SELECT * FROM share_links WHERE token = ?', req.params.token)
   if (!s || s.expires_at < nowIso()) return fail(res, 410, 'Ссылка недействительна или истекла')
   log(s.family_id, null, s.profile_id, 'Открыта ссылка для врача', 'Врач (по ссылке)')
+  track('share_opened', { familyId: s.family_id, role: 'doctor' })
   const state = buildState(s.family_id, { access: 'share', profileIds: [s.profile_id] })
   res.json({ ...state, activeProfileId: s.profile_id, expiresAt: s.expires_at })
 })
@@ -636,6 +652,7 @@ function wipeFamily(fid) {
   run('DELETE FROM profiles WHERE family_id = ?', fid)
   run('DELETE FROM requests WHERE family_id = ?', fid)
   run('DELETE FROM messages WHERE family_id = ?', fid)
+  run('DELETE FROM events WHERE family_id = ?', fid)
 }
 
 // ---------- интерфейс сотрудников ----------

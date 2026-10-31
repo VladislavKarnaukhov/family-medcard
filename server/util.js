@@ -42,6 +42,15 @@ export const numOrNull = (v) => (v == null || v === '' || !Number.isFinite(Numbe
 
 export const inList = (ids) => (ids.length ? `(${ids.map(() => '?').join(',')})` : '(NULL)')
 
+// События для измерения MVP: только имя, время, кто и в какой семье. Содержимого записей (лекарства, тексты, показатели) здесь нет.
+export function track(name, { userId = null, familyId = null, role = null } = {}) {
+  try {
+    run('INSERT INTO events (id, at, name, user_id, family_id, role) VALUES (?,?,?,?,?,?)', uuid(), nowIso(), name, userId, familyId, role)
+  } catch (e) {
+    console.error('track:', e.message)
+  }
+}
+
 export function log(familyId, user, profileId, action, whoOverride) {
   run(
     'INSERT INTO access_log (id, family_id, profile_id, user_id, who, action, at) VALUES (?,?,?,?,?,?,?)',

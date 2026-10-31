@@ -227,6 +227,19 @@ try {
     assert.equal(a.d7.missed.length, a.d7.unmarked)
   })
 
+  await step('events are recorded without content, metrics script reports the funnel, deletion wipes events', async () => {
+    const names = db.prepare('SELECT DISTINCT name FROM events').all().map((r) => r.name)
+    for (const n of ['signup', 'consent_health', 'profile_created', 'medication_created', 'invite_created', 'invite_accepted', 'intake_marked', 'care_note_created']) assert.ok(names.includes(n), 'event ' + n)
+    assert.equal((await call('POST', '/api/events', { name: 'summary_viewed', familyId: fid })).status, 200)
+    assert.equal((await call('POST', '/api/events', { name: 'anything', familyId: fid })).status, 400)
+    assert.equal(count('events', "name = 'summary_viewed'"), 1)
+    const r = spawnSync(process.execPath, ['scripts/metrics.mjs', '--json'], { env: { ...process.env, DATA_DIR: dir }, encoding: 'utf8' })
+    assert.equal(r.status, 0, r.stderr)
+    const m = JSON.parse(r.stdout)
+    assert.ok(m.funnel['Регистрация владельца'] >= 1 && m.funnel['Отмечен приём или запись в дневнике'] >= 1 && m.funnel['Открыта сводка для врача'] >= 1)
+    assert.equal(m.target.families, 10)
+  })
+
   await step('state carries 90 days of diary notes and intakes for the diary screen', async () => {
     const old = `${addDays(today, -60)}T09:00`
     db.prepare("INSERT INTO care_notes (id, profile_id, at, kind, text, author_id, author_name, author_role, by_self, created_at) VALUES ('old-note', ?, ?, 'other', 'давняя запись', 'x', 'Тест', 'owner', 0, ?)").run(momId, old, old)
@@ -356,7 +369,7 @@ try {
     assert.ok(count('medications') > 0 && count('notifications') > 0)
     const r = await call('DELETE', '/api/me/account', { password: 'long-enough-1' })
     assert.equal(r.status, 200, JSON.stringify(r.json))
-    for (const t of ['medications', 'intakes', 'care_notes', 'appointments', 'notifications', 'emergency_links']) assert.equal(count(t), 0, t)
+    for (const t of ['medications', 'intakes', 'care_notes', 'appointments', 'notifications', 'emergency_links', 'events']) assert.equal(count(t), 0, t)
     cookie = ''
     await call('POST', '/api/auth/register', { name: 'Тест', email: 't@example.test', password: 'long-enough-1', consents: { terms: true, consent_pd: true } })
     const st = await call('POST', '/api/consents/health/start', {})

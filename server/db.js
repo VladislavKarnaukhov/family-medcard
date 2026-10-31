@@ -293,6 +293,16 @@ CREATE TABLE IF NOT EXISTS appointments (
   reminded_at TEXT,
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  at TEXT NOT NULL,
+  name TEXT NOT NULL,
+  user_id TEXT,
+  family_id TEXT,
+  role TEXT
+);
+CREATE INDEX IF NOT EXISTS events_name_at ON events (name, at);
+CREATE INDEX IF NOT EXISTS events_family ON events (family_id, at);
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
   family_id TEXT NOT NULL REFERENCES families(id) ON DELETE CASCADE,
