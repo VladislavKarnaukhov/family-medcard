@@ -302,7 +302,7 @@ function ContextPanel({ data, reload, staff }) {
             {data.profiles.map((p) => (
               <li key={p.id}>
                 <p className="font-medium">{p.name}</p>
-                <p className="text-sm text-muted">{[ageText(p.birthYear), SEX[p.sex]].filter(Boolean).join(' · ')}</p>
+                <p className="text-sm text-muted">{[ageText(p.birthYear, p.birthDate), SEX[p.sex]].filter(Boolean).join(' · ')}</p>
                 {p.notes && <p className="mt-1 text-sm">{p.notes}</p>}
                 <p className="mt-1 text-xs text-muted">
                   Анализов: {data.labResults.filter((l) => l.profileId === p.id).length} · замеров: {data.vitals.filter((v) => v.profileId === p.id).length} · документов: {data.documents.filter((d) => d.profileId === p.id).length}

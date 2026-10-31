@@ -124,7 +124,7 @@ export default function Summary({ state, profile, readOnly = false }) {
             <span className="shrink-0 text-sm text-muted">{fmtDate(localISO())}</span>
           </div>
           <p className="mt-0.5 text-sm text-muted">
-            {[profile.birthYear && `${profile.birthYear} г. р. (${ageText(profile.birthYear)})`, sexText !== 'не указан' && `пол: ${sexText}`].filter(Boolean).join(' · ') || 'Данные профиля не заполнены'}
+            {[profile.birthYear && `${profile.birthDate ? fmtDate(profile.birthDate) : `${profile.birthYear} г.`} р. (${ageText(profile.birthYear, profile.birthDate)})`, sexText !== 'не указан' && `пол: ${sexText}`].filter(Boolean).join(' · ') || 'Данные профиля не заполнены'}
             {' · период: '}
             {periodLabel}
           </p>

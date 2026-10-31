@@ -218,6 +218,7 @@ db.exec(`CREATE TABLE IF NOT EXISTS email_verifications (
   expires_at TEXT NOT NULL
 )`)
 addColumn('users', 'email_verified_at', 'TEXT')
+addColumn('profiles', 'birth_date', 'TEXT')
 db.exec(`CREATE TABLE IF NOT EXISTS feedback (
   id TEXT PRIMARY KEY,
   user_id TEXT REFERENCES users(id) ON DELETE CASCADE,

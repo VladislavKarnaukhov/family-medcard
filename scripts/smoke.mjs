@@ -399,6 +399,23 @@ try {
     assert.equal(firstSteps({ ...rich, profiles: [{ id: 'q', peer: true }] }).steps[0].done, false, 'peer profile does not count as own')
   })
 
+  await step('profile keeps an exact birth date, derives the year, rejects a future date (M-01)', async () => {
+    const r = await call('POST', `/api/families/${fid}/profiles`, { name: 'Дата Тестова', basis: 'adult', attest: true, birthDate: '1950-03-07', sex: 'f' })
+    assert.equal(r.status, 200, JSON.stringify(r.json))
+    let st = (await call('GET', `/api/families/${fid}/state`)).json.profiles.find((p) => p.id === r.json.id)
+    assert.equal(st.birthDate, '1950-03-07')
+    assert.equal(st.birthYear, 1950)
+    const future = await call('PUT', `/api/profiles/${r.json.id}`, { name: 'Дата Тестова', birthDate: '2999-01-01', birthYear: 1951, sex: 'f' })
+    assert.equal(future.status, 200)
+    st = (await call('GET', `/api/families/${fid}/state`)).json.profiles.find((p) => p.id === r.json.id)
+    assert.equal(st.birthDate, null)
+    assert.equal(st.birthYear, 1951, 'falls back to the year field')
+    const { ageText } = await import('../src/lib/format.js')
+    const y = new Date().getFullYear()
+    assert.match(ageText(null, `${y - 70}-12-31`), /^69 /, 'birthday not yet reached this year when date is the last day of the year')
+    assert.match(ageText(1950), /лет|год|года/)
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
