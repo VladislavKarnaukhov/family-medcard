@@ -437,11 +437,47 @@ try {
     assert.equal(by('Тромбоциты').confidence, 'low', 'letter O fixed in a number is flagged')
     assert.equal(by('Креатинин').value, 101)
     assert.equal(by('Креатинин').confidence, 'low')
-    assert.equal(by('Кальций общий').confidence, 'low', 'not in the reference list: kept but flagged')
+    assert.equal(by('Кальций общий').confidence, 'high', 'not in the reference list but cleanly read: kept, name stays as written')
     assert.equal(by('Гемоглобин').confidence, 'high')
     assert.ok(!r.rows.some((x) => /Врач|Страница/.test(x.name)), 'noise lines are skipped')
     assert.equal(parseLabText('просто текст без показателей').rows.length, 0)
     assert.equal(parseLabText('Гемоглобин 1320 г/л 117 - 155').rows[0].confidence, 'low', 'implausible value is flagged, not fixed')
+  })
+
+  await step('parser on an OCR-like hospital form: wrapped names, flags, lookalike units, lost decimal point (values are synthetic)', async () => {
+    const { parseLabText } = await import('../src/lib/labparse.js')
+    const text = `Дата взятия образца: 05.03.2025      09:10
+Наименование исследования        Результат     Ед.изм.      Нормальные значения
+ГЕМАТОЛОГИЧЕСКИЕ ИССЛЕДОВАНИЯ
+Эритроциты        4.21      10*12/n      3.92-5.08
+Гемоглобин        128       г/л          119-146
+Средний объем эритроцитов (MCV)      90.0      фл      82.9-98.0
+Среднее содержание гемоглобина в      29.1      nr/kn      27.0-32.3
+эритроците (MCH)
+Средняя концентрация Hb в эритроцитах      33.0      г/дл      31.8-34.7
+(MCHC)
+Нейтрофилы %      50.2      %      42.5-73.2
+Базофилы %      08 (Н)      %      0.0-0.7
+Моноциты %      6.2      %      4311.0
+Лимфоциты %      41.8      %      18.2-474`
+    const r = parseLabText(text)
+    assert.equal(r.date, '2025-03-05', 'sampling date, not another date')
+    const by = (re) => r.rows.find((x) => re.test(x.name))
+    assert.equal(r.rows.length, 9)
+    assert.equal(by(/^Эритроциты$/).unit, '10¹²/л', 'lookalike «n» repaired to «л»')
+    assert.equal(by(/^Эритроциты$/).confidence, 'high')
+    assert.equal(by(/MCV|объ.м эритроцита/).name, 'Средний объём эритроцита', 'indicator found by abbreviation in brackets')
+    assert.equal(by(/MCH\)/).unit, 'пг/кл', 'rare unit repaired')
+    assert.match(by(/MCH\)/).name, /эритроците \(MCH\)$/, 'wrapped name joined')
+    const mchc = by(/MCHC/)
+    assert.notEqual(mchc.name, 'Гемоглобин', '«Hb» inside a longer name must not turn it into hemoglobin')
+    assert.equal(mchc.value, 33)
+    assert.equal(by(/^Нейтрофилы %/).confidence, 'high')
+    const baso = by(/^Базофилы %/)
+    assert.equal(baso.value, 0.8, '«08» read as 0.8')
+    assert.equal(baso.confidence, 'low')
+    assert.equal(by(/^Моноциты %/).confidence, 'low', 'reference lost its dash')
+    assert.equal(by(/^Лимфоциты %/).confidence, 'low', 'implausible reference 18.2-474 %')
   })
 
   await step('on-device OCR assets are served and CSP allows only the worker and wasm they need', async () => {
