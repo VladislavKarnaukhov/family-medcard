@@ -17,7 +17,8 @@
     "serve": "vite build && npm start",
     "share:public": "DATA_DIR=server/data/public node scripts/share.mjs",
     "metrics": "node scripts/metrics.mjs",
-    "mail:test": "node --env-file-if-exists=.env scripts/mail-test.mjs"
+    "mail:test": "node --env-file-if-exists=.env scripts/mail-test.mjs",
+    "audit": "npm audit --omit=dev --audit-level=high"
   },
   "keywords": [],
   "author": "",

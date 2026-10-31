@@ -80,6 +80,11 @@ export async function refresh() {
   try {
     const data = await api('GET', `/api/families/${state.familyId}/state`)
     commit({ ...EMPTY_DATA, ...data, activeProfileId: pickActive(data.profiles, state.familyId, state.activeProfileId) })
+    // Адрес подтвердили (кодом при подписи согласия или ссылкой в другой вкладке): обновляем баннер.
+    if (state.user && !state.user.emailVerified) {
+      const me = await api('GET', '/api/me')
+      if (me.user.emailVerified) commit({ user: me.user })
+    }
   } catch (e) {
     if (e.status === 401) commit({ user: null, familyId: null, families: [] })
     else if (e.status === 404) await init()

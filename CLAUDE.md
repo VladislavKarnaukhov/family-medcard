@@ -15,6 +15,7 @@ npm run dev      # Vite: клиенты на :5173, сотрудники на :5
 npm run build    # сборка обоих приложений в dist/
 npm start        # сборка и запуск одним сервером на :3000 (NODE_ENV=production)
 npm run backup   # резервная копия базы
+npm run audit    # уязвимости в зависимостях (запускайте перед выпуском)
 npm run metrics  # воронка и цель MVP по таблице events (--json для машинного вывода)
 ```
 
