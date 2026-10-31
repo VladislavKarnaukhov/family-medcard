@@ -860,7 +860,8 @@ mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAccess, tooMany, b
 const dist = join(here, '..', 'dist')
 if (existsSync(dist)) app.use(express.static(dist, { index: 'index.html', setHeaders: (r, f) => r.setHeader('Cache-Control', f.includes(`${join('dist', 'assets')}`) ? 'public, max-age=31536000, immutable' : 'no-cache') }))
 
-app.use((req, res) => (req.path.startsWith('/api/') ? fail(res, 404, 'not_found') : res.status(404).send('Не найдено')))
+const notFoundPage = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Страница не найдена · Близкие</title><style>body{margin:0;background:#f8f5ef;color:#26332f;font:18px/1.5 system-ui,sans-serif;display:grid;min-height:100vh;place-items:center;padding:24px}main{max-width:420px}h1{font-size:28px;margin:0 0 12px}a{display:inline-flex;align-items:center;min-height:48px;padding:0 24px;border-radius:999px;background:#1b6b58;color:#fff;text-decoration:none;font-weight:600}p{color:#5b6b64}</style></head><body><main><h1>Страница не найдена</h1><p>Возможно, ссылка устарела или в ней опечатка.</p><a href="/">Перейти в «Близкие»</a></main></body></html>`
+app.use((req, res) => (req.path.startsWith('/api/') ? fail(res, 404, 'not_found') : res.status(404).type('html').send(notFoundPage)))
 app.use((err, req, res, next) => {
   console.error(err)
   if (res.headersSent) return next(err)

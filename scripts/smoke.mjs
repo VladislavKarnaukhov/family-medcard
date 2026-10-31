@@ -503,6 +503,15 @@ try {
     assert.equal((await call('DELETE', '/api/me/account', { password: 'long-enough-1' })).status, 200)
   })
 
+  await step('unknown page gives a friendly 404, API 404 stays JSON (M-46)', async () => {
+    const page = await call('GET', '/no/such/page')
+    assert.equal(page.status, 404)
+    assert.match(page.text, /Страница не найдена/)
+    const api404 = await call('GET', '/api/no-such-route')
+    assert.equal(api404.status, 404)
+    assert.equal(api404.json.error, 'not_found')
+  })
+
   await step('wrong password rejected', async () => {
     cookie = ''
     assert.equal((await call('POST', '/api/auth/login', { email: 't@example.test', password: 'nope-nope-1' })).status, 401)
