@@ -480,6 +480,31 @@ try {
     assert.equal(by(/^Лимфоциты %/).confidence, 'low', 'implausible reference 18.2-474 %')
   })
 
+  await step('PDF text layer: columns rebuilt from coordinates and parsed like a photo', async () => {
+    const { pdfToText } = await import('../src/lib/pdftext.js')
+    const { parseLabText } = await import('../src/lib/labparse.js')
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+    const rows = [['Test', 'Result', 'Unit', 'Reference'], ['HGB', '128', 'g/L', '117 - 155'], ['CRP', '3.2', 'mg/L', '0 - 5'], ['GLU', '5.4', 'mmol/L', '4.1 - 5.9']]
+    const xs = [50, 200, 300, 400]
+    const stream = rows.map((r, i) => r.map((c, j) => `BT /F1 12 Tf ${xs[j]} ${700 - i * 20} Td (${c}) Tj ET`).join('\n')).join('\n') + '\nBT /F1 12 Tf 50 600 Td (Date of sampling: 05.03.2025) Tj ET'
+    const objs = ['<< /Type /Catalog /Pages 2 0 R >>', '<< /Type /Pages /Kids [3 0 R] /Count 1 >>', '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>', `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>']
+    let pdf = '%PDF-1.4\n'
+    const off = []
+    objs.forEach((o, i) => { off.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n` })
+    const xref = pdf.length
+    pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + off.map((o) => String(o).padStart(10, '0') + ' 00000 n \n').join('') + `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`
+    const text = await pdfToText(pdfjs, Buffer.from(pdf, 'latin1'))
+    assert.match(text, /HGB\s{2,}128\s{2,}g\/L\s{2,}117 - 155/, 'one line per row, columns separated')
+    const r = parseLabText(text)
+    assert.equal(r.date, '2025-03-05')
+    const hgb = r.rows.find((x) => x.name === 'Гемоглобин')
+    assert.deepEqual([hgb.value, hgb.unit, hgb.refLow, hgb.refHigh], [128, 'g/L', 117, 155])
+    assert.equal(r.rows.find((x) => x.name === 'С-реактивный белок').value, 3.2)
+    assert.equal(r.rows.find((x) => x.name === 'Глюкоза').refHigh, 5.9)
+    const csp = readFileSync('server/index.js', 'utf8')
+    assert.ok(existsSync('public/ocr/pdf.worker.min.mjs') && csp.includes("worker-src 'self' blob:"), 'pdf worker is served from our own origin')
+  })
+
   await step('on-device OCR assets are served and CSP allows only the worker and wasm they need', async () => {
     for (const f of ['worker.min.js', 'lang/rus.traineddata.gz', 'lang/eng.traineddata.gz', 'tesseract-core-simd-lstm.wasm']) {
       const r = await fetch(`${base}/ocr/${f}`)

@@ -15,5 +15,6 @@ const copy = (from, to) => {
 }
 copy(join(nm, 'tesseract.js', 'dist', 'worker.min.js'), join(out, 'worker.min.js'))
 for (const f of readdirSync(join(nm, 'tesseract.js-core'))) if (/lstm/.test(f) && /\.(js|wasm)$/.test(f)) copy(join(nm, 'tesseract.js-core', f), join(out, f))
+copy(join(nm, 'pdfjs-dist', 'build', 'pdf.worker.min.mjs'), join(out, 'pdf.worker.min.mjs'))
 for (const l of ['rus', 'eng']) copy(join(nm, '@tesseract.js-data', l, '4.0.0_best_int', `${l}.traineddata.gz`), join(out, 'lang', `${l}.traineddata.gz`))
 console.log('Файлы распознавания готовы:', out)

@@ -50,11 +50,39 @@ async function getWorker(onProgress) {
   return worker
 }
 
-export async function ocrImage(file, onProgress) {
+export async function ocrCanvas(canvas, onProgress) {
   const w = await getWorker(onProgress)
-  const canvas = await prepare(file)
   const { data } = await w.recognize(canvas)
   return data.text
+}
+
+export async function ocrImage(file, onProgress) {
+  return ocrCanvas(await prepare(file), onProgress)
+}
+
+// PDF: сначала текстовый слой (точно и быстро), для сканов страницы рисуются и читаются как фото.
+export async function readPdf(file, onProgress) {
+  const pdfjs = await import('pdfjs-dist/build/pdf.min.mjs')
+  pdfjs.GlobalWorkerOptions.workerSrc = `${BASE}/pdf.worker.min.mjs`
+  const { pdfToText } = await import('./pdftext.js')
+  const data = await file.arrayBuffer()
+  const text = await pdfToText(pdfjs, data.slice(0))
+  if (text.replace(/\s/g, '').length > 80) return { text, scanned: false }
+  // Скан без текстового слоя: рисуем страницы и читаем как изображения.
+  const task = pdfjs.getDocument({ data: new Uint8Array(data) })
+  const doc = await task.promise
+  let out = ''
+  for (let n = 1; n <= Math.min(doc.numPages, 4); n++) {
+    const page = await doc.getPage(n)
+    const vp = page.getViewport({ scale: 2200 / page.getViewport({ scale: 1 }).width })
+    const c = document.createElement('canvas')
+    c.width = Math.round(vp.width)
+    c.height = Math.round(vp.height)
+    await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise
+    out += (await ocrCanvas(c, onProgress)) + '\n'
+  }
+  await task.destroy()
+  return { text: out, scanned: true }
 }
 
 export async function stopOcr() {
