@@ -7,7 +7,7 @@ import { latestPoints, isOut } from '../lib/data'
 import { docTitle, fmtDate, fmtDateTime, fmtNum, refText, ageText, SEX } from '../lib/format'
 import { CONSENT_LABEL } from './ProfileForm'
 import { DOC_TYPES } from './Dossier'
-import { daySchedule, firstSteps, fmtDt, localNow, marked, nextAppointment } from '../lib/care'
+import { daySchedule, fmtDt, localNow, marked, nextAppointment } from '../lib/care'
 
 function CareBlock({ state, profile, owner, write }) {
   const date = localNow(state.family?.timezone).date
@@ -67,59 +67,6 @@ function Welcome({ owner }) {
         </>
       )}
     </div>
-  )
-}
-
-function FirstSteps({ state }) {
-  const [hidden, setHidden] = useState(() => {
-    try {
-      return localStorage.getItem('blizkie-steps-hidden') === '1'
-    } catch {
-      return false
-    }
-  })
-  let seen = false
-  try {
-    seen = localStorage.getItem('blizkie-summary-seen') === '1'
-  } catch {
-    /* хранилище недоступно */
-  }
-  const { steps, done, next } = firstSteps(state, seen)
-  if (hidden || !next) return null
-  const hide = () => {
-    setHidden(true)
-    try {
-      localStorage.setItem('blizkie-steps-hidden', '1')
-    } catch {
-      /* хранилище недоступно */
-    }
-  }
-  return (
-    <section className="mb-8 rounded-2xl bg-card px-5 py-3 shadow-sheet" aria-label="Первые шаги">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <p className="min-w-0 flex-1 basis-60">
-          <span className="text-sm text-muted">Первые шаги, {done} из {steps.length}</span>
-          <span className="block font-medium">{next.title}</span>
-        </p>
-        <Button className="shrink-0" onClick={() => go(next.href)}>
-          Сделать
-        </Button>
-        <button className="min-h-12 text-sm text-muted hover:underline" onClick={hide}>Скрыть</button>
-      </div>
-      <details className="border-t border-line">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center text-sm text-accent-dark">Все шаги</summary>
-        <ol className="divide-y divide-line pb-2">
-          {steps.map((s) => (
-            <li key={s.key} className="flex items-center gap-3 py-2">
-              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${s.done ? 'bg-accent text-white' : 'border border-line-strong'}`} aria-hidden="true">
-                {s.done && <Icon name="check" size={14} />}
-              </span>
-              <span className={s.done ? 'text-muted line-through' : ''}>{s.title}</span>
-            </li>
-          ))}
-        </ol>
-      </details>
-    </section>
   )
 }
 
@@ -263,7 +210,6 @@ export default function Dashboard({ state, profile }) {
 
   return (
     <div>
-      {owner && !profile.peer && <FirstSteps state={state} />}
       <PageHeader
         title={profile.name}
         subtitle={
