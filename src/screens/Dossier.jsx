@@ -17,7 +17,7 @@ const ADDABLE = Object.entries(DOC_TYPES).filter(([k]) => k !== 'analysis')
 
 const STATUS = {
   requested: 'Запрошено помощником',
-  processing: 'Помощник вносит в досье',
+  processing: 'Помощник вносит в документы',
 }
 
 export default function Dossier({ state, profile }) {
@@ -69,7 +69,7 @@ export default function Dossier({ state, profile }) {
   return (
     <div>
       <PageHeader
-        title="Досье"
+        title="Документы"
         subtitle={`Все документы профиля «${profile.name}» в одном месте. Всего: ${items.length}.`}
         actions={
           write && (
@@ -112,7 +112,7 @@ export default function Dossier({ state, profile }) {
           <div className="space-y-3 lg:col-span-2">
             <ErrorText>{err}</ErrorText>
             <Button disabled={!f.title.trim() || busy} onClick={submit}>
-              {busy ? 'Загружаем…' : owner ? 'Передать помощнику' : 'Добавить в досье'}
+              {busy ? 'Загружаем…' : owner ? 'Передать помощнику' : 'Добавить в документы'}
             </Button>
           </div>
         </Card>
@@ -122,7 +122,7 @@ export default function Dossier({ state, profile }) {
 
       {shown.length === 0 ? (
         <Empty icon="folder" action={write && <Button variant="soft" icon="plus" onClick={() => go('add')}>Добавить анализ</Button>}>
-          {items.length === 0 ? 'В досье пока пусто. Добавьте бланк анализа или отправьте документ помощнику.' : 'Документов этого типа нет.'}
+          {items.length === 0 ? 'Документов пока нет. Добавьте бланк анализа или отправьте документ помощнику.' : 'Документов этого типа нет.'}
         </Empty>
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet">
@@ -175,7 +175,7 @@ export default function Dossier({ state, profile }) {
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-accent-soft px-5 py-4">
           <div className="max-w-[56ch]">
             <p className="font-semibold">Паспорт здоровья</p>
-            <p className="text-[0.95rem] text-muted">Краткое досье на русском и английском: профиль, лекарства, показатели, документы. Пригодится для лечения за границей или второго мнения.</p>
+            <p className="text-[0.95rem] text-muted">Краткая справка на русском и английском: профиль, лекарства, показатели, документы. Пригодится для лечения за границей или второго мнения.</p>
           </div>
           <Button
             variant="ghost"

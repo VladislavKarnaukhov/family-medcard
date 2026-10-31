@@ -106,7 +106,7 @@ export function VisitForm({ state, profile, id }) {
                 </Field>
                 {docs.length > 0 && (
                   <fieldset>
-                    <legend className="mb-1.5 text-sm font-medium">Документы из досье</legend>
+                    <legend className="mb-1.5 text-sm font-medium">Документы профиля</legend>
                     <div className="flex flex-wrap gap-2">
                       {docs.map((d) => (
                         <button key={d.id} type="button" aria-pressed={v.documentIds.includes(d.id)} onClick={() => toggleDoc(d.id)} className={`min-h-12 rounded-full px-4 font-medium ${v.documentIds.includes(d.id) ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>

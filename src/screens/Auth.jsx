@@ -10,7 +10,7 @@ import { OtpSign } from './ConsentGate'
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
 // Вход и регистрация: на компьютере слева текстовая колонка с примером строки результата, справа форма.
-export function AuthShell({ children, wide = false, headline = 'Лекарства близких под спокойным присмотром', sentence = 'Расписание приёма, отметки и сводка для врача в одном месте. Вы видите, что принято сегодня, а доступ остаётся у вас.', brand = '', sample = true }) {
+export function AuthShell({ children, wide = false, headline = 'Забота без тревоги', sentence = 'Расписание приёма, отметки и сводка для врача в одном месте. Вы видите, что принято сегодня, а доступ остаётся у вас.', brand = '', sample = true }) {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col lg:flex-row">
@@ -162,7 +162,7 @@ export default function AuthScreen() {
   return (
     <AuthShell>
       <h1 className="mb-1 text-[1.75rem]">Добро пожаловать</h1>
-      <p className="mb-6 text-muted">Войдите или создайте аккаунт, чтобы вести досье семьи.</p>
+      <p className="mb-6 text-muted">Войдите или создайте аккаунт, чтобы вести записи о здоровье семьи.</p>
       <Card className="!p-6">
         <AuthForm />
       </Card>
