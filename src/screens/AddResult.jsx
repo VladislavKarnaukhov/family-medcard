@@ -4,7 +4,7 @@ import { Icon } from '../components/icons'
 import { Preview, ResultForm } from '../components/ResultForm'
 import { actions, can } from '../lib/store'
 import { recognize, getFeatures } from '../lib/recognize'
-import { ocrImage, stopOcr } from '../lib/ocr'
+import { ocrImage, readPdf, stopOcr } from '../lib/ocr'
 import { parseLabText } from '../lib/labparse'
 import { BLOOD_PANELS, draftBad, draftRows, emptyDraft, panelDraft, toDraft } from '../lib/draft'
 import { fmtDate, localISO } from '../lib/format'
@@ -67,14 +67,16 @@ export default function AddResult({ state, profile }) {
       let got = 0
       for (const [i, f] of files.entries()) {
         const blank = { ...emptyDraft(localISO()), sourceFile: f.name }
-        if (!f.type.startsWith('image/')) {
-          notes.push(`${f.name}: PDF вносится вручную, чтение на устройстве работает для фото`)
+        const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name)
+        if (!isPdf && !f.type.startsWith('image/')) {
           out.push(blank)
           continue
         }
         try {
           setProgress(`Читаем бланк ${i + 1} из ${files.length} на вашем устройстве…`)
-          const parsed = parseLabText(await ocrImage(f, (m) => m.status === 'recognizing text' && setProgress(`Читаем бланк ${i + 1} из ${files.length}: ${Math.round((m.progress || 0) * 100)}%`)))
+          const onP = (m) => m.status === 'recognizing text' && setProgress(`Читаем бланк ${i + 1} из ${files.length}: ${Math.round((m.progress || 0) * 100)}%`)
+          const text = isPdf ? (await readPdf(f, onP)).text : await ocrImage(f, onP)
+          const parsed = parseLabText(text)
           if (parsed.rows.length) {
             got += parsed.rows.length
             out.push({ ...toDraft({ sourceFile: f.name, date: parsed.date || localISO(), labName: parsed.labName || '', rows: parsed.rows }) })
