@@ -428,6 +428,19 @@ try {
     assert.equal(bannerOnScreen('', true), true)
   })
 
+  await step('text colors keep WCAG AA contrast (4.5:1) on every surface they are used on (M-61)', async () => {
+    const css = readFileSync('src/index.css', 'utf8')
+    const c = Object.fromEntries([...css.matchAll(/--color-([a-z-]+):\s*(#[0-9a-fA-F]{6})/g)].map((m) => [m[1], m[2]]))
+    const lum = (h) => {
+      const v = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4))
+      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
+    }
+    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
+    const pairs = [['ink', 'paper'], ['ink', 'card'], ['muted', 'paper'], ['muted', 'card'], ['muted', 'sunken'], ['accent-dark', 'paper'], ['accent-dark', 'accent-soft'], ['alert', 'paper'], ['alert', 'alert-soft'], ['accent', 'paper']]
+    for (const [fg, bg] of pairs) assert.ok(ratio(c[fg], c[bg]) >= 4.5, `${fg} on ${bg}: ${ratio(c[fg], c[bg]).toFixed(2)}`)
+    assert.ok(ratio('#ffffff', c.accent) >= 4.5, 'white on accent button')
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
