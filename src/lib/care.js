@@ -99,6 +99,12 @@ export function firstSteps(state, summarySeen = false) {
 // Плашка не нужна там, где приёмы и так на экране: на «Сегодня» и в простом режиме на главной.
 export const bannerOnScreen = (hash, simple) => /^#\/today(\/|$)/.test(hash) || (simple && (hash === '' || hash === '#' || hash === '#/'))
 
+// Простой режим: одно главное действие, остальные приёмы дня свёрнуты.
+export function simpleSplit(rows) {
+  const first = rows.find((r) => r.state === 'due' || r.state === 'unmarked') || rows.find((r) => r.state === 'later') || null
+  return { first, rest: rows.filter((r) => r !== first) }
+}
+
 export const marked = (rows) => rows.filter((r) => r.state === 'taken' || r.state === 'skipped').length
 
 export function nextAppointment(state, profileId) {
