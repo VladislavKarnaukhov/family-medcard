@@ -138,6 +138,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
       id = uuid()
       run('INSERT INTO intakes (id, medication_id, profile_id, scheduled_at, status, reason, marked_by_id, marked_by_name, marked_by_self, marked_at) VALUES (?,?,?,?,?,?,?,?,?,?)', id, m.id, m.profile_id, at, status, reason, req.user.id, req.user.name, who.self, nowIso())
     }
+    if (!ex || ex.status === 'unmarked') log(m.fid, req.user, m.profile_id, `${status === 'taken' ? 'Отмечен приём' : 'Отмечен пропуск приёма'}: ${m.name}`)
     track('intake_marked', { userId: req.user.id, familyId: m.fid, role: actorRole(c.a, m.profile_id).role })
     res.json(intakeView(get('SELECT * FROM intakes WHERE id = ?', id)))
   })
