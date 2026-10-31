@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Button, Chip, Empty, ErrorText, H, PageHeader, go } from '../components/ui'
+import { Button, Chip, Empty, ErrorText, PageHeader, go } from '../components/ui'
 import { Icon } from '../components/icons'
 import { actions, can } from '../lib/store'
 import { KIND_LABEL, MOOD_LABEL, NEEDS, bannerOnScreen, bannerRows, daySchedule, simpleSplit, fmtDt, isMarker, localNow, marked, nextAppointment } from '../lib/care'

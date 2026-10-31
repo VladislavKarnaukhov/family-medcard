@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react'
 import QRCode from 'qrcode'
 import { Button, Card, Empty, ErrorText, H, Notice, PageHeader, Spinner, Toggle } from '../components/ui'
-import { Icon } from '../components/icons'
+
 import { Footer, Wordmark } from '../components/Layout'
 import { api } from '../lib/api'
 import { actions, can } from '../lib/store'
 import { DocLink } from './Legal'
 
 // Один и тот же вид для предпросмотра владельцу и для публичной страницы.
-export function CardView({ c }) {
+export function CardView({ c, as: Title = 'h1' }) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-[2.25rem] leading-tight">{c.name}</h1>
+        <Title className="text-[2.25rem] leading-tight">{c.name}</Title>
         {c.birthYear && <p className="mt-1 text-xl text-muted">{c.birthYear} г. р.</p>}
       </div>
       <Block title="Аллергии">{c.allergies || 'Не указаны'}</Block>
@@ -129,7 +129,7 @@ export default function Emergency({ state, profile }) {
       <PageHeader title="Экстренная карточка" subtitle="Страница для скорой по QR-коду: открывается без входа. Покажите её фельдшеру или оставьте на холодильнике." back={{ href: '#/', label: 'Главная' }} />
 
       <H>Что увидит любой, у кого будет ссылка</H>
-      <Card className="max-w-[560px]"><CardView c={card} /></Card>
+      <Card className="max-w-[560px]"><CardView c={card} as="h2" /></Card>
       <p className="mt-3 text-sm text-muted">Аллергии, заболевания и контакты редактируются в <a className="font-medium text-accent-dark underline" href="#/profile">профиле</a>. Лекарства берутся из раздела «Лекарства».</p>
 
       {link ? (

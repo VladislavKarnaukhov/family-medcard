@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { api, uploadFile } from '../lib/api'
-import { Avatar, Button, Chip, Empty, ErrorText, Field, Tabs, go } from '../components/ui'
+import { Avatar, Button, Chip, Empty, ErrorText, Field, Tabs } from '../components/ui'
 import { Icon } from '../components/icons'
 import { usePoll } from './hooks'
 import { ageText, docTitle, fmtDate, fmtDateTime, humanize, localISO, SEX } from '../lib/format'

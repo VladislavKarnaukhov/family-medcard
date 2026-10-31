@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Card, Empty, ErrorText, Notice, PageHeader, Tabs, Toggle, go } from '../components/ui'
+import { Button, Empty, ErrorText, Notice, PageHeader, Tabs, Toggle, go } from '../components/ui'
 import { Icon } from '../components/icons'
 import { Preview, ResultForm } from '../components/ResultForm'
 import { actions, can } from '../lib/store'

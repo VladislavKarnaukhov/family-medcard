@@ -6,6 +6,15 @@ export class ApiError extends Error {
   }
 }
 
+// Коды ошибок сервера, которые нельзя показывать человеку как есть.
+const CODES = {
+  not_found: 'Не найдено. Возможно, это уже удалено или у вас нет доступа.',
+  forbidden: 'У вас нет прав на это действие.',
+  auth: 'Сессия закончилась. Войдите заново.',
+  bad_request: 'Не удалось обработать запрос. Обновите страницу и попробуйте ещё раз.',
+}
+export const humanError = (error, status) => CODES[error] || error || (status >= 500 ? 'Сервер временно недоступен. Попробуйте чуть позже.' : 'Не удалось выполнить запрос')
+
 async function parse(res) {
   let data = null
   try {
@@ -13,7 +22,7 @@ async function parse(res) {
   } catch {
     /* пустой ответ */
   }
-  if (!res.ok) throw new ApiError(data?.error || 'Не удалось выполнить запрос', res.status)
+  if (!res.ok) throw new ApiError(humanError(data?.error, res.status), res.status)
   return data
 }
 
