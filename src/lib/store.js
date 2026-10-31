@@ -255,6 +255,7 @@ export const actions = {
   },
   setMedStatus: act((id, status) => api('PUT', `/api/medications/${id}`, { status })),
   deleteMed: act((id) => api('DELETE', `/api/medications/${id}`)),
+  undoIntake: act((medId, scheduledAt) => api('POST', `/api/medications/${medId}/intakes`, { scheduledAt, status: 'unmarked' })),
   markIntake: act((medId, scheduledAt, status, reason = '') => api('POST', `/api/medications/${medId}/intakes`, { scheduledAt, status, reason })),
   addNote: act((profileId, n) => api('POST', `/api/profiles/${profileId}/care-notes`, n)),
   updateNote: act((id, n) => api('PUT', `/api/care-notes/${id}`, n)),

@@ -104,7 +104,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
     const c = ctxProfile(req, res, m.profile_id, 'write')
     if (!c) return
     const status = req.body.status
-    if (!['taken', 'skipped'].includes(status)) return fail(res, 400, 'Неверный статус')
+    if (!['taken', 'skipped', 'unmarked'].includes(status)) return fail(res, 400, 'Неверный статус')
     const tz = famTz(m.fid)
     const local = tzNow(tz)
     const times = safeJson(m.times) || []
@@ -119,6 +119,15 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
     const who = actorRole(c.a, m.profile_id)
     const ex = get('SELECT * FROM intakes WHERE medication_id = ? AND scheduled_at = ?', m.id, at)
     if (ex && ex.status !== 'unmarked' && !withinWindow(ex.marked_at) && !isOwner(c.a)) return fail(res, 409, 'Отметку можно исправить в течение 24 часов')
+    if (status === 'unmarked') {
+      // Снять отметку: приём возвращается в «не отмечен» (если час на отметку прошёл) или в «ещё не время».
+      if (times.length === 0) return fail(res, 400, 'Для лекарства «по необходимости» отметку нельзя снять')
+      if (!ex || ex.status === 'unmarked') return res.json({ undone: true })
+      if (addMinutes(at, 60) <= local.dt) run("UPDATE intakes SET status = 'unmarked', reason = '', marked_by_id = NULL, marked_by_name = NULL, marked_by_self = 0, marked_at = NULL WHERE id = ?", ex.id)
+      else run('DELETE FROM intakes WHERE id = ?', ex.id)
+      log(m.fid, req.user, m.profile_id, `Отметка приёма снята: ${m.name}`)
+      return res.json({ undone: true })
+    }
     const reason = str(req.body.reason, 200)
     let id
     if (ex) {

@@ -36,6 +36,18 @@ export function IntakeRow({ row, write, simple, onDone }) {
       setBusy(false)
     }
   }
+  const undo = async () => {
+    setBusy(true)
+    setErr('')
+    try {
+      await actions.undoIntake(row.med.id, row.at)
+      onDone?.()
+    } catch (e) {
+      setErr(e.message)
+    } finally {
+      setBusy(false)
+    }
+  }
   const btn = simple ? '!min-h-14 !text-xl' : '!min-h-12'
   return (
     <li className={`py-4 ${simple ? 'py-5' : ''}`}>
@@ -62,6 +74,11 @@ export function IntakeRow({ row, write, simple, onDone }) {
           <Button className={`${btn} flex-1 sm:flex-none sm:min-w-40`} variant="ghost" disabled={busy} onClick={() => setSkip(true)}>
             {simple ? 'Пропустил(а)' : 'Пропустил'}
           </Button>
+          {done && (
+            <Button className={btn} variant="quiet" disabled={busy} onClick={undo}>
+              Отменить отметку
+            </Button>
+          )}
         </div>
       )}
       {skip && (

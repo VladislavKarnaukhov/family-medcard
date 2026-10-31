@@ -337,6 +337,21 @@ try {
     })
   })
 
+  await step('mark can be undone: closed slot returns to «unmarked», repeat is harmless, can be marked again (M-04)', async () => {
+    const before = db.prepare('SELECT status FROM intakes WHERE medication_id = ? AND scheduled_at = ?').get(medId, intakeAt)
+    assert.equal(before.status, 'taken')
+    const r = await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'unmarked' })
+    assert.equal(r.status, 200, JSON.stringify(r.json))
+    assert.equal(r.json.undone, true)
+    const row = db.prepare('SELECT status, marked_by_id, marked_at FROM intakes WHERE medication_id = ? AND scheduled_at = ?').get(medId, intakeAt)
+    assert.equal(row.status, 'unmarked')
+    assert.equal(row.marked_by_id, null)
+    assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'unmarked' })).status, 200)
+    assert.ok(count('access_log', "action LIKE 'Отметка приёма снята%'") >= 1)
+    await asUser(viewerJar, async () => assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'unmarked' })).status, 403))
+    assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken' })).status, 200)
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
