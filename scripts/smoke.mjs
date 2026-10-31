@@ -458,6 +458,7 @@ try {
     const t = readFileSync('src/screens/Auth.jsx', 'utf8')
     assert.ok(t.includes('Забота без тревоги'))
     assert.ok(!/Заведите маму/i.test(t))
+    assert.ok(!t.includes('Пример экрана') && !t.includes('Расписание приёма, отметки и сводка'), 'hero is the headline only')
     const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (['legal', 'staff'].includes(e.name) ? [] : walk(join(d, e.name))) : [join(d, e.name)]))
     for (const f of walk('src').filter((f) => /\.jsx?$/.test(f))) assert.ok(!/досье/i.test(readFileSync(f, 'utf8')), 'досье in ' + f)
   })
