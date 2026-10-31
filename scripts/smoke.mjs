@@ -362,6 +362,20 @@ try {
     assert.equal(bannerRows([r('taken'), r('skipped'), r('later')]).rows.length, 0)
   })
 
+  await step('first steps checklist follows the data (M-62)', async () => {
+    const { firstSteps } = await import('../src/lib/care.js')
+    const empty = { profiles: [], medications: [], members: [], invites: [], intakes: [] }
+    assert.equal(firstSteps(empty).done, 0)
+    assert.equal(firstSteps(empty).next.key, 'profile')
+    const withProfile = { ...empty, profiles: [{ id: 'p1' }] }
+    assert.equal(firstSteps(withProfile).next.key, 'meds')
+    assert.equal(firstSteps(withProfile).next.href, 'meds/p1/new')
+    const rich = { profiles: [{ id: 'p1' }], medications: [{}], members: [], invites: [{}], intakes: [{ status: 'taken' }] }
+    assert.equal(firstSteps(rich).next.key, 'summary')
+    assert.equal(firstSteps(rich, true).next, null)
+    assert.equal(firstSteps({ ...rich, profiles: [{ id: 'q', peer: true }] }).steps[0].done, false, 'peer profile does not count as own')
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {

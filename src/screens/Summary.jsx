@@ -66,7 +66,14 @@ export default function Summary({ state, profile, readOnly = false }) {
   const [period, setPeriod] = useState(() => (PERIODS.some((p) => p[0] === new URLSearchParams(location.search).get('days')) ? new URLSearchParams(location.search).get('days') : '180'))
   const [hint, setHint] = useState(false)
   useEffect(() => {
-    if (!readOnly) actions.track('summary_viewed')
+    if (!readOnly) {
+      actions.track('summary_viewed')
+      try {
+        localStorage.setItem('blizkie-summary-seen', '1')
+      } catch {
+        /* хранилище недоступно */
+      }
+    }
   }, [readOnly])
   if (!profile) return <Empty icon="sheet">Сначала создайте профиль.</Empty>
 
