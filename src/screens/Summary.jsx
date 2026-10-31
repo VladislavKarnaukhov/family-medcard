@@ -6,11 +6,14 @@ import { vitalsSince } from './Vitals'
 import { ageText, fmtDate, fmtDateTime, fmtNum, localISO, refText, SEX } from '../lib/format'
 
 const PERIODS = [
+  ['7', '7 дней', 7],
+  ['30', '30 дней', 30],
   ['90', '3 месяца', 90],
   ['180', '6 месяцев', 180],
   ['365', 'Год', 365],
   ['730', '2 года', 730],
 ]
+const MAX_MISSED = 8
 const MAX_CHANGES = 10
 const MAX_OUT = 6
 const DAY = 86400000
@@ -32,6 +35,29 @@ function Block({ title, children }) {
       <h3 className="mb-1.5 text-base font-semibold">{title}</h3>
       {children}
     </section>
+  )
+}
+
+function fmtAt(at) {
+  return `${fmtDate(at.slice(0, 10))}, ${at.slice(11)}`
+}
+
+// Отметки приёмов: только факты, без оценок. Считаются приёмы, у которых уже прошёл час на отметку.
+function Adherence({ data, days }) {
+  const r = data && (days <= 7 ? data.d7 : data.d30)
+  if (!r || !r.planned) return <p className="text-sm text-muted">За выбранный период плановых приёмов ещё не было.</p>
+  return (
+    <>
+      <p className="text-sm">
+        Отмечено <strong>{r.taken + r.skipped}</strong> из <strong>{r.planned}</strong> плановых приёмов ({r.percent}%): принято {r.taken}, пропущено {r.skipped}, не отмечено {r.unmarked}.
+      </p>
+      {r.missed.length > 0 && (
+        <p className="mt-1 text-sm text-muted">
+          Не отмечено: {r.missed.slice(0, MAX_MISSED).map((x) => `${fmtAt(x.at)} ${x.medication}`).join('; ')}
+          {r.missed.length > MAX_MISSED || r.unmarked > r.missed.length ? ' и другие' : ''}.
+        </p>
+      )}
+    </>
   )
 }
 
@@ -109,6 +135,12 @@ export default function Summary({ state, profile, readOnly = false }) {
             </p>
           )}
         </header>
+
+        {meds.length > 0 && (
+          <Block title={`Приём лекарств за ${days <= 7 ? '7' : '30'} дней`}>
+            <Adherence data={state.adherence?.[profile.id]} days={days} />
+          </Block>
+        )}
 
         <Block title="Вне диапазона лаборатории (последнее значение)">
           {out.length === 0 ? (
