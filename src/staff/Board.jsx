@@ -20,7 +20,7 @@ export default function Board({ me, staff }) {
         title="Поручения"
         subtitle="Что клиенты просят сделать и на каком этапе работа."
         actions={
-          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-11 rounded-md px-5 font-medium transition-colors ${mine ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-sunken'}`}>
+          <button onClick={() => setMine(!mine)} aria-pressed={mine} className={`min-h-12 rounded-md px-5 font-medium transition-colors ${mine ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-sunken'}`}>
             Только мои
           </button>
         }
@@ -49,12 +49,12 @@ export default function Board({ me, staff }) {
                       </div>
                       <div className="mt-3 flex flex-wrap items-center gap-1.5">
                         {REQ_STATUS.filter(([k]) => k !== s).map(([k, l]) => (
-                          <button key={k} onClick={() => patch(r.id, { status: k })} className="min-h-9 rounded-md border border-line-strong px-3 text-sm font-medium hover:bg-accent-soft">
+                          <button key={k} onClick={() => patch(r.id, { status: k })} className="min-h-12 rounded-md border border-line-strong px-3 text-sm font-medium hover:bg-accent-soft">
                             → {l}
                           </button>
                         ))}
                       </div>
-                      <select aria-label="Ответственный" className="!mt-2 !min-h-9 !py-1 text-sm" value={r.assigneeId || ''} onChange={(e) => patch(r.id, { assigneeId: e.target.value })}>
+                      <select aria-label="Ответственный" className="!mt-2 !min-h-12 !py-1 text-sm" value={r.assigneeId || ''} onChange={(e) => patch(r.id, { assigneeId: e.target.value })}>
                         <option value="">Не назначен</option>
                         {staff.map((x) => (
                           <option key={x.id} value={x.id}>

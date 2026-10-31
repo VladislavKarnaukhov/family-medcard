@@ -109,7 +109,7 @@ export function VisitForm({ state, profile, id }) {
                     <legend className="mb-1.5 text-sm font-medium">Документы из досье</legend>
                     <div className="flex flex-wrap gap-2">
                       {docs.map((d) => (
-                        <button key={d.id} type="button" aria-pressed={v.documentIds.includes(d.id)} onClick={() => toggleDoc(d.id)} className={`min-h-11 rounded-full px-4 font-medium ${v.documentIds.includes(d.id) ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>
+                        <button key={d.id} type="button" aria-pressed={v.documentIds.includes(d.id)} onClick={() => toggleDoc(d.id)} className={`min-h-12 rounded-full px-4 font-medium ${v.documentIds.includes(d.id) ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>
                           {docTitle(d.title)}
                         </button>
                       ))}
@@ -127,15 +127,15 @@ export function VisitForm({ state, profile, id }) {
         </div>
         {existing && (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-line pt-5">
-            <a className="inline-flex min-h-11 items-center gap-2 font-medium text-accent-dark hover:underline" href="#/summary"><Icon name="sheet" size={18} /> Сводка к визиту</a>
+            <a className="inline-flex min-h-12 items-center gap-2 font-medium text-accent-dark hover:underline" href="#/summary"><Icon name="sheet" size={18} /> Сводка к визиту</a>
             {owner && !existing.requestId && !sent && (
-              <button className="inline-flex min-h-11 items-center gap-2 font-medium text-accent-dark hover:underline" onClick={() => run(async () => { await actions.requestVisit(existing.id); setSent(true) })}>
+              <button className="inline-flex min-h-12 items-center gap-2 font-medium text-accent-dark hover:underline" onClick={() => run(async () => { await actions.requestVisit(existing.id); setSent(true) })}>
                 <Icon name="chat" size={18} /> Поручить помощнику
               </button>
             )}
             {(existing.requestId || sent) && <p className="text-sm text-muted">Поручение помощнику создано.</p>}
             {owner && (
-              <button className="min-h-11 font-medium text-alert hover:underline" onClick={() => confirm('Удалить визит?') && run(() => actions.deleteVisit(existing.id), list)}>Удалить</button>
+              <button className="min-h-12 font-medium text-alert hover:underline" onClick={() => confirm('Удалить визит?') && run(() => actions.deleteVisit(existing.id), list)}>Удалить</button>
             )}
           </div>
         )}

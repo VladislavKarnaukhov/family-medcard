@@ -85,10 +85,10 @@ export default function Indicator({ state, profile, keyName }) {
         actions={
           keys.length > 1 && (
             <div className="flex gap-2">
-              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-sunken" aria-label="Предыдущий показатель" onClick={() => go1(idx - 1)}>
+              <button className="flex h-12 w-12 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-sunken" aria-label="Предыдущий показатель" onClick={() => go1(idx - 1)}>
                 <Icon name="chevL" size={19} />
               </button>
-              <button className="flex h-11 w-11 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-sunken" aria-label="Следующий показатель" onClick={() => go1(idx + 1)}>
+              <button className="flex h-12 w-12 items-center justify-center rounded-xl border border-line-strong bg-card hover:bg-sunken" aria-label="Следующий показатель" onClick={() => go1(idx + 1)}>
                 <Icon name="chevR" size={19} />
               </button>
             </div>

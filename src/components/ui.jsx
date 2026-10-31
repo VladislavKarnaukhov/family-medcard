@@ -41,7 +41,7 @@ export function Button({ variant = 'primary', big, icon, className = '', childre
   return (
     <button
       type="button"
-      className={`press inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 font-medium disabled:cursor-not-allowed disabled:opacity-50 lg:min-h-11 ${
+      className={`press inline-flex min-h-12 items-center justify-center gap-2 rounded-full px-6 font-medium disabled:cursor-not-allowed disabled:opacity-50 ${
         big ? 'min-h-14 w-full text-lg lg:min-h-12' : ''
       } ${BTN[variant]} ${className}`}
       {...p}
@@ -66,7 +66,7 @@ export function PageHeader({ title, subtitle, actions, back }) {
   return (
     <header className="mb-8 lg:mb-10">
       {back && (
-        <a href={back.href} className="mb-3 inline-flex min-h-10 items-center gap-1 text-sm font-medium text-accent-dark hover:underline">
+        <a href={back.href} className="mb-3 inline-flex min-h-12 items-center gap-1 text-sm font-medium text-accent-dark hover:underline">
           <Icon name="chevL" size={16} />
           {back.label}
         </a>
@@ -181,7 +181,7 @@ export function Tabs({ value, onChange, items, className = '' }) {
           role="tab"
           aria-selected={value === k}
           onClick={() => onChange(k)}
-          className={`-mb-px min-h-11 shrink-0 border-b-2 text-[0.95rem] transition-colors ${
+          className={`-mb-px min-h-12 shrink-0 border-b-2 text-[0.95rem] transition-colors ${
             value === k ? 'border-accent font-semibold text-accent-dark' : 'border-transparent text-muted hover:text-ink'
           }`}
         >

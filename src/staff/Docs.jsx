@@ -40,18 +40,18 @@ export function DocQueue() {
               <Chip tone={d.status === 'processing' ? 'solid' : 'quiet'}>{d.status === 'requested' ? 'запрошено в клинике' : d.status === 'processing' ? `ждёт внесения · ${ago(d.createdAt)}` : `в досье · ${ago(d.createdAt)}`}</Chip>
               <div className="flex items-center gap-1">
                 {d.fileUrl && (
-                  <a className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent-dark hover:bg-accent-soft" href={d.fileUrl} target="_blank" rel="noreferrer">
+                  <a className="inline-flex min-h-12 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent-dark hover:bg-accent-soft" href={d.fileUrl} target="_blank" rel="noreferrer">
                     <Icon name="eye" size={16} /> Файл
                   </a>
                 )}
                 {d.status === 'processing' && d.fileUrl && d.type === 'analysis' && (
-                  <Button className="!min-h-10 text-sm" onClick={() => go(`process/${d.id}`)}>
+                  <Button className="!min-h-12 text-sm" onClick={() => go(`process/${d.id}`)}>
                     Внести показатели
                   </Button>
                 )}
                 {d.status === 'processing' && d.type !== 'analysis' && (
                   <Button
-                    className="!min-h-10 text-sm"
+                    className="!min-h-12 text-sm"
                     onClick={async () => {
                       await api('PATCH', `/api/staff/documents/${d.id}`, { status: 'ready' })
                       location.reload()
@@ -114,10 +114,10 @@ export function Process({ id }) {
           confirmClose ? (
             <div className="flex flex-wrap items-center gap-2 rounded-xl bg-white px-3 py-2 ring-1 ring-line">
               <span className="text-[0.95rem]">Документ останется в досье без показателей.</span>
-              <Button className="!min-h-10 text-sm" onClick={closeAsIs}>
+              <Button className="!min-h-12 text-sm" onClick={closeAsIs}>
                 Закрыть
               </Button>
-              <Button variant="ghost" className="!min-h-10 text-sm" onClick={() => setConfirmClose(false)}>
+              <Button variant="ghost" className="!min-h-12 text-sm" onClick={() => setConfirmClose(false)}>
                 Отмена
               </Button>
             </div>

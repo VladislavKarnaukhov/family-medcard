@@ -119,7 +119,7 @@ export default function Dashboard({ state, profile }) {
         alert: outCount > 0,
         body: (
           <details className="group">
-            <summary className="flex min-h-11 cursor-pointer list-none flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <summary className="flex min-h-12 cursor-pointer list-none flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="min-w-0">
                 <p className="font-semibold sm:truncate">Анализы, {r.labName}</p>
                 <p className="text-sm text-muted">
@@ -148,10 +148,10 @@ export default function Dashboard({ state, profile }) {
             </table>
             {write && (
               <div className="mt-2 flex gap-2 border-t border-line pt-3">
-                <Button variant="ghost" icon="edit" className="!min-h-10 text-sm" onClick={() => go('edit/' + r.id)}>
+                <Button variant="ghost" icon="edit" className="!min-h-12 text-sm" onClick={() => go('edit/' + r.id)}>
                   Исправить
                 </Button>
-                <Button variant="danger" icon="trash" className="!min-h-10 text-sm" onClick={() => confirm('Удалить этот анализ?') && actions.deleteLabResult(r.id)}>
+                <Button variant="danger" icon="trash" className="!min-h-12 text-sm" onClick={() => confirm('Удалить этот анализ?') && actions.deleteLabResult(r.id)}>
                   Удалить
                 </Button>
               </div>
@@ -166,7 +166,7 @@ export default function Dashboard({ state, profile }) {
         kind: 'doc',
         date: d.date,
         body: (
-          <a href="#/dossier" className="flex min-h-11 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <a href="#/dossier" className="flex min-h-12 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <p className="font-semibold sm:truncate">{docTitle(d.title)}</p>
               <p className="text-sm text-muted">
@@ -187,7 +187,7 @@ export default function Dashboard({ state, profile }) {
         kind: 'vitals',
         date: v.datetime.slice(0, 10),
         body: (
-          <a href="#/vitals" className="flex min-h-11 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <a href="#/vitals" className="flex min-h-12 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div>
               <p className="font-semibold">
                 Давление {v.systolic}/{v.diastolic}, пульс {v.pulse}

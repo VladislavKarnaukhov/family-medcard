@@ -61,7 +61,7 @@ function ProfileTabs({ state }) {
     <div className="no-print flex items-end gap-4 lg:hidden">
       <Tabs className="min-w-0 flex-1" value={state.activeProfileId} onChange={(id) => actions.setActive(id)} items={items} />
       {owner && (
-        <button onClick={() => go('profile/new')} className="mb-px flex min-h-11 shrink-0 items-center gap-1 border-b border-line pb-px text-[0.95rem] font-medium text-accent-dark">
+        <button onClick={() => go('profile/new')} className="mb-px flex min-h-12 shrink-0 items-center gap-1 border-b border-line pb-px text-[0.95rem] font-medium text-accent-dark">
           <Icon name="plus" size={16} />
           Профиль
         </button>
@@ -73,7 +73,7 @@ function ProfileTabs({ state }) {
 function UserMenu({ state }) {
   return (
     <details className="relative">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-sm">
         <Avatar name={state.user.name} size={32} />
         <span className="max-w-[8rem] truncate">{state.user.name}</span>
       </summary>
@@ -92,12 +92,12 @@ function UserMenu({ state }) {
         )}
         <p className="px-2 pb-1 text-sm text-muted">{state.user.email}</p>
         {[['summary', 'Сводка', 'sheet'], ...careLinks(state), ...NAV_MORE].filter((i) => !i[3] || can(state).owner).map(([r, label, icon]) => (
-          <a key={r} href={'#/' + r} className="flex min-h-11 items-center gap-3 rounded-md px-2 hover:bg-sunken">
+          <a key={r} href={'#/' + r} className="flex min-h-12 items-center gap-3 rounded-md px-2 hover:bg-sunken">
             <Icon name={icon} size={18} className="text-muted" />
             {label}
           </a>
         ))}
-        <button onClick={actions.logout} className="flex min-h-11 w-full items-center gap-3 rounded-md px-2 text-left hover:bg-sunken">
+        <button onClick={actions.logout} className="flex min-h-12 w-full items-center gap-3 rounded-md px-2 text-left hover:bg-sunken">
           <Icon name="logout" size={18} className="text-muted" />
           Выйти
         </button>
@@ -111,7 +111,7 @@ function RailLink({ to, label, icon, active, badge }) {
     <a
       href={'#/' + to}
       aria-current={active ? 'page' : undefined}
-      className={`flex min-h-10 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors ${
+      className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors ${
         active ? 'bg-card font-semibold text-ink shadow-sheet' : 'text-muted hover:bg-card/60 hover:text-ink'
       }`}
     >
@@ -148,7 +148,7 @@ function Rail({ state, active }) {
                     role="tab"
                     aria-selected={on}
                     onClick={() => actions.setActive(p.id)}
-                    className={`flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] transition-colors ${on ? 'bg-card font-semibold text-accent-dark shadow-sheet' : 'hover:bg-card/60'}`}
+                    className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] transition-colors ${on ? 'bg-card font-semibold text-accent-dark shadow-sheet' : 'hover:bg-card/60'}`}
                   >
                     <span className="truncate">{p.name}</span>
                   </button>
@@ -157,7 +157,7 @@ function Rail({ state, active }) {
             })}
             {owner && (
               <li>
-                <button onClick={() => go('profile/new')} className="flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] text-accent-dark hover:bg-card/60">
+                <button onClick={() => go('profile/new')} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] text-accent-dark hover:bg-card/60">
                   <Icon name="plus" size={16} />
                   Добавить профиль
                 </button>
@@ -173,12 +173,12 @@ function Rail({ state, active }) {
             <p className="truncate text-sm font-medium">{state.user.name}</p>
             <p className="truncate text-xs text-muted">{state.user.email}</p>
           </div>
-          <button onClick={actions.logout} aria-label="Выйти" title="Выйти" className="flex h-9 w-9 items-center justify-center rounded-md text-muted hover:bg-sunken hover:text-ink">
+          <button onClick={actions.logout} aria-label="Выйти" title="Выйти" className="flex h-12 w-12 items-center justify-center rounded-md text-muted hover:bg-sunken hover:text-ink">
             <Icon name="logout" size={18} />
           </button>
         </div>
         {state.families.length > 1 && (
-          <select value={state.familyId} onChange={(e) => actions.setFamily(e.target.value)} className="!mt-3 !min-h-10 !text-sm" aria-label="Семья">
+          <select value={state.familyId} onChange={(e) => actions.setFamily(e.target.value)} className="!mt-3 !min-h-12 !text-sm" aria-label="Семья">
             {state.families.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}, {f.roleLabel}
@@ -237,7 +237,7 @@ export default function Layout({ route = [], state, bare, children }) {
         <header className="no-print flex items-center justify-between gap-3 border-b border-line bg-paper/90 px-4 py-2.5 backdrop-blur lg:hidden">
           <Wordmark />
           <div className="flex items-center gap-1">
-            <a href="#/notifications" aria-label="События" className="relative flex h-11 w-11 items-center justify-center rounded-full hover:bg-sunken">
+            <a href="#/notifications" aria-label="События" className="relative flex h-12 w-12 items-center justify-center rounded-full hover:bg-sunken">
               <Icon name="bell" size={22} />
               {state.unreadNotifications > 0 && <span className="absolute right-1 top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{state.unreadNotifications}</span>}
             </a>

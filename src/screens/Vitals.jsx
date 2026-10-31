@@ -141,7 +141,7 @@ export default function Vitals({ state, profile }) {
                     <p className="text-sm text-muted">{fmtDateTime(v.datetime)}</p>
                   </div>
                   {write && (
-                    <button className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert" aria-label="Удалить запись" onClick={() => confirm('Удалить запись?') && actions.deleteVital(v.id)}>
+                    <button className="flex h-12 w-12 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert" aria-label="Удалить запись" onClick={() => confirm('Удалить запись?') && actions.deleteVital(v.id)}>
                       <Icon name="trash" size={18} />
                     </button>
                   )}

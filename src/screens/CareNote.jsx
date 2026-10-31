@@ -42,7 +42,7 @@ export default function CareNote({ state, profile, kind0 }) {
             <legend className="mb-1.5 text-sm font-medium">Нужна помощь врача</legend>
             <div className="flex flex-wrap gap-2">
               {Object.entries(NEEDS).map(([k, v]) => (
-                <button key={k} type="button" aria-pressed={needs === k} onClick={() => setNeeds(k)} className={`min-h-11 rounded-full px-5 font-medium ${needs === k ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>{v}</button>
+                <button key={k} type="button" aria-pressed={needs === k} onClick={() => setNeeds(k)} className={`min-h-12 rounded-full px-5 font-medium ${needs === k ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>{v}</button>
               ))}
             </div>
             <p className="mt-1.5 text-sm text-muted">Это ваш ответ, сервис его не оценивает. При необходимости вызовите скорую.</p>

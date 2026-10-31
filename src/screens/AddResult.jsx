@@ -118,7 +118,7 @@ export default function AddResult({ state, profile }) {
                 <Icon name="file" className="text-accent" />
                 <span className="min-w-0 flex-1 truncate">{f.name}</span>
                 <span className="text-sm text-muted">{Math.max(1, Math.round(f.size / 1024))} КБ</span>
-                <button className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert" aria-label={`Убрать ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>
+                <button className="flex h-12 w-12 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert" aria-label={`Убрать ${f.name}`} onClick={() => setFiles(files.filter((_, j) => j !== i))}>
                   <Icon name="x" size={18} />
                 </button>
               </li>

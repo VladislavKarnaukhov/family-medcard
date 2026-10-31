@@ -211,11 +211,11 @@ export function Stopped({ state }) {
           <OtpSign docId="consent_health" startUrl="/api/consents/health/start" signUrl="/api/consents/health/sign" onDone={refresh} agreeText="Я передумал(а) и снова даю отдельное согласие на обработку данных о состоянии моего здоровья." />
         </Card>
       ) : (
-        <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={() => setResume(true)}>
+        <button className="min-h-12 font-medium text-accent-dark hover:underline" onClick={() => setResume(true)}>
           Я передумал(а): вернуть согласие
         </button>
       )}
-      <button className="block min-h-11 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
+      <button className="block min-h-12 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
         Выйти
       </button>
     </div>

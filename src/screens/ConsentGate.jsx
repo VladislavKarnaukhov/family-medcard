@@ -61,7 +61,7 @@ export function OtpSign({ docId, startUrl, signUrl, extra = {}, onDone, startBod
           <Button className="w-full" icon="check" disabled={busy || code.length !== 6} onClick={sign}>
             Подписать согласие
           </Button>
-          <button className="min-h-11 w-full font-medium text-accent-dark hover:underline" onClick={start} disabled={busy}>
+          <button className="min-h-12 w-full font-medium text-accent-dark hover:underline" onClick={start} disabled={busy}>
             Отправить код ещё раз
           </button>
         </>

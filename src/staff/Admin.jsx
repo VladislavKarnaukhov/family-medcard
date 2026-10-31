@@ -34,7 +34,7 @@ export function DataRequests() {
                   <Button
                     variant="ghost"
                     icon="check"
-                    className="mt-3 !min-h-10 text-sm"
+                    className="mt-3 !min-h-12 text-sm"
                     onClick={async () => {
                       await api('PATCH', `/api/staff/data-requests/${r.id}`, {})
                       reload()
@@ -105,10 +105,10 @@ export function Team({ me }) {
                   </div>
                   {u.id !== me.id && (
                     <div className="flex gap-2">
-                      <Button variant="ghost" className="!min-h-10 text-sm" onClick={() => patch(u.id, { isAdmin: !u.isAdmin })}>
+                      <Button variant="ghost" className="!min-h-12 text-sm" onClick={() => patch(u.id, { isAdmin: !u.isAdmin })}>
                         {u.isAdmin ? 'Снять права' : 'Сделать администратором'}
                       </Button>
-                      <Button variant={u.disabled ? 'soft' : 'ghost'} className="!min-h-10 text-sm" onClick={() => patch(u.id, { disabled: !u.disabled })}>
+                      <Button variant={u.disabled ? 'soft' : 'ghost'} className="!min-h-12 text-sm" onClick={() => patch(u.id, { disabled: !u.disabled })}>
                         {u.disabled ? 'Включить' : 'Отключить'}
                       </Button>
                     </div>

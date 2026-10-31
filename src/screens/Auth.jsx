@@ -102,7 +102,7 @@ export function AuthForm({ invite, onDone, startMode }) {
               role="tab"
               aria-selected={mode === k}
               onClick={() => setMode(k)}
-              className={`min-h-11 rounded-lg text-[0.95rem] font-medium transition-colors ${mode === k ? 'bg-white text-accent-dark shadow-sm' : 'text-muted'}`}
+              className={`min-h-12 rounded-lg text-[0.95rem] font-medium transition-colors ${mode === k ? 'bg-white text-accent-dark shadow-sm' : 'text-muted'}`}
             >
               {l}
             </button>
@@ -145,12 +145,12 @@ export function AuthForm({ invite, onDone, startMode }) {
         {busy ? 'Подождите…' : mode === 'login' ? 'Войти' : mode === 'register' ? 'Создать аккаунт' : 'Отправить ссылку'}
       </Button>
       {mode === 'login' && (
-        <button type="button" onClick={() => setMode('forgot')} className="block min-h-11 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
+        <button type="button" onClick={() => setMode('forgot')} className="block min-h-12 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
           Забыли пароль?
         </button>
       )}
       {mode === 'forgot' && (
-        <button type="button" onClick={() => setMode('login')} className="block min-h-11 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
+        <button type="button" onClick={() => setMode('login')} className="block min-h-12 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
           Вернуться ко входу
         </button>
       )}
@@ -239,7 +239,7 @@ export function InviteScreen({ token, user }) {
       <AuthShell>
         <h1 className="mb-2 text-[1.75rem]">Приглашение недействительно</h1>
         <p className="text-muted">{err}. Попросите человека, который вас пригласил, создать новую ссылку.</p>
-        <a className="mt-4 inline-flex min-h-11 items-center font-medium text-accent-dark hover:underline" href="#/">
+        <a className="mt-4 inline-flex min-h-12 items-center font-medium text-accent-dark hover:underline" href="#/">
           На главную
         </a>
       </AuthShell>
@@ -259,7 +259,7 @@ export function InviteScreen({ token, user }) {
         <Card>
           <OtpSign docId="consent_subject" startUrl={`/api/profiles/${store.me.selfProfileId}/self-consent/start`} signUrl={`/api/profiles/${store.me.selfProfileId}/self-consent/sign`} onDone={() => (window.location.hash = '#/')} agreeText="Я прочитал(а) документ и согласен(на) на обработку данных о состоянии моего здоровья в этом сервисе." />
         </Card>
-        <button className="mt-4 min-h-11 font-medium text-muted hover:underline" onClick={() => (window.location.hash = '#/')}>Подтвердить позже</button>
+        <button className="mt-4 min-h-12 font-medium text-muted hover:underline" onClick={() => (window.location.hash = '#/')}>Подтвердить позже</button>
       </AuthShell>
     )
 
