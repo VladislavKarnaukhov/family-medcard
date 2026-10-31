@@ -164,14 +164,8 @@ function Rail({ state, active }) {
       <div className="px-3">
         <Wordmark />
       </div>
-      <nav className="mt-8 space-y-0.5" aria-label="Основная навигация">
-        {items.map(([r, label, icon]) => (
-          <RailLink key={r} to={r} label={label} icon={icon} active={active === r.split('/')[0]} badge={r === 'assistant' ? state.unread : r === 'notifications' ? state.unreadNotifications : 0} />
-        ))}
-      </nav>
-
       {state.profiles.length > 0 && (
-        <div className="mt-8 min-h-0 flex-1 overflow-y-auto">
+        <div className="mt-6 max-h-48 shrink-0 overflow-y-auto">
           <p className="mb-1 px-3 text-sm text-muted">Профили</p>
           <ul role="tablist" aria-label="Профили семьи">
             {state.profiles.map((p) => {
@@ -200,6 +194,12 @@ function Rail({ state, active }) {
           </ul>
         </div>
       )}
+
+      <nav className="mt-6 min-h-0 flex-1 space-y-0.5 overflow-y-auto" aria-label="Основная навигация">
+        {items.map(([r, label, icon]) => (
+          <RailLink key={r} to={r} label={label} icon={icon} active={active === r.split('/')[0]} badge={r === 'assistant' ? state.unread : r === 'notifications' ? state.unreadNotifications : 0} />
+        ))}
+      </nav>
 
       <div className="mt-4 border-t border-line-strong/60 pt-4">
         <div className="flex items-center gap-3 px-3">

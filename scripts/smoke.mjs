@@ -463,6 +463,16 @@ try {
     for (const f of walk('src').filter((f) => /\.jsx?$/.test(f))) assert.ok(!/досье/i.test(readFileSync(f, 'utf8')), 'досье in ' + f)
   })
 
+  await step('profile screens: «whose data» comes first in the form, profile list is above the long menu in the desktop rail', async () => {
+    const form = readFileSync('src/screens/ProfileForm.jsx', 'utf8')
+    assert.ok(form.indexOf('Чьи это данные') < form.indexOf('<Field label="Имя">'), 'basis before name')
+    const rail = readFileSync('src/components/Layout.jsx', 'utf8')
+    const rl = rail.slice(rail.indexOf('function Rail('))
+    assert.ok(rl.indexOf('Добавить профиль') < rl.indexOf('Основная навигация'), 'profiles above nav in the rail')
+    assert.match(rl, /Основная навигация[^>]*>/)
+    assert.ok(/overflow-y-auto" aria-label="Основная навигация"/.test(rl), 'nav scrolls instead of hiding the profile list')
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {

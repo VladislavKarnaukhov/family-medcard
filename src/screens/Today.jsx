@@ -333,7 +333,7 @@ export function DueBanner({ state }) {
   if (!shown.length || bannerOnScreen(window.location.hash, state.user?.simpleMode)) return null
   const d = shown[0]
   return (
-    <div role="alert" className="no-print fixed inset-x-3 top-3 z-40 mx-auto max-w-[560px] rounded-2xl bg-card p-5 shadow-pop ring-1 ring-line">
+    <div role="alert" className="no-print fixed inset-x-3 top-3 z-40 mx-auto max-w-[560px] rounded-2xl bg-card p-5 shadow-pop ring-1 ring-line lg:inset-x-auto lg:bottom-6 lg:right-6 lg:top-auto lg:mx-0 lg:w-[400px]">
       <p className="text-lg font-semibold">{due.length ? 'Время принять лекарство' : 'Приём не отмечен'}</p>
       <p className="mt-0.5 text-muted">
         {d.r.time}: {d.r.med.name}

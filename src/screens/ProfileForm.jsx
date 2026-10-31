@@ -77,6 +77,28 @@ export default function ProfileForm({ profile, isNew }) {
     <div className="mx-auto max-w-[680px]">
       <PageHeader title={editing ? `Профиль: ${editing.name}` : 'Новый профиль'} subtitle={editing ? `${BASIS[editing.basis]} · ${CONSENT_LABEL[editing.consentStatus]}` : 'Человек, за здоровьем которого вы следите: свой, мамы, ребёнка.'} back={{ href: '#/', label: 'Главная' }} />
       <div className="space-y-6">
+        {isNew && (
+          <Card className="space-y-4">
+            <Field label="Чьи это данные" hint={minor && f.basis !== 'guardian_child' ? 'По году рождения это несовершеннолетний: данные вносит законный представитель.' : 'Вносить данные другого человека можно только с его согласием или как законному представителю.'}>
+              <select value={f.basis} onChange={(e) => setF({ ...f, basis: e.target.value, attest: false })}>
+                <option value="">Выберите…</option>
+                {Object.entries(BASIS).map(([k, l]) => (
+                  <option key={k} value={k}>
+                    {l}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            {attestNeeded && (
+              <div className="rounded-xl bg-paper p-4">
+                <Toggle checked={f.attest} onChange={(v) => setF({ ...f, attest: v })}>
+                  {ATTEST[f.basis][1]} <DocLink id={ATTEST[f.basis][0]}>Документ</DocLink>
+                </Toggle>
+              </div>
+            )}
+          </Card>
+        )}
+
         <Card className="space-y-5">
           <Field label="Имя">
             <input value={f.name} onChange={set('name')} placeholder="Например, Мама" autoFocus={isNew} />
@@ -120,28 +142,6 @@ export default function ProfileForm({ profile, isNew }) {
             ))}
             {f.emergencyContacts.length < 3 && (
               <Button variant="soft" icon="plus" onClick={() => setF({ ...f, emergencyContacts: [...f.emergencyContacts, { name: '', relation: '', phone: '' }] })}>Добавить контакт</Button>
-            )}
-          </Card>
-        )}
-
-        {isNew && (
-          <Card className="space-y-4">
-            <Field label="Чьи это данные" hint={minor && f.basis !== 'guardian_child' ? 'По году рождения это несовершеннолетний: данные вносит законный представитель.' : 'Вносить данные другого человека можно только с его согласием или как законному представителю.'}>
-              <select value={f.basis} onChange={(e) => setF({ ...f, basis: e.target.value, attest: false })}>
-                <option value="">Выберите…</option>
-                {Object.entries(BASIS).map(([k, l]) => (
-                  <option key={k} value={k}>
-                    {l}
-                  </option>
-                ))}
-              </select>
-            </Field>
-            {attestNeeded && (
-              <div className="rounded-xl bg-paper p-4">
-                <Toggle checked={f.attest} onChange={(v) => setF({ ...f, attest: v })}>
-                  {ATTEST[f.basis][1]} <DocLink id={ATTEST[f.basis][0]}>Документ</DocLink>
-                </Toggle>
-              </div>
             )}
           </Card>
         )}
