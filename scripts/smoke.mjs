@@ -663,15 +663,67 @@ try {
     })
   })
 
-  await step('appointment and request to the assistant', async () => {
+  await step('visit reminder works; the concierge is off by default: no chat, no requests, no greeting, no unread badge', async () => {
     const at = `${addDays(today, 1)}T12:00`
     const a = await call('POST', `/api/profiles/${momId}/appointments`, { at, specialist: 'Кардиолог', purpose: 'Планово' })
     assert.equal(a.status, 200)
     const r = await call('POST', `/api/appointments/${a.json.id}/request`, {})
-    assert.equal(r.status, 200)
-    assert.equal(count('requests', "title LIKE 'Подготовить визит%'"), 1)
+    assert.equal(r.status, 403)
+    assert.equal(r.json.code, 'concierge_off')
+    assert.equal((await call('POST', `/api/families/${fid}/messages`, { text: 'Здравствуйте' })).json.code, 'concierge_off')
+    assert.equal((await call('POST', `/api/families/${fid}/requests`, { title: 'Что-то' })).json.code, 'concierge_off')
+    assert.equal(count('requests', "title LIKE 'Подготовить визит%'"), 0)
+    const st = (await call('GET', `/api/families/${fid}/state`)).json
+    assert.equal(st.concierge, false)
+    assert.equal(st.unread, 0)
+    assert.equal(st.messages.length, 0, 'no greeting from a helper who does not exist')
+    assert.equal(db.prepare('SELECT staff_id FROM families WHERE id = ?').get(fid).staff_id, null)
     tick()
     assert.ok(count('notifications', "kind = 'appointment_soon'") >= 1, 'reminder inside 24h')
+  })
+
+  await step('concierge UI is gated by state.concierge everywhere', async () => {
+    const read = (f) => readFileSync(f, 'utf8')
+    assert.match(read('src/components/Layout.jsx'), /i\[4\] !== 'concierge' \|\| state\.concierge/)
+    assert.match(read('src/App.jsx'), /owner && state\.concierge \? <Assistant/)
+    assert.match(read('src/screens/Visits.jsx'), /state\.concierge && owner/)
+    assert.match(read('src/screens/Dossier.jsx'), /owner && state\.concierge/)
+    assert.ok(!/Передать помощнику|Отправить помощнику/.test(['Dossier', 'AddResult'].map((f) => read(`src/screens/${f}.jsx`)).join('')))
+  })
+
+  await step('with CONCIERGE=1 the helper is back: greeting, chat, requests, visit request', async () => {
+    const dir2 = mkdtempSync(join(tmpdir(), 'blizkie-concierge-'))
+    const port2 = port + 900
+    const srv2 = spawn(process.execPath, ['server/index.js'], { env: { ...process.env, DATA_DIR: dir2, PORT: String(port2), NODE_ENV: 'test', SMTP_HOST: '', CONCIERGE: '1', BACKUP: '0' }, stdio: 'ignore' })
+    try {
+      const b2 = `http://127.0.0.1:${port2}`
+      for (let i = 0; i < 50; i++) { try { if ((await fetch(b2 + '/healthz')).ok) break } catch {} await wait(200) }
+      let jar = ''
+      const c2 = async (method, path, body) => {
+        const r = await fetch(b2 + path, { method, headers: { 'x-app': '1', 'content-type': 'application/json', cookie: jar }, body: body ? JSON.stringify(body) : undefined })
+        const s = r.headers.get('set-cookie')
+        if (s) jar = s.split(';')[0]
+        const tx = await r.text()
+        try { return { status: r.status, json: JSON.parse(tx) } } catch { return { status: r.status, json: null } }
+      }
+      assert.equal((await c2('POST', '/api/auth/register', { name: 'Помощник Тестов', email: 'c1@example.test', password: 'long-enough-1', consents: { terms: true, consent_pd: true } })).status, 200)
+      const s = await c2('POST', '/api/consents/health/start', {})
+      await c2('POST', '/api/consents/health/sign', { agree: true, code: s.json.devCode })
+      const f2 = (await c2('GET', '/api/me')).json.families[0].id
+      const st = (await c2('GET', `/api/families/${f2}/state`)).json
+      assert.equal(st.concierge, true)
+      assert.equal(st.messages.length, 1, 'greeting from the assigned helper')
+      assert.equal(st.unread, 1)
+      assert.equal((await c2('POST', `/api/families/${f2}/messages`, { text: 'Здравствуйте' })).status, 200)
+      assert.equal((await c2('POST', `/api/families/${f2}/requests`, { title: 'Собрать документы' })).status, 200)
+      const p = (await c2('POST', `/api/families/${f2}/profiles`, { name: 'Мама', basis: 'adult', attest: true, birthYear: 1950, sex: 'f' })).json.id
+      const ap = await c2('POST', `/api/profiles/${p}/appointments`, { at: `${addDays(today, 3)}T10:00`, specialist: 'Терапевт' })
+      assert.equal((await c2('POST', `/api/appointments/${ap.json.id}/request`, {})).status, 200)
+    } finally {
+      srv2.kill('SIGTERM')
+      await wait(300)
+      rmSync(dir2, { recursive: true, force: true })
+    }
   })
 
   await step('emergency card: only the card fields, revocation gives 410', async () => {
