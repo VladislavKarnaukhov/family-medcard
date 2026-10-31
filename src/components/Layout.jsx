@@ -7,7 +7,7 @@ import { hasMeds } from '../lib/care'
 
 const NAV = [
   ['', 'Главная', 'home'],
-  ['dossier', 'Досье', 'folder'],
+  ['dossier', 'Документы', 'folder'],
   ['indicators', 'Показатели', 'chart'],
   ['assistant', 'Помощник', 'chat', 'owner'],
   ['summary', 'Сводка', 'sheet'],

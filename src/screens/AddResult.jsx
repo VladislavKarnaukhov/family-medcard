@@ -86,7 +86,7 @@ export default function AddResult({ state, profile }) {
   if (!drafts) {
     return (
       <div className="mx-auto max-w-[720px]">
-        <PageHeader title="Добавить анализ" subtitle={`Профиль «${profile.name}». Можно выбрать сразу несколько фото или PDF.`} back={{ href: '#/dossier', label: 'Досье' }} />
+        <PageHeader title="Добавить анализ" subtitle={`Профиль «${profile.name}». Можно выбрать сразу несколько фото или PDF.`} back={{ href: '#/dossier', label: 'Документы' }} />
 
         <input ref={cam} type="file" accept="image/*" capture="environment" hidden onChange={(e) => addFiles(e.target.files)} />
         <input ref={pick} type="file" accept="image/*,application/pdf" multiple hidden onChange={(e) => addFiles(e.target.files)} />
@@ -147,7 +147,7 @@ export default function AddResult({ state, profile }) {
           </div>
           <p className="text-sm text-muted">
             {can(state).owner ? 'Помощник внесёт показатели за вас и сообщит в переписке. ' : ''}
-            Если вносите сами, вы проверите таблицу рядом с бланком перед сохранением. Файл при этом тоже попадёт к помощнику и останется в досье.
+            Если вносите сами, вы проверите таблицу рядом с бланком перед сохранением. Файл при этом тоже попадёт к помощнику и останется в документах.
           </p>
           <div className="rounded-2xl bg-sunken p-5">
             <p className="font-semibold">Нет бланка или измеряли сами</p>

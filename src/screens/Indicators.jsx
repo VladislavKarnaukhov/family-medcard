@@ -24,7 +24,7 @@ export default function Indicators({ state, profile }) {
         <PageHeader title="Показатели" subtitle="Последнее значение каждого показателя и его динамика." />
         {vitalsRow}
         <div className="mt-6">
-          <Empty icon="chart">Пока нет показателей. Они появятся, когда в досье будет первый анализ.</Empty>
+          <Empty icon="chart">Пока нет показателей. Они появятся, когда появится первый анализ.</Empty>
         </div>
       </div>
     )

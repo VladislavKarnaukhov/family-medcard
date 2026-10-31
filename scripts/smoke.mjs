@@ -453,10 +453,13 @@ try {
     assert.equal(simpleSplit([r('taken', 1)]).rest.length, 1)
   })
 
-  await step('login hero uses the agreed calm wording', async () => {
+  await step('client wording: calm hero, no «досье» outside legal texts and the staff app', async () => {
+    const { readdirSync } = await import('node:fs')
     const t = readFileSync('src/screens/Auth.jsx', 'utf8')
-    assert.ok(t.includes('Лекарства близких под спокойным присмотром'))
+    assert.ok(t.includes('Забота без тревоги'))
     assert.ok(!/Заведите маму/i.test(t))
+    const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (['legal', 'staff'].includes(e.name) ? [] : walk(join(d, e.name))) : [join(d, e.name)]))
+    for (const f of walk('src').filter((f) => /\.jsx?$/.test(f))) assert.ok(!/досье/i.test(readFileSync(f, 'utf8')), 'досье in ' + f)
   })
 
   await step('another family cannot see or change this family (isolation)', async () => {

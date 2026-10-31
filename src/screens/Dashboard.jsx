@@ -221,7 +221,7 @@ export default function Dashboard({ state, profile }) {
               <p className="text-sm text-muted">
                 {DOC_TYPES[d.type]}
                 {d.status === 'requested' && ' · запрошено помощником'}
-                {d.status === 'processing' && ' · помощник вносит в досье'}
+                {d.status === 'processing' && ' · помощник вносит в документы'}
               </p>
             </div>
           </a>
