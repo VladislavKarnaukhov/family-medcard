@@ -212,6 +212,14 @@ CREATE TABLE IF NOT EXISTS resets (
   expires_at TEXT NOT NULL
 );
 `)
+db.exec(`CREATE TABLE IF NOT EXISTS email_verifications (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at TEXT NOT NULL
+)`)
+addColumn('users', 'email_verified_at', 'TEXT')
+// Кто уже подтверждал почту кодом при подписи согласия, считается подтвердившим адрес.
+db.exec("UPDATE users SET email_verified_at = created_at WHERE email_verified_at IS NULL AND id IN (SELECT user_id FROM consents WHERE method = 'otp')")
 addColumn('users', 'is_admin', 'INTEGER NOT NULL DEFAULT 0')
 addColumn('users', 'disabled', 'INTEGER NOT NULL DEFAULT 0')
 addColumn('families', 'client_read_at', 'TEXT')

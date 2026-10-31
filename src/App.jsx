@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import { actions, can, init, startPolling, useStore } from './lib/store'
 import { Spinner, useRoute } from './components/ui'
 import Layout from './components/Layout'
-import AuthScreen, { AuthShell, InviteScreen, ResetScreen } from './screens/Auth'
+import AuthScreen, { AuthShell, InviteScreen, ResetScreen, VerifyScreen } from './screens/Auth'
 import ShareView from './screens/ShareView'
 import Dashboard from './screens/Dashboard'
 import AddResult from './screens/AddResult'
@@ -59,6 +59,7 @@ export default function App() {
   if (route[0] === 'sos') return <Sos token={route[1]} />
   if (route[0] === 'consent') return <SubjectConsent token={route[1]} />
   if (route[0] === 'reset') return <ResetScreen token={route[1]} />
+  if (route[0] === 'verify') return <VerifyScreen token={route[1]} />
 
   if (!state.ready) return <Loading />
   if (route[0] === 'invite') return <InviteScreen token={route[1]} user={state.user} />

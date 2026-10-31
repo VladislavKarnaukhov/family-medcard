@@ -11,7 +11,37 @@ const limited = (key, max, windowMs) => {
   return list.length >= max
 }
 
+// Письмо со ссылкой подтверждения адреса. Без подтверждения работать можно: адрес всё равно проверяется кодом при подписи согласия.
+export function sendVerification(u) {
+  const t = token(24)
+  run('DELETE FROM email_verifications WHERE user_id = ?', u.id)
+  run('INSERT INTO email_verifications (token_hash, user_id, expires_at) VALUES (?,?,?)', sha(t), u.id, new Date(Date.now() + 2 * 86400000).toISOString())
+  const url = `${appUrl()}/#/verify/${t}`
+  sendMailSoon({
+    to: u.email,
+    subject: 'Подтвердите адрес почты',
+    text: `Подтвердите адрес почты, откройте ссылку (действует 2 дня): ${url}`,
+    html: layout({ title: 'Подтвердите адрес почты', lines: ['Откройте ссылку, чтобы подтвердить, что этот адрес ваш.', 'Ссылка действует 2 дня.'], cta: { label: 'Подтвердить адрес', url } }),
+  })
+}
+
 export function mountAccount(app, { needUser, needStaff, fail, startSessionFor }) {
+  app.post('/api/auth/verify', (req, res) => {
+    if (limited(`verify:${req.ip}`, 20, 3600000)) return fail(res, 429, 'Слишком много попыток')
+    const r = get('SELECT * FROM email_verifications WHERE token_hash = ?', sha(String(req.body.token || '')))
+    if (!r || r.expires_at < nowIso()) return fail(res, 410, 'Ссылка недействительна или истекла. Запросите новое письмо в приложении.')
+    run('UPDATE users SET email_verified_at = ? WHERE id = ? AND email_verified_at IS NULL', nowIso(), r.user_id)
+    run('DELETE FROM email_verifications WHERE user_id = ?', r.user_id)
+    res.json({ ok: true })
+  })
+
+  app.post('/api/me/resend-verification', needUser, (req, res) => {
+    if (limited(`resend:${req.user.id}`, 3, 3600000)) return fail(res, 429, 'Письмо уже отправлено. Попробуйте позже.')
+    if (get('SELECT email_verified_at v FROM users WHERE id = ?', req.user.id)?.v) return res.json({ ok: true, verified: true })
+    sendVerification(req.user)
+    res.json({ ok: true })
+  })
+
   // --- восстановление пароля: ответ всегда одинаковый, чтобы не раскрывать, есть ли такой email
   app.post('/api/auth/forgot', async (req, res) => {
     if (limited(`forgot:${req.ip}`, 5, 3600000)) return fail(res, 429, 'Слишком много запросов. Попробуйте позже.')

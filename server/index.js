@@ -10,7 +10,7 @@ import { mountConsent, recordConsent } from './consent.js'
 import { aiEnabled, recognizeWithClaude } from './recognize.js'
 import { ensureStaff } from './seed.js'
 import { appUrl, assertMailConfigured, isProd, layout, sendMailSoon } from './mailer.js'
-import { mountAccount } from './account.js'
+import { mountAccount, sendVerification } from './account.js'
 import { mountCare, notifView } from './care.js'
 import { startScheduler } from './scheduler.js'
 import { startBackups } from './backup.js'
@@ -87,10 +87,10 @@ function mePayload(user) {
       : all('SELECT g.*, f.name FROM grants g JOIN families f ON f.id = g.family_id WHERE g.user_id = ? ORDER BY g.created_at', user.id)
           .filter((g) => !g.expires_at || g.expires_at >= today())
           .map((g) => ({ id: g.family_id, name: g.name, access: g.access, roleLabel: g.role_label, expiresAt: g.expires_at, selfProfileId: g.self_profile_id || null }))
-  const pref = get('SELECT email_events, email_intake, simple_mode FROM users WHERE id = ?', user.id)
+  const pref = get('SELECT email_events, email_intake, simple_mode, email_verified_at FROM users WHERE id = ?', user.id)
   const isOwnerAny = families.some((f) => f.access === 'owner')
   return {
-    user: { id: user.id, name: user.name, email: user.email, role: user.role, isAdmin: !!user.is_admin, simpleMode: !!pref?.simple_mode, emailEvents: pref?.email_events || (isOwnerAny ? 'instant' : 'off'), emailIntake: !!pref?.email_intake },
+    user: { id: user.id, name: user.name, email: user.email, role: user.role, isAdmin: !!user.is_admin, simpleMode: !!pref?.simple_mode, emailVerified: user.role === 'staff' || !!pref?.email_verified_at, emailEvents: pref?.email_events || (isOwnerAny ? 'instant' : 'off'), emailIntake: !!pref?.email_intake },
     families,
   }
 }
@@ -182,6 +182,7 @@ app.post('/api/auth/register', (req, res) => {
       return u
     })
     startSession(res, user.id)
+    sendVerification(user)
     res.json(mePayload(user))
   } catch (e) {
     if (e.code === 410) return fail(res, 410, 'Приглашение недействительно или истекло')

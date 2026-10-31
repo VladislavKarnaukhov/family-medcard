@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { api } from '../lib/api'
 import { actions, can } from '../lib/store'
 import { Avatar, Tabs, go } from './ui'
 import { Icon } from './icons'
@@ -32,6 +34,25 @@ export function Wordmark() {
     <a href="#/" className="inline-flex items-baseline gap-2" aria-label="Близкие, на главную">
       <span className="text-[1.5rem] font-semibold tracking-[-0.04em] text-accent-dark">Близкие</span>
     </a>
+  )
+}
+
+function VerifyBanner({ state }) {
+  const [sent, setSent] = useState(false)
+  if (!state.user || state.user.emailVerified) return null
+  const send = async () => {
+    try {
+      await api('POST', '/api/me/resend-verification', {})
+      setSent(true)
+    } catch {
+      /* лимит писем */
+    }
+  }
+  return (
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-accent-soft px-5 py-3 text-[0.95rem]">
+      <p>{sent ? 'Письмо отправлено. Откройте ссылку в нём.' : `Подтвердите адрес почты ${state.user.email}: мы отправили вам ссылку.`}</p>
+      {!sent && <button className="min-h-12 font-medium text-accent-dark hover:underline" onClick={send}>Отправить ещё раз</button>}
+    </div>
   )
 }
 
@@ -245,6 +266,7 @@ export default function Layout({ route = [], state, bare, children }) {
           </div>
         </header>
         <main className="flex-1 px-4 pb-28 pt-5 lg:px-14 lg:pb-14 lg:pt-12 print:p-0">
+          <VerifyBanner state={state} />
           {state.profiles.length > 0 && route[0] !== 'profile' && (
             <div className="mb-5 lg:hidden">
               <ProfileTabs state={state} />
