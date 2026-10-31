@@ -16,7 +16,7 @@ import Assistant from './screens/Assistant'
 import Dossier from './screens/Dossier'
 import Circle from './screens/Circle'
 import Legal from './screens/Legal'
-import ConsentGate from './screens/ConsentGate'
+import ConsentGate, { SelfConsentGate } from './screens/ConsentGate'
 import Privacy, { Stopped } from './screens/Privacy'
 import SubjectConsent from './screens/SubjectConsent'
 import Today, { DueBanner, TodayContent } from './screens/Today'
@@ -108,6 +108,9 @@ export default function App() {
       </Layout>
     )
   if (owner && !state.consent.ok) return <ConsentGate outdated={!!state.consent.outdated} />
+
+  const mine = state.me?.selfProfileId && state.profiles.find((p) => p.id === state.me.selfProfileId)
+  if (mine && mine.consentStatus !== 'confirmed' && route[0] !== 'privacy') return <SelfConsentGate profileId={mine.id} />
 
   const profileById = (id) => state.profiles.find((p) => p.id === id) || profile
   const carePage = () => {

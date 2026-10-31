@@ -364,6 +364,11 @@ function ctxProfile(req, res, pid, need = 'read', opts) {
   if (need === 'write' && !canWrite(a)) return fail(res, 403, 'forbidden'), null
   if (need === 'owner' && !isOwner(a)) return fail(res, 403, 'forbidden'), null
   if (!gate(req, res, p.family_id, need, opts)) return null
+  // «Сам(а)» работает со своим профилем только после собственного согласия.
+  if (need === 'write' && a.grant?.self_profile_id === p.id && p.consent_status !== 'confirmed') {
+    res.status(403).json({ error: 'Сначала подтвердите своё согласие кодом на почту', code: 'self_consent_required' })
+    return null
+  }
   return { p, a }
 }
 
