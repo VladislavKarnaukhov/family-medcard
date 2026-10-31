@@ -379,6 +379,19 @@ try {
     assert.equal(count('medications', "name = 'Чужое'"), 0)
   })
 
+  await step('invites are limited per family per day (M-43)', async () => {
+    const other = await register('Лимит Тестов', 'limit@example.test')
+    await asUser(other, async () => {
+      const st = await call('POST', '/api/consents/health/start', {})
+      await call('POST', '/api/consents/health/sign', { agree: true, code: st.json.devCode })
+      const f2 = (await call('GET', '/api/me')).json.families[0].id
+      for (let i = 0; i < 10; i++) assert.equal((await call('POST', `/api/families/${f2}/invites`, { access: 'view', role: 'Брат', consentConfirmed: true })).status, 200, 'invite ' + i)
+      const over = await call('POST', `/api/families/${f2}/invites`, { access: 'view', role: 'Брат', consentConfirmed: true })
+      assert.equal(over.status, 429)
+      assert.equal((await call('DELETE', '/api/me/account', { password: 'long-enough-1' })).status, 200)
+    })
+  })
+
   await step('revoking access takes effect on the next request', async () => {
     const gid = db.prepare("SELECT g.id FROM grants g JOIN users u ON u.id = g.user_id WHERE u.email = 'bro@example.test'").get().id
     await asUser(viewerJar, async () => assert.equal((await call('GET', `/api/families/${fid}/state`)).status, 200))

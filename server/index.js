@@ -264,9 +264,15 @@ function ctxFamily(req, res, need = 'read', opts) {
   return a
 }
 
+const INVITES_PER_DAY = 10
+const INVITES_PENDING = 20
 app.post('/api/families/:fid/invites', needUser, (req, res) => {
   const a = ctxFamily(req, res, 'owner')
   if (!a) return
+  // Срок приглашения 14 дней, поэтому созданные за сутки это те, что истекают позже чем через 13 дней.
+  const day = get('SELECT COUNT(*) c FROM invites WHERE family_id = ? AND expires_at > ?', req.params.fid, new Date(Date.now() + 13 * 86400000).toISOString()).c
+  const pending = get('SELECT COUNT(*) c FROM invites WHERE family_id = ? AND accepted_at IS NULL AND expires_at > ?', req.params.fid, nowIso()).c
+  if (day >= INVITES_PER_DAY || pending >= INVITES_PENDING) return fail(res, 429, 'Слишком много приглашений. Отзовите ненужные или попробуйте завтра.')
   const preset = ['self', 'caregiver'].includes(req.body.preset) ? req.body.preset : null
   const access = preset || req.body.access === 'add' ? 'add' : 'view'
   const role = preset === 'self' ? 'Сам(а)' : preset === 'caregiver' ? 'Сиделка' : str(req.body.role, 40) || 'Близкий'
