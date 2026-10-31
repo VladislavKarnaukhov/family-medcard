@@ -382,6 +382,11 @@ function ctxProfile(req, res, pid, need = 'read', opts) {
 }
 
 const sex = (v) => (v === 'm' || v === 'f' ? v : '')
+// Дата рождения (если известна) и год: год выводится из даты. Будущая и слишком давняя дата отбрасываются.
+const birthOf = (body) => {
+  const d = typeof body.birthDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.birthDate) && body.birthDate >= '1900-01-01' && body.birthDate <= today() ? body.birthDate : null
+  return { date: d, year: d ? Number(d.slice(0, 4)) : year(body.birthYear) }
+}
 const year = (v) => {
   const n = Number(v)
   return Number.isInteger(n) && n >= 1900 && n <= new Date().getFullYear() ? n : null
@@ -393,12 +398,13 @@ app.post('/api/families/:fid/profiles', needUser, (req, res) => {
   if (!name) return fail(res, 400, 'Укажите имя')
   const basis = ['self', 'adult', 'guardian_child', 'guardian_ward'].includes(req.body.basis) ? req.body.basis : null
   if (!basis) return fail(res, 400, 'Укажите, чьи это данные')
-  const by = year(req.body.birthYear)
+  const birth = birthOf(req.body)
+  const by = birth.year
   if (by && by > new Date().getFullYear() - 18 && basis !== 'guardian_child') return fail(res, 400, 'Данные несовершеннолетнего вносит законный представитель')
   if (basis !== 'self' && req.body.attest !== true) return fail(res, 400, 'Подтвердите согласие или полномочия')
   const id = uuid()
   tx(() => {
-    run('INSERT INTO profiles (id, family_id, name, birth_year, sex, notes, basis, consent_status) VALUES (?,?,?,?,?,?,?,?)', id, req.params.fid, name, by, sex(req.body.sex), str(req.body.notes, 4000), basis, basis === 'self' ? 'self' : 'attested')
+    run('INSERT INTO profiles (id, family_id, name, birth_year, birth_date, sex, notes, basis, consent_status) VALUES (?,?,?,?,?,?,?,?,?)', id, req.params.fid, name, by, birth.date, sex(req.body.sex), str(req.body.notes, 4000), basis, basis === 'self' ? 'self' : 'attested')
     if (basis !== 'self') recordConsent(req, { userId: req.user.id, familyId: req.params.fid, profileId: id, docId: basis === 'adult' ? 'consent_adult' : 'consent_guardian', method: 'attestation', subjectName: name })
   })
   log(req.params.fid, req.user, id, `Создан профиль «${name}»`)
@@ -411,10 +417,11 @@ app.put('/api/profiles/:id', needUser, (req, res) => {
   if (!c) return
   const name = str(req.body.name, 80)
   if (!name) return fail(res, 400, 'Укажите имя')
-  const nby = year(req.body.birthYear)
+  const nbirth = birthOf(req.body)
+  const nby = nbirth.year
   if (nby && nby > new Date().getFullYear() - 18 && c.p.basis !== 'guardian_child') return fail(res, 400, 'Данные несовершеннолетнего вносит законный представитель')
   const contacts = Array.isArray(req.body.emergencyContacts) ? req.body.emergencyContacts.slice(0, 3).map((x) => ({ name: str(x?.name, 80), relation: str(x?.relation, 40), phone: str(x?.phone, 30) })).filter((x) => x.name && x.phone) : safeJson(c.p.emergency_contacts) || []
-  run('UPDATE profiles SET name = ?, birth_year = ?, sex = ?, notes = ?, allergies = ?, emergency_contacts = ? WHERE id = ?', name, year(req.body.birthYear), sex(req.body.sex), str(req.body.notes, 4000), req.body.allergies === undefined ? c.p.allergies : str(req.body.allergies, 1000), JSON.stringify(contacts), c.p.id)
+  run('UPDATE profiles SET name = ?, birth_year = ?, birth_date = ?, sex = ?, notes = ?, allergies = ?, emergency_contacts = ? WHERE id = ?', name, nbirth.year, nbirth.date, sex(req.body.sex), str(req.body.notes, 4000), req.body.allergies === undefined ? c.p.allergies : str(req.body.allergies, 1000), JSON.stringify(contacts), c.p.id)
   res.json({ ok: true })
 })
 

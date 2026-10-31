@@ -52,6 +52,7 @@ export default function ProfileForm({ profile, isNew }) {
   const [f, setF] = useState({
     name: editing?.name ?? '',
     birthYear: editing?.birthYear ?? '',
+    birthDate: editing?.birthDate ?? '',
     sex: editing?.sex ?? '',
     notes: editing?.notes ?? '',
     allergies: editing?.allergies ?? '',
@@ -63,7 +64,7 @@ export default function ProfileForm({ profile, isNew }) {
   const [busy, setBusy] = useState(false)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const setC = (i, patch) => setF({ ...f, emergencyContacts: f.emergencyContacts.map((c, j) => (j === i ? { ...c, ...patch } : c)) })
-  const year = f.birthYear === '' ? null : Number(f.birthYear)
+  const year = f.birthDate ? Number(f.birthDate.slice(0, 4)) : f.birthYear === '' ? null : Number(f.birthYear)
   const yearBad = year != null && (!Number.isInteger(year) || year < 1900 || year > new Date().getFullYear())
   const minor = year != null && year > new Date().getFullYear() - 18
   const basisBad = isNew && (!f.basis || (minor && f.basis !== 'guardian_child'))
@@ -81,8 +82,11 @@ export default function ProfileForm({ profile, isNew }) {
             <input value={f.name} onChange={set('name')} placeholder="Например, Мама" autoFocus={isNew} />
           </Field>
           <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Год рождения" hint={yearBad ? 'Проверьте год рождения' : undefined}>
-              <input inputMode="numeric" value={f.birthYear} onChange={set('birthYear')} placeholder="1960" />
+            <Field label="Дата рождения" hint="Если точной даты нет, укажите только год справа.">
+              <input type="date" value={f.birthDate} min="1900-01-01" max={new Date().toISOString().slice(0, 10)} onChange={set('birthDate')} />
+            </Field>
+            <Field label="Или только год" hint={yearBad ? 'Проверьте год рождения' : undefined}>
+              <input inputMode="numeric" value={f.birthDate ? f.birthDate.slice(0, 4) : f.birthYear} disabled={!!f.birthDate} onChange={set('birthYear')} placeholder="1960" />
             </Field>
             <Field label="Пол">
               <select value={f.sex} onChange={set('sex')}>
@@ -150,7 +154,7 @@ export default function ProfileForm({ profile, isNew }) {
             onClick={async () => {
               setBusy(true)
               try {
-                await actions.saveProfile({ id: editing?.id, ...f, birthYear: year })
+                await actions.saveProfile({ id: editing?.id, ...f, birthYear: year, birthDate: f.birthDate || null })
                 go('')
               } catch (e) {
                 setErr(e.message)

@@ -41,9 +41,14 @@ export function refText(lo, hi) {
   return 'не указан'
 }
 
-export function ageText(birthYear) {
-  if (!birthYear) return ''
-  const a = new Date().getFullYear() - birthYear
+export function ageText(birthYear, birthDate) {
+  if (!birthYear && !birthDate) return ''
+  let a = new Date().getFullYear() - (birthYear || Number(birthDate.slice(0, 4)))
+  if (birthDate) {
+    const n = new Date()
+    const had = n.getMonth() + 1 > Number(birthDate.slice(5, 7)) || (n.getMonth() + 1 === Number(birthDate.slice(5, 7)) && n.getDate() >= Number(birthDate.slice(8, 10)))
+    a = n.getFullYear() - Number(birthDate.slice(0, 4)) - (had ? 0 : 1)
+  }
   const m10 = a % 10
   const m100 = a % 100
   const w = m100 >= 11 && m100 <= 14 ? 'лет' : m10 === 1 ? 'год' : m10 >= 2 && m10 <= 4 ? 'года' : 'лет'

@@ -255,7 +255,7 @@ export default function Dashboard({ state, profile }) {
 
   const { latest, out, events } = model
   const me = state.families.find((f) => f.id === state.familyId)
-  const meta = [ageText(profile.birthYear), SEX[profile.sex] !== 'не указан' ? SEX[profile.sex] : ''].filter(Boolean).join(' · ')
+  const meta = [ageText(profile.birthYear, profile.birthDate), SEX[profile.sex] !== 'не указан' ? SEX[profile.sex] : ''].filter(Boolean).join(' · ')
 
   return (
     <div>

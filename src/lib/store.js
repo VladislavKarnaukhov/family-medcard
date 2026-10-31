@@ -154,7 +154,7 @@ export const actions = {
   },
 
   saveProfile: async (p) => {
-    const body = { name: p.name, birthYear: p.birthYear, sex: p.sex, notes: p.notes, basis: p.basis, attest: p.attest, allergies: p.allergies, emergencyContacts: p.emergencyContacts }
+    const body = { name: p.name, birthYear: p.birthYear, birthDate: p.birthDate || null, sex: p.sex, notes: p.notes, basis: p.basis, attest: p.attest, allergies: p.allergies, emergencyContacts: p.emergencyContacts }
     let id = p.id
     if (id) await api('PUT', `/api/profiles/${id}`, body)
     else id = (await api('POST', `/api/families/${state.familyId}/profiles`, body)).id
