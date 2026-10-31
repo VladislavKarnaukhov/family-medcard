@@ -14,6 +14,7 @@ import { mountAccount, sendVerification } from './account.js'
 import { mountCare, notifView } from './care.js'
 import { startScheduler } from './scheduler.js'
 import { startBackups } from './backup.js'
+import { logError } from './errlog.js'
 import { mountFeedback, surveyDue } from './feedback.js'
 
 assertMailConfigured()
@@ -26,10 +27,10 @@ app.use(compression())
 app.use(express.json({ limit: '6mb' }))
 
 // Проверка живости для хостинга и балансировщика: без авторизации, без данных.
-app.get('/healthz', (req, res) => {
+app.get(['/health', '/healthz'], (req, res) => {
   try {
     db.prepare('SELECT 1').get()
-    res.json({ ok: true })
+    res.json({ ok: true, uptime: Math.round(process.uptime()) })
   } catch {
     res.status(503).json({ ok: false })
   }
@@ -871,8 +872,10 @@ if (existsSync(dist)) app.use(express.static(dist, { index: 'index.html', setHea
 const notFoundPage = `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Страница не найдена · Близкие</title><style>body{margin:0;background:#f8f5ef;color:#26332f;font:18px/1.5 system-ui,sans-serif;display:grid;min-height:100vh;place-items:center;padding:24px}main{max-width:420px}h1{font-size:28px;margin:0 0 12px}a{display:inline-flex;align-items:center;min-height:48px;padding:0 24px;border-radius:999px;background:#1b6b58;color:#fff;text-decoration:none;font-weight:600}p{color:#5b6b64}</style></head><body><main><h1>Страница не найдена</h1><p>Возможно, ссылка устарела или в ней опечатка.</p><a href="/">Перейти в «Близкие»</a></main></body></html>`
 app.use((req, res) => (req.path.startsWith('/api/') ? fail(res, 404, 'not_found') : res.status(404).type('html').send(notFoundPage)))
 app.use((err, req, res, next) => {
-  console.error(err)
   if (res.headersSent) return next(err)
+  // Ошибки клиента (например, битый JSON) не пишем в журнал сервера.
+  if (err.status >= 400 && err.status < 500) return fail(res, err.status, 'Некорректный запрос')
+  logError(err, req)
   fail(res, 500, 'Ошибка сервера')
 })
 
