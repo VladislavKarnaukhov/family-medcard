@@ -10,7 +10,7 @@ import { OtpSign } from './ConsentGate'
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
 // Вход и регистрация: на компьютере слева текстовая колонка с примером строки результата, справа форма.
-export function AuthShell({ children, wide = false, headline = 'Здоровье близких: всё под рукой и под присмотром', sentence = 'Анализы, документы и замеры семьи в одном месте. Помощник берёт рутину на себя, а доступ остаётся у вас.', brand = '', sample = true }) {
+export function AuthShell({ children, wide = false, headline = 'Заведите маму за 5 минут', sentence = 'Лекарства, отметки приёма и сводка для врача. Вы видите, что принято сегодня, а доступ остаётся у вас.', brand = '', sample = true }) {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col lg:flex-row">
@@ -23,16 +23,16 @@ export function AuthShell({ children, wide = false, headline = 'Здоровье
             <h2 className="text-[2.75rem] leading-[1.05] tracking-[-0.04em]">{headline}</h2>
             <p className="mt-4 text-[1.05rem] text-muted">{sentence}</p>
             {sample && (
-              <div className="mt-10 border-t border-line pt-4" aria-label="Пример строки результата">
-                <p className="mb-2 text-xs text-muted">Пример</p>
+              <div className="mt-10 border-t border-line pt-4" aria-label="Пример строки на экране «Сегодня»">
+                <p className="mb-2 text-xs text-muted">Пример экрана «Сегодня»</p>
                 <div className="flex items-baseline justify-between gap-3">
-                  <p className="font-semibold">Гемоглобин</p>
-                  <p className="num-display text-2xl font-semibold text-alert">
-                    108 <span className="text-sm font-normal text-muted">г/л</span>
-                  </p>
+                  <p className="font-semibold">Утро · Метформин, 500 мг</p>
+                  <p className="text-sm font-medium text-accent-dark">Принято в 08:12</p>
                 </div>
-                <RangeBar className="mt-2" index={0} value={108} low={120} high={150} unit="г/л" status="low" />
-                <p className="mt-1.5 text-sm text-muted">Диапазон лаборатории 120–150 г/л</p>
+                <div className="mt-3 flex items-baseline justify-between gap-3">
+                  <p className="font-semibold">Вечер · Метформин, 500 мг</p>
+                  <p className="text-sm text-muted">в 20:00</p>
+                </div>
               </div>
             )}
           </div>
@@ -102,7 +102,7 @@ export function AuthForm({ invite, onDone, startMode }) {
               role="tab"
               aria-selected={mode === k}
               onClick={() => setMode(k)}
-              className={`min-h-11 rounded-lg text-[0.95rem] font-medium transition-colors ${mode === k ? 'bg-white text-accent-dark shadow-sm' : 'text-muted'}`}
+              className={`min-h-12 rounded-lg text-[0.95rem] font-medium transition-colors ${mode === k ? 'bg-white text-accent-dark shadow-sm' : 'text-muted'}`}
             >
               {l}
             </button>
@@ -145,12 +145,12 @@ export function AuthForm({ invite, onDone, startMode }) {
         {busy ? 'Подождите…' : mode === 'login' ? 'Войти' : mode === 'register' ? 'Создать аккаунт' : 'Отправить ссылку'}
       </Button>
       {mode === 'login' && (
-        <button type="button" onClick={() => setMode('forgot')} className="block min-h-11 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
+        <button type="button" onClick={() => setMode('forgot')} className="block min-h-12 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
           Забыли пароль?
         </button>
       )}
       {mode === 'forgot' && (
-        <button type="button" onClick={() => setMode('login')} className="block min-h-11 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
+        <button type="button" onClick={() => setMode('login')} className="block min-h-12 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
           Вернуться ко входу
         </button>
       )}
@@ -239,7 +239,7 @@ export function InviteScreen({ token, user }) {
       <AuthShell>
         <h1 className="mb-2 text-[1.75rem]">Приглашение недействительно</h1>
         <p className="text-muted">{err}. Попросите человека, который вас пригласил, создать новую ссылку.</p>
-        <a className="mt-4 inline-flex min-h-11 items-center font-medium text-accent-dark hover:underline" href="#/">
+        <a className="mt-4 inline-flex min-h-12 items-center font-medium text-accent-dark hover:underline" href="#/">
           На главную
         </a>
       </AuthShell>
@@ -259,7 +259,7 @@ export function InviteScreen({ token, user }) {
         <Card>
           <OtpSign docId="consent_subject" startUrl={`/api/profiles/${store.me.selfProfileId}/self-consent/start`} signUrl={`/api/profiles/${store.me.selfProfileId}/self-consent/sign`} onDone={() => (window.location.hash = '#/')} agreeText="Я прочитал(а) документ и согласен(на) на обработку данных о состоянии моего здоровья в этом сервисе." />
         </Card>
-        <button className="mt-4 min-h-11 font-medium text-muted hover:underline" onClick={() => (window.location.hash = '#/')}>Подтвердить позже</button>
+        <button className="mt-4 min-h-12 font-medium text-muted hover:underline" onClick={() => (window.location.hash = '#/')}>Подтвердить позже</button>
       </AuthShell>
     )
 

@@ -1,6 +1,7 @@
 // Сбор состояния семьи для клиента с учётом прав доступа.
 import { all, get, inList, safeJson, today } from './util.js'
 import { careState } from './care.js'
+import { DOCS } from '../src/legal/docs.js'
 
 export function familyAccess(user, familyId) {
   if (!user) return null
@@ -20,15 +21,21 @@ export function familyAccess(user, familyId) {
 }
 
 // Действует ли подписанное согласие владельца семьи на обработку данных о здоровье.
-export function consentOk(familyId) {
+// Состояние согласия владельца: ok | none | outdated (подписана прежняя версия документа) | stopped (отозвано).
+export function consentStatus(familyId) {
   const f = get('SELECT processing_stopped FROM families WHERE id = ?', familyId)
-  if (!f || f.processing_stopped) return false
-  return !!get(
-    `SELECT 1 FROM consents c JOIN grants g ON g.user_id = c.user_id AND g.family_id = ? AND g.access = 'owner'
-     WHERE c.doc_id = 'consent_health' AND c.method = 'otp' AND c.revoked_at IS NULL LIMIT 1`,
-    familyId,
-  )
+  if (!f || f.processing_stopped) return 'stopped'
+  const signed = (version) =>
+    !!get(
+      `SELECT 1 FROM consents c JOIN grants g ON g.user_id = c.user_id AND g.family_id = ? AND g.access = 'owner'
+       WHERE c.doc_id = 'consent_health' AND c.method = 'otp' AND c.revoked_at IS NULL ${version ? 'AND c.doc_version = ?' : ''} LIMIT 1`,
+      ...(version ? [familyId, version] : [familyId]),
+    )
+  if (signed(DOCS.consent_health.version)) return 'ok'
+  return signed(null) ? 'outdated' : 'none'
 }
+
+export const consentOk = (familyId) => consentStatus(familyId) === 'ok'
 
 export const profileAllowed = (a, pid) => a.profileIds == null || a.profileIds.includes(pid)
 export const canWrite = (a) => ['owner', 'add', 'staff'].includes(a.access)
@@ -54,7 +61,7 @@ export function buildState(familyId, a) {
     family: { id: family.id, name: family.name, timezone: family.timezone },
     me: { access: a.access, selfProfileId: a.grant?.self_profile_id || null },
     assistant: { name: family.staff_id ? get('SELECT name FROM users WHERE id = ?', family.staff_id)?.name : null },
-    consent: { ok: consentOk(familyId), stopped: !!family.processing_stopped, deleteAfter: family.delete_after },
+    consent: { ok: consentOk(familyId), outdated: consentStatus(familyId) === 'outdated', stopped: !!family.processing_stopped, deleteAfter: family.delete_after },
     profiles: [...profiles, ...peers].map((p) => ({ peer: peers.includes(p), sharePeers: !!p.share_peers, id: p.id, name: p.name, birthYear: p.birth_year, sex: p.sex, notes: peers.includes(p) ? '' : p.notes, basis: p.basis, consentStatus: p.consent_status, allergies: peers.includes(p) ? '' : p.allergies, notifyBadMood: !!p.notify_bad_mood, hasSelfUser: careGrants.some((g) => g.self_profile_id === p.id), hasCaregiver: careGrants.some((g) => /сиделк/i.test(g.role_label) && profileAllowed({ profileIds: safeJson(g.profile_ids) }, p.id)), ...(a.access === 'share' ? {} : { emergencyContacts: peers.includes(p) ? [] : safeJson(p.emergency_contacts) || [] }) })),
     questions: Object.fromEntries(profiles.map((p) => [p.id, p.questions])),
     labResults: labRows.map((l) => ({ id: l.id, profileId: l.profile_id, date: l.date, labName: l.lab_name, sourceFile: l.source_file })),

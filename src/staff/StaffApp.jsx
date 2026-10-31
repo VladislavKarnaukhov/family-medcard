@@ -57,7 +57,7 @@ function Login({ onDone }) {
         <Button type="submit" big disabled={busy}>
           {forgot ? 'Отправить ссылку' : 'Войти'}
         </Button>
-        <button type="button" onClick={() => (setForgot(!forgot), setSent(false), setErr(''))} className="block min-h-11 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
+        <button type="button" onClick={() => (setForgot(!forgot), setSent(false), setErr(''))} className="block min-h-12 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
           {forgot ? 'Вернуться ко входу' : 'Забыли пароль?'}
         </button>
       </form>
@@ -129,7 +129,7 @@ export default function StaffApp() {
         <div className="flex items-center justify-between gap-3 px-4 py-3 lg:block lg:px-3 lg:py-0">
           <Wordmark />
           <p className="hidden pt-1 text-xs text-muted lg:block">Рабочее место</p>
-          <button onClick={logout} aria-label="Выйти" className="flex h-10 w-10 items-center justify-center rounded-md text-muted hover:bg-card/60 lg:hidden">
+          <button onClick={logout} aria-label="Выйти" className="flex h-12 w-12 items-center justify-center rounded-md text-muted hover:bg-card/60 lg:hidden">
             <Icon name="logout" size={19} />
           </button>
         </div>
@@ -139,7 +139,7 @@ export default function StaffApp() {
               key={to}
               href={'#/' + to}
               aria-current={active === to ? 'page' : undefined}
-              className={`flex min-h-10 shrink-0 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors ${active === to ? 'bg-card font-semibold text-ink shadow-sheet' : 'text-muted hover:bg-card/60 hover:text-ink'}`}
+              className={`flex min-h-12 shrink-0 items-center gap-3 rounded-xl px-3 text-[0.95rem] transition-colors ${active === to ? 'bg-card font-semibold text-ink shadow-sheet' : 'text-muted hover:bg-card/60 hover:text-ink'}`}
             >
               <Icon name={icon} size={19} />
               <span className="lg:flex-1">{label}</span>
@@ -154,7 +154,7 @@ export default function StaffApp() {
               <p className="truncate text-xs text-muted">{user.isAdmin ? 'Администратор' : 'Помощник'}</p>
             </div>
           </a>
-          <button onClick={logout} className="mt-1 flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-sm text-muted hover:bg-card/60 hover:text-ink">
+          <button onClick={logout} className="mt-1 flex min-h-12 w-full items-center gap-3 rounded-md px-3 text-sm text-muted hover:bg-card/60 hover:text-ink">
             <Icon name="logout" size={18} />
             Выйти
           </button>

@@ -1,7 +1,7 @@
 // Смоук-тест: поднимает сервер на временной базе и проходит основной сценарий через HTTP.
 // Запуск: npm test (нужна сборка: npm run build).
-import { spawn } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { spawn, spawnSync } from 'node:child_process'
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import assert from 'node:assert/strict'
@@ -320,6 +320,39 @@ try {
     await call('POST', '/api/auth/register', { name: 'Тест', email: 't@example.test', password: 'long-enough-1', consents: { terms: true, consent_pd: true } })
     const st = await call('POST', '/api/consents/health/start', {})
     await call('POST', '/api/consents/health/sign', { agree: true, code: st.json.devCode })
+  })
+
+  await step('outbox.log: mode 600, codes and tokens masked, none in production', async () => {
+    const p = join(dir, 'outbox.log')
+    assert.ok(existsSync(p), 'outbox.log should exist in dev')
+    assert.equal(statSync(p).mode & 0o777, 0o600)
+    const t = readFileSync(p, 'utf8')
+    assert.ok(t.includes('Код подтверждения') && t.includes('******'), 'masked code expected')
+    assert.ok(!/\b\d{6}\b/.test(t), 'no plain 6-digit codes')
+    const d2 = mkdtempSync(join(tmpdir(), 'blizkie-prod-'))
+    try {
+      const r = spawnSync(process.execPath, ['server/index.js'], { env: { ...process.env, DATA_DIR: d2, PORT: String(port + 700), NODE_ENV: 'production', SMTP_HOST: '', SMTP_USER: '', SMTP_PASS: '' }, encoding: 'utf8', timeout: 15000 })
+      assert.equal(r.status, 1)
+      assert.match(r.stderr, /нужна настроенная почта/)
+    } finally { rmSync(d2, { recursive: true, force: true }) }
+  })
+
+  await step('new LEGAL_VERSION blocks writes until the owner signs again', async () => {
+    const { DatabaseSync } = await import('node:sqlite')
+    const h = new DatabaseSync(join(dir, 'blizkie.db'))
+    const fid2 = (await call('GET', '/api/me')).json.families[0].id
+    h.prepare("UPDATE consents SET doc_version = 'старая-версия' WHERE doc_id = 'consent_health'").run()
+    const w = await call('POST', `/api/families/${fid2}/profiles`, { name: 'Папа', basis: 'self', birthYear: 1955, sex: 'm' })
+    assert.equal(w.status, 403)
+    assert.equal(w.json.code, 'consent_outdated')
+    const st = await call('GET', `/api/families/${fid2}/state`)
+    assert.equal(st.status, 200)
+    assert.equal(st.json.consent.outdated, true)
+    const s1 = await call('POST', '/api/consents/health/start', {})
+    assert.equal((await call('POST', '/api/consents/health/sign', { agree: true, code: s1.json.devCode })).status, 200)
+    const ok = await call('POST', `/api/families/${fid2}/profiles`, { name: 'Папа', basis: 'self', birthYear: 1955, sex: 'm' })
+    assert.equal(ok.status, 200)
+    h.close()
   })
 
   await step('wrong password rejected', async () => {

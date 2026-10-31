@@ -1,12 +1,27 @@
 // Отправка писем через SMTP (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, MAIL_FROM).
-// Без SMTP письма не уходят, а пишутся в server/data/outbox.log (режим разработки).
+// Без SMTP письма не уходят. В режиме разработки они пишутся в server/data/outbox.log (права 600, коды и токены замаскированы),
+// в production без SMTP сервер не запускается.
 import nodemailer from 'nodemailer'
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, chmodSync } from 'node:fs'
 import { join } from 'node:path'
 import { DATA_DIR } from './db.js'
 
 export const mailEnabled = () => !!process.env.SMTP_HOST && !!process.env.SMTP_USER && !!process.env.SMTP_PASS
 export const isProd = () => process.env.NODE_ENV === 'production'
+// Сервер без почты в production бесполезен (коды подписи и сброс пароля не дойдут), поэтому не стартуем молча.
+export function assertMailConfigured() {
+  if (isProd() && !mailEnabled()) {
+    console.error('Ошибка запуска: в production нужна настроенная почта. Задайте SMTP_HOST, SMTP_USER, SMTP_PASS (и MAIL_FROM) в .env или в окружении. См. .env.example.')
+    process.exit(1)
+  }
+}
+
+// В журнал разработки не попадают рабочие секреты: 6-значные коды и токены в ссылках.
+export const maskSecrets = (t) =>
+  String(t)
+    .replace(/\b\d{6}\b/g, '******')
+    .replace(/([?&#/=])([A-Za-z0-9_-]{16,})/g, (_, d, tk) => `${d}${tk.slice(0, 3)}…`)
+
 export const appUrl = () => (process.env.APP_URL || 'http://localhost:5173').replace(/\/$/, '')
 
 let transport
@@ -40,7 +55,11 @@ export function layout({ title, lines, cta, footer }) {
 export async function sendMail({ to, subject, text, html }) {
   const from = process.env.MAIL_FROM || 'Близкие <no-reply@localhost>'
   if (!mailEnabled()) {
-    appendFileSync(join(DATA_DIR, 'outbox.log'), `${new Date().toISOString()} to=${to} subject=${subject}\n${text}\n---\n`)
+    if (!isProd()) {
+      const file = join(DATA_DIR, 'outbox.log')
+      appendFileSync(file, `${new Date().toISOString()} to=${to} subject=${subject}\n${maskSecrets(text)}\n---\n`, { mode: 0o600 })
+      chmodSync(file, 0o600)
+    }
     return { sent: false }
   }
   await getTransport().sendMail({ from, to, subject, text, html })

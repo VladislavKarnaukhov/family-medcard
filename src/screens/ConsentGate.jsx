@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Button, Card, ErrorText, Field, Notice, Toggle } from '../components/ui'
 import { api } from '../lib/api'
-import { actions, refresh } from '../lib/store'
+import { actions, refresh, useStore } from '../lib/store'
 import { AuthShell } from './Auth'
 import { DocLink } from './Legal'
 
@@ -61,7 +61,7 @@ export function OtpSign({ docId, startUrl, signUrl, extra = {}, onDone, startBod
           <Button className="w-full" icon="check" disabled={busy || code.length !== 6} onClick={sign}>
             Подписать согласие
           </Button>
-          <button className="min-h-11 w-full font-medium text-accent-dark hover:underline" onClick={start} disabled={busy}>
+          <button className="min-h-12 w-full font-medium text-accent-dark hover:underline" onClick={start} disabled={busy}>
             Отправить код ещё раз
           </button>
         </>
@@ -71,10 +71,11 @@ export function OtpSign({ docId, startUrl, signUrl, extra = {}, onDone, startBod
   )
 }
 
-export default function ConsentGate() {
+export default function ConsentGate({ outdated = false }) {
   return (
     <AuthShell wide>
-      <h1 className="mb-2 text-[1.75rem]">Согласие на обработку данных о здоровье</h1>
+      <h1 className="mb-2 text-[1.75rem]">{outdated ? 'Документы обновились' : 'Согласие на обработку данных о здоровье'}</h1>
+      {outdated && <p className="mb-4 text-muted">Мы изменили редакцию документов. Ваши данные на месте, но чтобы продолжить вносить записи, подпишите согласие в новой редакции. Просматривать данные, выгружать и удалять их можно и сейчас.</p>}
       <p className="mb-6 text-muted">
         Сведения о здоровье — особая категория персональных данных. Чтобы хранить документы и результаты анализов, нам нужно ваше отдельное письменное согласие. Мы оформляем его электронной подписью: вы подтверждаете согласие кодом, отправленным на вашу почту.
       </p>

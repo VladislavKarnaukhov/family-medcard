@@ -4,7 +4,7 @@ import { Icon } from '../components/icons'
 import { RangeBar } from '../components/RangeBar'
 import { actions, can } from '../lib/store'
 import { latestPoints, isOut } from '../lib/data'
-import { docTitle, fmtDate, fmtDateTime, fmtNum, humanize, refText, ageText, SEX } from '../lib/format'
+import { docTitle, fmtDate, fmtDateTime, fmtNum, refText, ageText, SEX } from '../lib/format'
 import { CONSENT_LABEL } from './ProfileForm'
 import { DOC_TYPES } from './Dossier'
 import { daySchedule, fmtDt, localNow, marked, nextAppointment } from '../lib/care'
@@ -39,15 +39,15 @@ function CareBlock({ state, profile, owner, write }) {
 }
 
 const STEPS = [
-  ['user', 'Создайте профиль', 'Свой, мамы или ребёнка. Для другого человека понадобится его согласие или подтверждение, что вы законный представитель.'],
-  ['camera', 'Отправьте первый бланк', 'Сфотографируйте анализ или загрузите PDF: помощник внесёт показатели в досье.'],
-  ['users', 'Откройте доступ близким', 'Пригласите брата, сестру или сиделку и выберите, что им видно.'],
+  ['user', 'Заведите профиль', 'Свой, мамы или ребёнка. Для другого человека понадобится его согласие или подтверждение, что вы законный представитель.'],
+  ['pill', 'Добавьте лекарства', 'Название, доза и время приёма. Отметки приёма появятся на экране «Сегодня».'],
+  ['users', 'Пригласите близких', 'Брата, сестру, сиделку или самого человека по ссылке. Вы выбираете, что им видно. Сводка для врача формируется из записей.'],
 ]
 
 function Welcome({ owner }) {
   return (
     <div className="mx-auto max-w-[640px] py-4 lg:py-10">
-      <PageHeader title="Давайте соберём досье" subtitle={owner ? 'Три шага, и все анализы семьи будут в одном месте.' : 'Для вас пока не открыт ни один профиль.'} />
+      <PageHeader title="Давайте заведём профиль" subtitle={owner ? 'Три шага, и вы будете видеть, что принято сегодня.' : 'Для вас пока не открыт ни один профиль.'} />
       {owner && (
         <>
           <ol className="mb-8 divide-y divide-line border-y border-line">
@@ -119,7 +119,7 @@ export default function Dashboard({ state, profile }) {
         alert: outCount > 0,
         body: (
           <details className="group">
-            <summary className="flex min-h-11 cursor-pointer list-none flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+            <summary className="flex min-h-12 cursor-pointer list-none flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
               <div className="min-w-0">
                 <p className="font-semibold sm:truncate">Анализы, {r.labName}</p>
                 <p className="text-sm text-muted">
@@ -148,10 +148,10 @@ export default function Dashboard({ state, profile }) {
             </table>
             {write && (
               <div className="mt-2 flex gap-2 border-t border-line pt-3">
-                <Button variant="ghost" icon="edit" className="!min-h-10 text-sm" onClick={() => go('edit/' + r.id)}>
+                <Button variant="ghost" icon="edit" className="!min-h-12 text-sm" onClick={() => go('edit/' + r.id)}>
                   Исправить
                 </Button>
-                <Button variant="danger" icon="trash" className="!min-h-10 text-sm" onClick={() => confirm('Удалить этот анализ?') && actions.deleteLabResult(r.id)}>
+                <Button variant="danger" icon="trash" className="!min-h-12 text-sm" onClick={() => confirm('Удалить этот анализ?') && actions.deleteLabResult(r.id)}>
                   Удалить
                 </Button>
               </div>
@@ -166,7 +166,7 @@ export default function Dashboard({ state, profile }) {
         kind: 'doc',
         date: d.date,
         body: (
-          <a href="#/dossier" className="flex min-h-11 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <a href="#/dossier" className="flex min-h-12 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <p className="font-semibold sm:truncate">{docTitle(d.title)}</p>
               <p className="text-sm text-muted">
@@ -187,7 +187,7 @@ export default function Dashboard({ state, profile }) {
         kind: 'vitals',
         date: v.datetime.slice(0, 10),
         body: (
-          <a href="#/vitals" className="flex min-h-11 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <a href="#/vitals" className="flex min-h-12 flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div>
               <p className="font-semibold">
                 Давление {v.systolic}/{v.diastolic}, пульс {v.pulse}
@@ -205,9 +205,6 @@ export default function Dashboard({ state, profile }) {
   if (!profile) return <Welcome owner={owner} />
 
   const { latest, out, events } = model
-  const openReq = state.requests.filter((r) => r.status !== 'done').length
-  const lastMsg = state.messages.filter((m) => !m.internal).slice(-1)[0]
-  const assistant = state.assistant?.name || 'Помощник'
   const me = state.families.find((f) => f.id === state.familyId)
   const meta = [ageText(profile.birthYear), SEX[profile.sex] !== 'не указан' ? SEX[profile.sex] : ''].filter(Boolean).join(' · ')
 
@@ -301,25 +298,6 @@ export default function Dashboard({ state, profile }) {
           </section>
 
           {!profile.peer && <CareBlock state={state} profile={profile} owner={owner} write={write} />}
-
-          {owner && (
-            <a href="#/assistant" className="lift block rounded-2xl bg-card p-6 shadow-sheet">
-              <div className="flex items-baseline gap-3">
-                <p className="flex-1 font-semibold">{assistant}</p>
-                {state.unread > 0 && <span className="rounded-full bg-accent px-2 text-sm font-semibold text-white">{state.unread}</span>}
-              </div>
-              {lastMsg && (
-                <p className="mt-2 line-clamp-2 text-[0.95rem] text-muted">
-                  {lastMsg.from === 'assistant' ? '' : 'Вы: '}
-                  {humanize(lastMsg.text)}
-                </p>
-              )}
-              <p className="mt-3 flex items-center justify-between text-sm font-medium text-accent-dark">
-                <span>{openReq > 0 ? `Поручений в работе: ${openReq}` : 'Написать помощнику'}</span>
-                <Icon name="chevR" size={18} />
-              </p>
-            </a>
-          )}
         </aside>
       </div>
     </div>

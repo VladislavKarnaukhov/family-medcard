@@ -146,19 +146,19 @@ export default function Dossier({ state, profile }) {
               <span className="text-sm text-muted">{fmtDate(d.date)}</span>
               <div className="flex items-center gap-1">
                 {d.kind === 'lab' && (
-                  <a className="inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-medium text-accent-dark hover:bg-accent-soft" href="#/indicators">
+                  <a className="inline-flex min-h-12 items-center rounded-lg px-3 text-sm font-medium text-accent-dark hover:bg-accent-soft" href="#/indicators">
                     Показатели
                   </a>
                 )}
                 {d.fileUrl && (
-                  <a className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent-dark hover:bg-accent-soft" href={d.fileUrl} target="_blank" rel="noreferrer">
+                  <a className="inline-flex min-h-12 items-center gap-1.5 rounded-lg px-3 text-sm font-medium text-accent-dark hover:bg-accent-soft" href={d.fileUrl} target="_blank" rel="noreferrer">
                     <Icon name="eye" size={16} />
                     Файл
                   </a>
                 )}
                 {write && d.kind === 'doc' && d.addedBy === 'client' && (
                   <button
-                    className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert"
+                    className="flex h-12 w-12 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert"
                     aria-label={`Удалить: ${d.title}`}
                     onClick={() => confirm('Удалить документ?') && actions.deleteDocument(d.id)}
                   >

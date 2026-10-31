@@ -23,7 +23,7 @@ function CopyLink({ link }) {
     <div className="flex items-center gap-2 rounded-xl bg-paper px-3 py-2">
       <Icon name="link" size={17} className="text-accent" />
       <p className="min-w-0 flex-1 select-all break-all text-sm">{link}</p>
-      <Button variant="ghost" className="!min-h-9 !px-3 text-sm" onClick={copy}>
+      <Button variant="ghost" className="!min-h-12 !px-3 text-sm" onClick={copy}>
         {copied ? 'Скопировано' : 'Копировать'}
       </Button>
     </div>
@@ -98,7 +98,7 @@ export default function Circle({ state, profile }) {
                   {m.profileIds.length > 1 && m.access !== 'owner' && <p className="text-sm text-muted">Профили: {m.profileIds.map(pname).filter(Boolean).join(', ')}</p>}
                 </div>
                 {m.access !== 'owner' && (
-                  <Button variant="danger" className="!min-h-10 text-sm" onClick={() => confirm(`Закрыть доступ для ${m.name}?`) && run(() => actions.removeMember(m.id))}>
+                  <Button variant="danger" className="!min-h-12 text-sm" onClick={() => confirm(`Закрыть доступ для ${m.name}?`) && run(() => actions.removeMember(m.id))}>
                     Закрыть доступ
                   </Button>
                 )}
@@ -124,7 +124,7 @@ export default function Circle({ state, profile }) {
                     </p>
                     <p className="text-sm text-muted">Ссылка действует до {fmtDate(i.expiresAt.slice(0, 10))}</p>
                     <CopyLink link={`${location.origin}/#/invite/${i.token}`} />
-                    <button className="min-h-10 text-sm font-medium text-alert hover:underline" onClick={() => run(() => actions.revokeInvite(i.token))}>
+                    <button className="min-h-12 text-sm font-medium text-alert hover:underline" onClick={() => run(() => actions.revokeInvite(i.token))}>
                       Отозвать приглашение
                     </button>
                   </li>
@@ -193,7 +193,7 @@ export default function Circle({ state, profile }) {
                     {state.profiles.map((p) => {
                       const on = selected.includes(p.id)
                       return (
-                        <button key={p.id} type="button" aria-pressed={on} onClick={() => toggle(p.id)} className={`flex min-h-11 items-center gap-2 rounded-md px-4 font-medium transition-colors ${on ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>
+                        <button key={p.id} type="button" aria-pressed={on} onClick={() => toggle(p.id)} className={`flex min-h-12 items-center gap-2 rounded-md px-4 font-medium transition-colors ${on ? 'bg-accent text-white' : 'border border-line-strong bg-card'}`}>
                           {on && <Icon name="check" size={16} />}
                           {p.name}
                         </button>

@@ -113,7 +113,7 @@ export function MedForm({ state, profile, id }) {
           <legend className="mb-1.5 text-sm font-medium">Время приёма</legend>
           <div className="flex flex-wrap items-center gap-2">
             {m.times.map((t) => (
-              <button key={t} type="button" onClick={() => setM({ ...m, times: m.times.filter((x) => x !== t) })} className="inline-flex min-h-11 items-center gap-2 rounded-full bg-accent-soft px-4 font-medium text-accent-dark" aria-label={`Убрать ${t}`}>
+              <button key={t} type="button" onClick={() => setM({ ...m, times: m.times.filter((x) => x !== t) })} className="inline-flex min-h-12 items-center gap-2 rounded-full bg-accent-soft px-4 font-medium text-accent-dark" aria-label={`Убрать ${t}`}>
                 {t} <Icon name="x" size={14} />
               </button>
             ))}
@@ -132,7 +132,7 @@ export function MedForm({ state, profile, id }) {
             <legend className="mb-1.5 text-sm font-medium">Дни</legend>
             <div className="flex flex-wrap gap-2">
               {WEEKDAYS.map(([n, l]) => (
-                <button key={n} type="button" aria-pressed={dayOn(n)} onClick={() => toggleDay(n)} className={`min-h-11 min-w-11 rounded-full px-3 font-medium ${dayOn(n) ? 'bg-accent text-white' : 'border border-line-strong bg-card text-muted'}`}>
+                <button key={n} type="button" aria-pressed={dayOn(n)} onClick={() => toggleDay(n)} className={`min-h-12 min-w-11 rounded-full px-3 font-medium ${dayOn(n) ? 'bg-accent text-white' : 'border border-line-strong bg-card text-muted'}`}>
                   {l}
                 </button>
               ))}
@@ -163,14 +163,14 @@ export function MedForm({ state, profile, id }) {
         {existing && (
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-line pt-5">
             {existing.status === 'active' ? (
-              <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={() => confirm('Отметить лекарство как отменённое? Отметки приёма сохранятся.') && run(() => actions.setMedStatus(existing.id, 'stopped'), list)}>
+              <button className="min-h-12 font-medium text-accent-dark hover:underline" onClick={() => confirm('Отметить лекарство как отменённое? Отметки приёма сохранятся.') && run(() => actions.setMedStatus(existing.id, 'stopped'), list)}>
                 Лекарство отменено
               </button>
             ) : (
-              <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={() => run(() => actions.setMedStatus(existing.id, 'active'), list)}>Возобновить приём</button>
+              <button className="min-h-12 font-medium text-accent-dark hover:underline" onClick={() => run(() => actions.setMedStatus(existing.id, 'active'), list)}>Возобновить приём</button>
             )}
             {owner && (
-              <button className="min-h-11 font-medium text-alert hover:underline" onClick={() => confirm('Удалить лекарство вместе со всеми отметками приёма?') && run(() => actions.deleteMed(existing.id), list)}>
+              <button className="min-h-12 font-medium text-alert hover:underline" onClick={() => confirm('Удалить лекарство вместе со всеми отметками приёма?') && run(() => actions.deleteMed(existing.id), list)}>
                 Удалить
               </button>
             )}

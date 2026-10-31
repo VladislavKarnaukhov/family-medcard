@@ -207,7 +207,7 @@ function Thread({ data, reload, fid }) {
           <ul className="max-h-44 divide-y divide-line overflow-y-auto rounded-xl border border-line bg-white shadow-pop" role="listbox" aria-label="Шаблоны ответов">
             {TEMPLATES.map((t) => (
               <li key={t}>
-                <button type="button" className="block min-h-11 w-full px-4 py-2 text-left text-[0.95rem] hover:bg-accent-soft" onClick={() => (setText(t), setTpl(false))}>
+                <button type="button" className="block min-h-12 w-full px-4 py-2 text-left text-[0.95rem] hover:bg-accent-soft" onClick={() => (setText(t), setTpl(false))}>
                   {t}
                 </button>
               </li>
@@ -227,10 +227,10 @@ function Thread({ data, reload, fid }) {
         />
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="ghost" className="!min-h-10 text-sm" onClick={() => setTpl(!tpl)} aria-expanded={tpl}>
+            <Button variant="ghost" className="!min-h-12 text-sm" onClick={() => setTpl(!tpl)} aria-expanded={tpl}>
               Шаблоны
             </Button>
-            <label className="flex min-h-10 cursor-pointer items-center gap-2 text-[0.95rem]">
+            <label className="flex min-h-12 cursor-pointer items-center gap-2 text-[0.95rem]">
               <input type="checkbox" checked={internal} onChange={(e) => setInternal(e.target.checked)} className="!h-5 !min-h-0 !w-5" />
               Внутренняя заметка
             </label>
@@ -327,12 +327,12 @@ function ContextPanel({ data, reload, staff }) {
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   {REQ_STATUS.map(([s, l]) => (
-                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-9 rounded-md px-3 text-sm font-medium ${r.status === s ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-sunken'}`}>
+                    <button key={s} onClick={() => patch(r.id, { status: s })} aria-pressed={r.status === s} className={`min-h-12 rounded-md px-3 text-sm font-medium ${r.status === s ? 'bg-accent text-white' : 'border border-line-strong bg-card hover:bg-sunken'}`}>
                       {l}
                     </button>
                   ))}
                 </div>
-                <select aria-label="Ответственный" className="!mt-2 !min-h-9 !py-1 text-sm" value={staff.find((s) => s.name === r.assignee)?.id || ''} onChange={(e) => patch(r.id, { assigneeId: e.target.value })}>
+                <select aria-label="Ответственный" className="!mt-2 !min-h-12 !py-1 text-sm" value={staff.find((s) => s.name === r.assignee)?.id || ''} onChange={(e) => patch(r.id, { assigneeId: e.target.value })}>
                   <option value="">Не назначен</option>
                   {staff.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -359,18 +359,18 @@ function ContextPanel({ data, reload, staff }) {
                 {d.status === 'processing' && <Chip tone="solid">ждёт внесения</Chip>}
                 {d.status === 'requested' && <Chip>запрошено в клинике</Chip>}
                 {d.fileUrl && (
-                  <a className="inline-flex min-h-9 items-center gap-1 rounded-lg px-2 text-sm font-medium text-accent-dark hover:bg-accent-soft" href={d.fileUrl} target="_blank" rel="noreferrer">
+                  <a className="inline-flex min-h-12 items-center gap-1 rounded-lg px-2 text-sm font-medium text-accent-dark hover:bg-accent-soft" href={d.fileUrl} target="_blank" rel="noreferrer">
                     <Icon name="eye" size={15} /> Файл
                   </a>
                 )}
                 {d.status === 'processing' && d.fileUrl && d.type === 'analysis' && (
-                  <a className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-accent px-3 text-sm font-medium text-white" href={`#/process/${d.id}`}>
+                  <a className="inline-flex min-h-12 items-center gap-1 rounded-lg bg-accent px-3 text-sm font-medium text-white" href={`#/process/${d.id}`}>
                     Внести показатели
                   </a>
                 )}
                 {d.status === 'processing' && d.type !== 'analysis' && (
                   <button
-                    className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-accent px-3 text-sm font-medium text-white"
+                    className="inline-flex min-h-12 items-center gap-1 rounded-lg bg-accent px-3 text-sm font-medium text-white"
                     onClick={async () => {
                       await api('PATCH', `/api/staff/documents/${d.id}`, { status: 'ready' })
                       reload()
@@ -380,7 +380,7 @@ function ContextPanel({ data, reload, staff }) {
                   </button>
                 )}
                 {d.status === 'requested' && (
-                  <label className="inline-flex min-h-9 cursor-pointer items-center rounded-lg px-2 text-sm font-medium text-accent-dark hover:bg-accent-soft">
+                  <label className="inline-flex min-h-12 cursor-pointer items-center rounded-lg px-2 text-sm font-medium text-accent-dark hover:bg-accent-soft">
                     Загрузить файл
                     <input type="file" accept="image/*,application/pdf" hidden onChange={(e) => e.target.files[0] && attach(d, e.target.files[0])} />
                   </label>
@@ -434,7 +434,7 @@ function ContextPanel({ data, reload, staff }) {
                 </div>
               </div>
             ) : (
-              <Button variant="soft" icon="plus" className="!min-h-10 text-sm" onClick={() => setAdding(true)}>
+              <Button variant="soft" icon="plus" className="!min-h-12 text-sm" onClick={() => setAdding(true)}>
                 Добавить документ клиенту
               </Button>
             )}
@@ -491,7 +491,7 @@ function Conversation({ fid, staff, row }) {
       <div className={`min-w-0 flex-1 flex-col ${tab === 'chat' ? 'flex' : 'hidden xl:flex'}`}>
         <header className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-b border-line bg-card px-4 py-3 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
-            <a href="#/" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-sunken lg:hidden" aria-label="К списку">
+            <a href="#/" className="flex h-12 w-12 items-center justify-center rounded-lg text-muted hover:bg-sunken lg:hidden" aria-label="К списку">
               <Icon name="chevL" size={20} />
             </a>
             <Avatar name={data.owner?.name || '?'} size={44} />
@@ -505,7 +505,7 @@ function Conversation({ fid, staff, row }) {
           </div>
           <label className="flex items-center gap-2 text-sm">
             <span className="text-muted">Ответственный</span>
-            <select value={data.assigneeId || ''} onChange={assign} className="!min-h-10 !w-auto !py-1">
+            <select value={data.assigneeId || ''} onChange={assign} className="!min-h-12 !w-auto !py-1">
               <option value="">Не назначен</option>
               {staff.map((s) => (
                 <option key={s.id} value={s.id}>

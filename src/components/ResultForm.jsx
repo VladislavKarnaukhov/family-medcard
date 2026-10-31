@@ -31,7 +31,7 @@ function Row({ row, onChange, onDelete }) {
   const set = (k) => (e) => onChange({ ...row, [k]: e.target.value })
   const known = row.name.trim() === '' || findIndicator(row.name)
   const bad = row.value.trim() !== '' && rowBad({ ...row, name: 'x' })
-  const cell = 'lg:!min-h-10 lg:!px-2.5 lg:!py-1.5 lg:placeholder:!text-transparent'
+  const cell = 'lg:!min-h-12 lg:!px-2.5 lg:!py-1.5 lg:placeholder:!text-transparent'
   return (
     <li className={`tabular-nums grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl border border-line bg-white p-3 lg:items-start lg:gap-2 lg:border-0 lg:bg-transparent lg:p-0 ${COLS}`}>
       <div className="col-span-2 lg:col-span-1">
@@ -53,7 +53,7 @@ function Row({ row, onChange, onDelete }) {
         <input inputMode="decimal" value={row.refHigh} onChange={set('refHigh')} className={cell} placeholder="Диапазон до" />
       </Field>
       <div className="col-span-2 flex justify-end lg:col-span-1 lg:mt-1.5 lg:justify-center">
-        <button type="button" onClick={onDelete} aria-label="Убрать строку" className="flex h-10 w-10 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert">
+        <button type="button" onClick={onDelete} aria-label="Убрать строку" className="flex h-12 w-12 items-center justify-center rounded-lg text-muted hover:bg-alert-soft hover:text-alert">
           <Icon name="trash" size={18} />
         </button>
       </div>

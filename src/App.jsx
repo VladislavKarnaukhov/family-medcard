@@ -74,7 +74,7 @@ export default function App() {
           </a>
           .
         </p>
-        <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
+        <button className="min-h-12 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
           Выйти
         </button>
       </AuthShell>
@@ -84,7 +84,7 @@ export default function App() {
       <AuthShell>
         <h1 className="mb-2 text-[1.75rem]">Нет доступа к семье</h1>
         <p className="mb-4 text-muted">Срок доступа мог истечь. Попросите владельца создать новое приглашение.</p>
-        <button className="min-h-11 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
+        <button className="min-h-12 font-medium text-accent-dark hover:underline" onClick={actions.logout}>
           Выйти
         </button>
       </AuthShell>
@@ -106,7 +106,7 @@ export default function App() {
         <Stopped state={state} />
       </Layout>
     )
-  if (owner && !state.consent.ok) return <ConsentGate />
+  if (owner && !state.consent.ok) return <ConsentGate outdated={!!state.consent.outdated} />
 
   const profileById = (id) => state.profiles.find((p) => p.id === id) || profile
   const carePage = () => {
