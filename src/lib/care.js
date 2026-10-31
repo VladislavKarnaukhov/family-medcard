@@ -89,7 +89,7 @@ export function firstSteps(state, summarySeen = false) {
   const steps = [
     { key: 'profile', title: 'Заведите профиль', done: own.length > 0, href: 'profile/new' },
     { key: 'meds', title: 'Добавьте лекарства и время приёма', done: state.medications.length > 0, href: pid ? `meds/${pid}/new` : 'profile/new' },
-    { key: 'invite', title: 'Пригласите близкого, сиделку или самого человека', done: (state.members?.length || 0) > 0 || (state.invites?.length || 0) > 0, href: 'circle' },
+    { key: 'invite', title: 'Пригласите близкого, сиделку или самого человека', done: (state.members || []).some((m) => m.access !== 'owner') || (state.invites?.length || 0) > 0, href: 'circle' },
     { key: 'mark', title: 'Отметьте первый приём', done: state.intakes.some((i) => i.status === 'taken' || i.status === 'skipped'), href: 'today' },
     { key: 'summary', title: 'Откройте сводку для врача', done: summarySeen, href: 'summary' },
   ]

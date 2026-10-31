@@ -392,6 +392,9 @@ try {
     assert.equal(firstSteps(empty).next.key, 'profile')
     const withProfile = { ...empty, profiles: [{ id: 'p1' }] }
     assert.equal(firstSteps(withProfile).next.key, 'meds')
+    const onlyOwner = { ...withProfile, medications: [{}], members: [{ access: 'owner' }] }
+    assert.equal(firstSteps(onlyOwner).next.key, 'invite', 'owner alone is not an invitation')
+    assert.equal(firstSteps({ ...onlyOwner, members: [{ access: 'owner' }, { access: 'view' }] }).next.key, 'mark')
     assert.equal(firstSteps(withProfile).next.href, 'meds/p1/new')
     const rich = { profiles: [{ id: 'p1' }], medications: [{}], members: [], invites: [{}], intakes: [{ status: 'taken' }] }
     assert.equal(firstSteps(rich).next.key, 'summary')
