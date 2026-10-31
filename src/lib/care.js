@@ -82,6 +82,20 @@ export function bannerRows(rows) {
   return due.length ? { kind: 'due', rows: due } : { kind: 'late', rows: rows.filter((r) => r.state === 'unmarked') }
 }
 
+// «Первые шаги» владельца: заведите профиль, лекарства, пригласите близких, отметьте приём, откройте сводку. Всё выводится из данных.
+export function firstSteps(state, summarySeen = false) {
+  const own = state.profiles.filter((p) => !p.peer)
+  const pid = own[0]?.id
+  const steps = [
+    { key: 'profile', title: 'Заведите профиль', done: own.length > 0, href: 'profile/new' },
+    { key: 'meds', title: 'Добавьте лекарства и время приёма', done: state.medications.length > 0, href: pid ? `meds/${pid}/new` : 'profile/new' },
+    { key: 'invite', title: 'Пригласите близкого, сиделку или самого человека', done: (state.members?.length || 0) > 0 || (state.invites?.length || 0) > 0, href: 'circle' },
+    { key: 'mark', title: 'Отметьте первый приём', done: state.intakes.some((i) => i.status === 'taken' || i.status === 'skipped'), href: 'today' },
+    { key: 'summary', title: 'Откройте сводку для врача', done: summarySeen, href: 'summary' },
+  ]
+  return { steps, done: steps.filter((s) => s.done).length, next: steps.find((s) => !s.done) || null }
+}
+
 export const marked = (rows) => rows.filter((r) => r.state === 'taken' || r.state === 'skipped').length
 
 export function nextAppointment(state, profileId) {
