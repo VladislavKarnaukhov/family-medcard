@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
 import { actions, can } from '../lib/store'
-import { Avatar, Tabs, go } from './ui'
+import { Avatar, go } from './ui'
 import { Icon } from './icons'
 import { hasMeds } from '../lib/care'
-import { splitNav } from '../lib/nav'
+import { splitMobileNav, splitNav } from '../lib/nav'
 
 const NAV = [
   ['', 'Главная', 'home'],
@@ -18,8 +18,8 @@ const NAV_MORE = [
   ['circle', 'Круг заботы', 'users', 'owner'],
   ['privacy', 'Мои данные', 'shield'],
 ]
-const ALIAS = { add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '', meds: 'today', visits: 'today', care: 'today', diary: 'today', emergency: '' }
-const TODAY = ['today', 'Сегодня', 'pill']
+const ALIAS = { more: 'more', profiles: '', feedback: 'more', add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '', meds: 'today', visits: 'today', care: 'today', diary: 'today', emergency: '' }
+const TODAY = ['today', 'Сегодня', 'heart']
 const careLinks = (state) => {
   const id = state.activeProfileId
   return id ? [['meds/' + id, 'Лекарства', 'pill'], ['visits/' + id, 'Визиты к врачу', 'clock'], ['diary/' + id, 'Дневник', 'file'], ['emergency/' + id, 'Экстренная карточка', 'qr', 'owner']] : []
@@ -28,6 +28,20 @@ const careLinks = (state) => {
 const mainNav = (state) => {
   const nav = NAV.filter((i) => !i[3] || can(state).owner)
   return hasMeds(state) ? [TODAY, ...nav] : nav
+}
+
+// Все пункты меню для текущего пользователя.
+export function navItems(state) {
+  const owner = can(state).owner
+  return [...mainNav(state), ...careLinks(state).filter((i) => !i[3] || owner), ...NAV_MORE.filter((i) => !i[3] || owner), ['notifications', 'События', 'bell']]
+}
+
+// Страница «Ещё» на телефоне: то, чего нет в нижних вкладках, плюс «Написать нам» и порядок профилей.
+export function moreItems(state) {
+  const { rest } = splitMobileNav(navItems(state))
+  const extra = [['feedback', 'Написать нам', 'chat']]
+  if (can(state).owner && state.profiles.filter((p) => !p.peer).length > 1) extra.unshift(['profiles', 'Порядок профилей', 'users'])
+  return [...rest, ...extra]
 }
 
 export function Wordmark() {
@@ -89,17 +103,51 @@ export function Footer({ className = '' }) {
   )
 }
 
+// Переключатель профилей на телефоне: текущий профиль целиком, список раскрывается по нажатию.
 function ProfileTabs({ state }) {
+  const [open, setOpen] = useState(false)
   const owner = can(state).owner
-  const items = state.profiles.map((p) => [p.id, p.name])
+  const own = state.profiles.filter((p) => !p.peer)
+  const cur = state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0]
+  if (!cur) return null
+  const pick = (fn) => () => {
+    setOpen(false)
+    fn()
+  }
   return (
-    <div className="no-print flex items-end gap-4 lg:hidden">
-      <Tabs className="min-w-0 flex-1" value={state.activeProfileId} onChange={(id) => actions.setActive(id)} items={items} />
-      {owner && (
-        <button onClick={() => go('profile/new')} className="mb-px flex min-h-12 shrink-0 items-center gap-1 border-b border-line pb-px text-[0.95rem] font-medium text-accent-dark">
-          <Icon name="plus" size={16} />
-          Профиль
-        </button>
+    <div className="no-print lg:hidden">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-card px-4 text-left shadow-sheet">
+        <Avatar name={cur.name} size={32} />
+        <span className="min-w-0 flex-1 truncate font-semibold">{cur.name}</span>
+        <Icon name="chevD" size={18} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <ul className="mt-2 overflow-hidden rounded-2xl bg-card shadow-pop" role="listbox" aria-label="Профили">
+          {state.profiles.map((p) => (
+            <li key={p.id}>
+              <button type="button" role="option" aria-selected={p.id === cur.id} onClick={pick(() => actions.setActive(p.id))} className={`flex min-h-12 w-full items-center gap-3 px-4 text-left hover:bg-sunken ${p.id === cur.id ? 'font-semibold text-accent-dark' : ''}`}>
+                <span className="min-w-0 flex-1 truncate">{p.name}</span>
+                {p.id === cur.id && <Icon name="check" size={16} />}
+              </button>
+            </li>
+          ))}
+          {owner && (
+            <li className="border-t border-line">
+              <button type="button" onClick={pick(() => go('profile/new'))} className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-accent-dark hover:bg-sunken">
+                <Icon name="plus" size={16} />
+                Добавить профиль
+              </button>
+            </li>
+          )}
+          {owner && own.length > 1 && (
+            <li>
+              <button type="button" onClick={pick(() => go('profiles'))} className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-muted hover:bg-sunken">
+                <Icon name="chevD" size={16} />
+                Порядок профилей
+              </button>
+            </li>
+          )}
+        </ul>
       )}
     </div>
   )
@@ -159,7 +207,7 @@ function RailLink({ to, label, icon, active, badge }) {
 
 function Rail({ state, active }) {
   const owner = can(state).owner
-  const items = [...mainNav(state), ...careLinks(state).filter((i) => !i[3] || owner), ...NAV_MORE.filter((i) => !i[3] || owner), ['notifications', 'События', 'bell']]
+  const items = navItems(state)
   const { primary, rest } = splitNav(items)
   const moreBadge = (rest.some((i) => i[0] === 'assistant') ? state.unread : 0) + (state.unreadNotifications || 0)
   return (
@@ -192,6 +240,14 @@ function Rail({ state, active }) {
                   <Icon name="plus" size={16} />
                   Добавить профиль
                 </button>
+              </li>
+            )}
+            {owner && state.profiles.filter((p) => !p.peer).length > 1 && (
+              <li>
+                <a href="#/profiles" className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-[0.95rem] text-muted hover:bg-card/60 hover:text-ink">
+                  <Icon name="chevD" size={16} />
+                  Порядок профилей
+                </a>
               </li>
             )}
           </ul>
@@ -241,19 +297,21 @@ function Rail({ state, active }) {
 }
 
 function BottomNav({ state, active }) {
-  const tabs = mainNav(state).slice(0, 5)
+  const { primary } = splitMobileNav(navItems(state))
+  const tabs = [...primary, ['more', 'Ещё', 'list']]
+  const badge = (state.unread || 0) + (state.unreadNotifications || 0)
   return (
     <nav className="no-print fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/90 backdrop-blur pb-[env(safe-area-inset-bottom)] lg:hidden" aria-label="Основная навигация">
       <ul className="mx-auto flex max-w-xl">
         {tabs.map(([r, label, icon]) => {
-          const on = active === r
-          const badge = r === 'assistant' ? state.unread : 0
+          const on = active === r.split('/')[0]
+          const n = r === 'more' ? badge : 0
           return (
-            <li key={r} className="flex-1">
-              <a href={'#/' + r} aria-current={on ? 'page' : undefined} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 text-[0.72rem] ${on ? 'font-semibold text-ink' : 'text-muted'}`}>
+            <li key={r} className="min-w-0 flex-1">
+              <a href={'#/' + r} aria-current={on ? 'page' : undefined} className={`relative flex min-h-16 flex-col items-center justify-center gap-1 px-0.5 text-[0.72rem] ${on ? 'font-semibold text-accent-dark' : 'text-muted'}`}>
                 <Icon name={icon} size={22} weight={on ? 'fill' : 'regular'} />
-                {label}
-                {badge > 0 && <span className="absolute right-[24%] top-2 min-w-4 rounded-full bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{badge}</span>}
+                <span className="max-w-full truncate">{label}</span>
+                {n > 0 && <span className="absolute right-[22%] top-2 min-w-4 rounded-full bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{n}</span>}
               </a>
             </li>
           )
@@ -298,7 +356,7 @@ export default function Layout({ route = [], state, bare, children }) {
           <SurveyBanner state={state} />
           {state.profiles.length > 0 && route[0] !== 'profile' && (
             <div className="mb-5 lg:hidden">
-              <ProfileTabs state={state} />
+              <ProfileTabs key={route.join("/")} state={state} />
             </div>
           )}
           <div key={route.join("/") + (state.activeProfileId || "")} className="page-in mx-auto w-full max-w-[1120px]">{children}</div>

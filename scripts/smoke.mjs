@@ -517,6 +517,45 @@ try {
     assert.ok(!/script-src[^;]*unsafe-inline/.test(csp) && !/https?:\/\//.test(csp), 'no inline scripts, no outside hosts')
   })
 
+  await step('mobile menu: four tabs plus «Ещё» that holds everything else; profile reorder helper', async () => {
+    const { splitMobileNav, moveId, MOBILE_TABS } = await import('../src/lib/nav.js')
+    const items = [['today', 'Сегодня'], ['', 'Главная'], ['dossier', 'Документы'], ['indicators', 'Показатели'], ['assistant', 'Помощник'], ['summary', 'Сводка'], ['meds/p1', 'Лекарства'], ['diary/p1', 'Дневник'], ['circle', 'Круг'], ['privacy', 'Мои данные']]
+    const { primary, rest } = splitMobileNav(items)
+    assert.deepEqual(primary.map((i) => i[1]), ['Сегодня', 'Главная', 'Лекарства', 'Документы'])
+    assert.equal(primary.length, MOBILE_TABS.length)
+    assert.deepEqual(rest.map((i) => i[1]), ['Показатели', 'Помощник', 'Сводка', 'Дневник', 'Круг', 'Мои данные'])
+    assert.deepEqual(moveId(['a', 'b', 'c'], 'b', -1), ['b', 'a', 'c'])
+    assert.deepEqual(moveId(['a', 'b', 'c'], 'b', 1), ['a', 'c', 'b'])
+    assert.deepEqual(moveId(['a', 'b', 'c'], 'a', -1), ['a', 'b', 'c'], 'top stays')
+    assert.deepEqual(moveId(['a', 'b', 'c'], 'c', 1), ['a', 'b', 'c'], 'bottom stays')
+    assert.deepEqual(moveId(['a', 'b'], 'x', 1), ['a', 'b'], 'unknown id ignored')
+    assert.ok(/<ProfileTabs key=\{route\.join\("\/"\)\}/.test(readFileSync('src/components/Layout.jsx', 'utf8')), 'profile switcher closes on navigation')
+  })
+
+  await step('owner orders profiles manually: persists, new profile goes last, strangers and bad ids rejected', async () => {
+    const mk = async (name) => (await call('POST', `/api/families/${fid}/profiles`, { name, basis: 'adult', attest: true, birthYear: 1950, sex: 'f' })).json.id
+    const names = async () => (await call('GET', `/api/families/${fid}/state`)).json.profiles.filter((p) => !p.peer).map((p) => p.name)
+    const a = await mk('Порядок А')
+    const b = await mk('Порядок Б')
+    const c = await mk('Порядок В')
+    const before = await names()
+    assert.deepEqual(before.slice(-3), ['Порядок А', 'Порядок Б', 'Порядок В'], 'new profiles are appended')
+    const all = (await call('GET', `/api/families/${fid}/state`)).json.profiles.filter((p) => !p.peer).map((p) => p.id)
+    const rest = all.filter((i) => ![a, b, c].includes(i))
+    assert.equal((await call('PUT', `/api/families/${fid}/profiles-order`, { ids: [c, ...rest, a, b] })).status, 200)
+    const after = await names()
+    assert.equal(after[0], 'Порядок В')
+    assert.deepEqual(after.slice(-2), ['Порядок А', 'Порядок Б'])
+    assert.equal((await call('PUT', `/api/families/${fid}/profiles-order`, { ids: [c, 'no-such-id'] })).status, 400)
+    assert.equal((await call('PUT', `/api/families/${fid}/profiles-order`, { ids: [c, c] })).status, 400, 'duplicates')
+    assert.equal((await call('PUT', `/api/families/${fid}/profiles-order`, { ids: [b] })).status, 200, 'partial list keeps the others after')
+    assert.equal((await names())[0], 'Порядок Б')
+    await asUser(viewerJar, async () => assert.ok([403, 404].includes((await call('PUT', `/api/families/${fid}/profiles-order`, { ids: [a] })).status)))
+    assert.equal((await names())[0], 'Порядок Б', 'others cannot reorder')
+    assert.ok(count('access_log', "action = 'Изменён порядок профилей'") >= 1)
+    for (const id of [a, b, c]) await call('DELETE', `/api/profiles/${id}`)
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
