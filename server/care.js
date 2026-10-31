@@ -24,6 +24,10 @@ export function actorRole(a, profileId) {
   return { role: /сиделк/i.test(a.grant?.role_label || '') ? 'caregiver' : 'relative', self: 0 }
 }
 
+// Лекарства создаёт и меняет владелец, сам человек или близкий с правом добавления; сиделка только отмечает приёмы.
+const medEditBlocked = (c, res) =>
+  actorRole(c.a, c.p.id).role === 'caregiver' ? (res.status(403).json({ error: 'Лекарства меняет владелец или сам человек. Сиделка отмечает приёмы и пишет в дневник.', code: 'caregiver_readonly_meds' }), true) : false
+
 function medBody(b, tz) {
   const name = str(b.name, 120)
   if (!name) return { error: 'Укажите название лекарства' }
@@ -50,6 +54,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
   app.post('/api/profiles/:id/medications', needUser, (req, res) => {
     const c = ctxProfile(req, res, req.params.id, 'write')
     if (!c) return
+    if (medEditBlocked(c, res)) return
     const r = medBody(req.body, famTz(c.p.family_id))
     if (r.error) return fail(res, 400, r.error)
     const v = r.v
@@ -64,6 +69,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
     if (!m) return fail(res, 404, 'not_found')
     const c = ctxProfile(req, res, m.profile_id, 'write')
     if (!c) return
+    if (medEditBlocked(c, res)) return
     if (req.body.status === 'stopped' || req.body.status === 'active') {
       if (req.body.status === 'stopped') run("UPDATE medications SET status = 'stopped', stopped_at = ? WHERE id = ?", nowIso(), m.id)
       else run("UPDATE medications SET status = 'active', stopped_at = NULL WHERE id = ?", m.id)

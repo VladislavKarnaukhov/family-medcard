@@ -28,7 +28,7 @@ function MedRow({ m, owner }) {
 
 export function MedsList({ state, profile }) {
   if (!profile) return <Empty>Сначала создайте профиль.</Empty>
-  const { write, owner } = can(state)
+  const { meds: write, owner } = can(state)
   const meds = state.medications.filter((m) => m.profileId === profile.id)
   const active = meds.filter((m) => m.status === 'active')
   const stopped = meds.filter((m) => m.status === 'stopped')
@@ -68,9 +68,9 @@ export function MedForm({ state, profile, id }) {
   const [time, setTime] = useState('09:00')
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
-  const { write, owner } = can(state)
+  const { meds: write, owner } = can(state)
   if (!profile || (id !== 'new' && !existing)) return <Empty>Лекарство не найдено.</Empty>
-  if (!write) return <Empty icon="lock">У вас доступ только для просмотра.</Empty>
+  if (!write) return <Empty icon="lock">Лекарства меняет владелец или сам человек. У вас доступ к отметкам приёма и дневнику.</Empty>
   const set = (k) => (e) => setM({ ...m, [k]: e.target.value })
   const dayOn = (n) => !m.days || m.days.includes(n)
   const toggleDay = (n) => {

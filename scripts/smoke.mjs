@@ -195,6 +195,26 @@ try {
     assert.ok(st.intakes.some((i) => i.scheduledAt === intakeAt && i.bySelf && i.status === 'taken'))
   })
 
+  await step('caregiver marks intakes and writes the diary but cannot create or edit medications', async () => {
+    const inv = await call('POST', `/api/families/${fid}/invites`, { preset: 'caregiver', profileIds: [momId], consentConfirmed: true })
+    assert.equal(inv.status, 200, JSON.stringify(inv.json))
+    const careJar = await register('Сиделка Тестова', 'nurse@example.test', inv.json.token)
+    await asUser(careJar, async () => {
+      const st = (await call('GET', `/api/families/${fid}/state`)).json
+      assert.equal(st.me.caregiver, true)
+      const add = await call('POST', `/api/profiles/${momId}/medications`, { name: 'Новое', times: ['10:00'] })
+      assert.equal(add.status, 403)
+      assert.equal(add.json.code, 'caregiver_readonly_meds')
+      assert.equal((await call('PUT', `/api/medications/${medId}`, { name: 'Подмена', times: ['09:00'] })).status, 403)
+      assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken' })).status, 200)
+      assert.equal((await call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'wellbeing', mood: 'good' })).status, 200)
+    })
+    assert.equal(count('medications', "name IN ('Новое', 'Подмена')"), 0)
+    const ownerAdd = await call('POST', `/api/profiles/${momId}/medications`, { name: 'От владельца', times: ['12:00'] })
+    assert.equal(ownerAdd.status, 200)
+    await call('DELETE', `/api/medications/${ownerAdd.json.id}`)
+  })
+
   await step('fall note notifies the owner; bad mood only if allowed', async () => {
     const before = count('notifications', "kind = 'fall'")
     await asUser(momJar, async () => {
