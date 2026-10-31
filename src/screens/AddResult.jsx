@@ -4,7 +4,7 @@ import { Icon } from '../components/icons'
 import { Preview, ResultForm } from '../components/ResultForm'
 import { actions, can } from '../lib/store'
 import { recognize, getFeatures } from '../lib/recognize'
-import { draftBad, draftRows, emptyDraft, toDraft } from '../lib/draft'
+import { BLOOD_PANELS, draftBad, draftRows, emptyDraft, panelDraft, toDraft } from '../lib/draft'
 import { fmtDate, localISO } from '../lib/format'
 import { DocLink } from './Legal'
 
@@ -82,6 +82,13 @@ export default function AddResult({ state, profile }) {
     setCur(0)
   }
 
+  const panel = (group) => {
+    setFiles([])
+    setUsedAi(false)
+    setDrafts([panelDraft(group, localISO())])
+    setCur(0)
+  }
+
   // ---------- шаг 1: загрузка ----------
   if (!drafts) {
     return (
@@ -155,6 +162,15 @@ export default function AddResult({ state, profile }) {
             <Button className="mt-4" variant="ghost" icon="edit" onClick={manual}>
               Внести показатели без файла
             </Button>
+            <p className="mt-5 text-sm font-medium">Анализы крови: готовый список показателей</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {BLOOD_PANELS.map((g) => (
+                <Button key={g} variant="soft" icon="flask" onClick={() => panel(g)}>
+                  {g}
+                </Button>
+              ))}
+            </div>
+            <p className="mt-2 text-sm text-muted">Заполните только то, что есть в бланке: пустые строки не сохраняются. Диапазон лаборатории укажите из бланка.</p>
           </div>
         </div>
       </div>
@@ -201,7 +217,7 @@ export default function AddResult({ state, profile }) {
         <div className="min-w-0">
           <ResultForm draft={d} onChange={(x) => setDrafts(drafts.map((y, i) => (i === cur ? x : y)))} />
           <div className="mt-6 space-y-3">
-            {!canSave && <p className="text-sm text-muted">Чтобы сохранить, заполните дату, лабораторию и числовое значение в каждой строке.</p>}
+            {!canSave && <p className="text-sm text-muted">{d.rows.some((r) => r.optional) ? 'Чтобы сохранить, заполните дату, лабораторию и хотя бы одно значение. Пустые строки не сохранятся.' : 'Чтобы сохранить, заполните дату, лабораторию и числовое значение в каждой строке.'}</p>}
             <ErrorText>{error}</ErrorText>
             <div className="flex flex-wrap gap-3">
               <Button icon="check" disabled={!canSave || saving} onClick={save}>

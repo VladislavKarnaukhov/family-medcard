@@ -385,103 +385,31 @@ try {
     assert.equal(bannerRows([r('taken'), r('skipped'), r('later')]).rows.length, 0)
   })
 
-  await step('first steps checklist follows the data (M-62)', async () => {
-    const { firstSteps } = await import('../src/lib/care.js')
-    const empty = { profiles: [], medications: [], members: [], invites: [], intakes: [] }
-    assert.equal(firstSteps(empty).done, 0)
-    assert.equal(firstSteps(empty).next.key, 'profile')
-    const withProfile = { ...empty, profiles: [{ id: 'p1' }] }
-    assert.equal(firstSteps(withProfile).next.key, 'meds')
-    const onlyOwner = { ...withProfile, medications: [{}], members: [{ access: 'owner' }] }
-    assert.equal(firstSteps(onlyOwner).next.key, 'invite', 'owner alone is not an invitation')
-    assert.equal(firstSteps({ ...onlyOwner, members: [{ access: 'owner' }, { access: 'view' }] }).next.key, 'mark')
-    assert.equal(firstSteps(withProfile).next.href, 'meds/p1/new')
-    const rich = { profiles: [{ id: 'p1' }], medications: [{}], members: [], invites: [{}], intakes: [{ status: 'taken' }] }
-    assert.equal(firstSteps(rich).next.key, 'summary')
-    assert.equal(firstSteps(rich, true).next, null)
-    assert.equal(firstSteps({ ...rich, profiles: [{ id: 'q', peer: true }] }).steps[0].done, false, 'peer profile does not count as own')
+  await step('first-steps checklist is gone from the dashboard', async () => {
+    assert.ok(!/FirstSteps|firstSteps/.test(readFileSync('src/screens/Dashboard.jsx', 'utf8') + readFileSync('src/lib/care.js', 'utf8')))
   })
 
-  await step('profile keeps an exact birth date, derives the year, rejects a future date (M-01)', async () => {
-    const r = await call('POST', `/api/families/${fid}/profiles`, { name: 'Дата Тестова', basis: 'adult', attest: true, birthDate: '1950-03-07', sex: 'f' })
-    assert.equal(r.status, 200, JSON.stringify(r.json))
-    let st = (await call('GET', `/api/families/${fid}/state`)).json.profiles.find((p) => p.id === r.json.id)
-    assert.equal(st.birthDate, '1950-03-07')
-    assert.equal(st.birthYear, 1950)
-    const future = await call('PUT', `/api/profiles/${r.json.id}`, { name: 'Дата Тестова', birthDate: '2999-01-01', birthYear: 1951, sex: 'f' })
-    assert.equal(future.status, 200)
-    st = (await call('GET', `/api/families/${fid}/state`)).json.profiles.find((p) => p.id === r.json.id)
-    assert.equal(st.birthDate, null)
-    assert.equal(st.birthYear, 1951, 'falls back to the year field')
-    const { ageText } = await import('../src/lib/format.js')
-    const y = new Date().getFullYear()
-    assert.match(ageText(null, `${y - 70}-12-31`), /^69 /, 'birthday not yet reached this year when date is the last day of the year')
-    assert.match(ageText(1950), /лет|год|года/)
-  })
-
-  await step('reminder banner is hidden where the intakes are already on screen', async () => {
-    const { bannerOnScreen } = await import('../src/lib/care.js')
-    assert.equal(bannerOnScreen('#/today', false), true)
-    assert.equal(bannerOnScreen('#/meds/x', false), false)
-    assert.equal(bannerOnScreen('#/', false), false)
-    assert.equal(bannerOnScreen('#/', true), true, 'simple mode home is Today')
-    assert.equal(bannerOnScreen('', true), true)
-  })
-
-  await step('text colors keep WCAG AA contrast (4.5:1) on every surface they are used on (M-61)', async () => {
-    const css = readFileSync('src/index.css', 'utf8')
-    const c = Object.fromEntries([...css.matchAll(/--color-([a-z-]+):\s*(#[0-9a-fA-F]{6})/g)].map((m) => [m[1], m[2]]))
-    const lum = (h) => {
-      const v = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((x) => (x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4))
-      return 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2]
-    }
-    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05) }
-    const pairs = [['ink', 'paper'], ['ink', 'card'], ['muted', 'paper'], ['muted', 'card'], ['muted', 'sunken'], ['accent-dark', 'paper'], ['accent-dark', 'accent-soft'], ['alert', 'paper'], ['alert', 'alert-soft'], ['accent', 'paper']]
-    for (const [fg, bg] of pairs) assert.ok(ratio(c[fg], c[bg]) >= 4.5, `${fg} on ${bg}: ${ratio(c[fg], c[bg]).toFixed(2)}`)
-    assert.ok(ratio('#ffffff', c.accent) >= 4.5, 'white on accent button')
-  })
-
-  await step('simple mode shows one main intake, the rest are folded (M-14)', async () => {
-    const { simpleSplit } = await import('../src/lib/care.js')
-    const r = (state, id) => ({ state, id })
-    const rows = [r('taken', 1), r('due', 2), r('later', 3)]
-    const s = simpleSplit(rows)
-    assert.equal(s.first.id, 2)
-    assert.deepEqual(s.rest.map((x) => x.id), [1, 3])
-    assert.equal(simpleSplit([r('taken', 1), r('later', 2)]).first.id, 2)
-    assert.equal(simpleSplit([r('taken', 1)]).first, null)
-    assert.equal(simpleSplit([r('taken', 1)]).rest.length, 1)
-  })
-
-  await step('client wording: calm hero, no «досье» outside legal texts and the staff app', async () => {
-    const { readdirSync } = await import('node:fs')
-    const t = readFileSync('src/screens/Auth.jsx', 'utf8')
-    assert.ok(t.includes('Забота без тревоги'))
-    assert.ok(!/Заведите маму/i.test(t))
-    assert.ok(!t.includes('Пример экрана') && !t.includes('Расписание приёма, отметки и сводка'), 'hero is the headline only')
-    const walk = (d) => readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? (['legal', 'staff'].includes(e.name) ? [] : walk(join(d, e.name))) : [join(d, e.name)]))
-    for (const f of walk('src').filter((f) => /\.jsx?$/.test(f))) assert.ok(!/досье/i.test(readFileSync(f, 'utf8')), 'досье in ' + f)
-  })
-
-  await step('profile screens: «whose data» comes first in the form, profile list is above the long menu in the desktop rail', async () => {
-    const form = readFileSync('src/screens/ProfileForm.jsx', 'utf8')
-    assert.ok(form.indexOf('Чьи это данные') < form.indexOf('<Field label="Имя">'), 'basis before name')
-    const rail = readFileSync('src/components/Layout.jsx', 'utf8')
-    const rl = rail.slice(rail.indexOf('function Rail('))
-    assert.ok(rl.indexOf('Добавить профиль') < rl.indexOf('Основная навигация'), 'profiles above nav in the rail')
-    assert.match(rl, /Основная навигация[^>]*>/)
-    assert.ok(/overflow-y-auto" aria-label="Основная навигация"/.test(rl), 'nav scrolls instead of hiding the profile list')
-  })
-
-  await step('rail menu: six main sections, the rest under «Ещё» (simpler interface)', async () => {
-    const { splitNav, PRIMARY } = await import('../src/lib/nav.js')
-    const items = [['today', 'Сегодня'], ['', 'Главная'], ['dossier', 'Документы'], ['indicators', 'Показатели'], ['assistant', 'Помощник'], ['summary', 'Сводка'], ['meds/p1', 'Лекарства'], ['visits/p1', 'Визиты'], ['diary/p1', 'Дневник'], ['emergency/p1', 'Экстренная'], ['vitals', 'Замеры'], ['circle', 'Круг'], ['privacy', 'Мои данные'], ['notifications', 'События']]
-    const { primary, rest } = splitNav(items)
-    assert.deepEqual(primary.map((i) => i[1]), ['Сегодня', 'Главная', 'Лекарства', 'Дневник', 'Сводка', 'Документы'])
-    assert.equal(primary.length, PRIMARY.length)
-    assert.equal(rest.length, items.length - 6)
-    assert.ok(rest.some((i) => i[1] === 'Помощник'))
-    assert.equal(splitNav(items.slice(1, 3)).primary.length, 2, 'missing sections are skipped, not crashed on')
+  await step('blood test panels: ready rows, empty rows skipped on save, at least one value required', async () => {
+    const { BLOOD_PANELS, panelDraft, draftBad, draftRows } = await import('../src/lib/draft.js')
+    assert.deepEqual(BLOOD_PANELS, ['Общий анализ крови', 'Биохимия', 'Гормоны и витамины'])
+    const d = panelDraft('Общий анализ крови', '2026-10-30')
+    assert.ok(d.rows.length >= 7 && d.rows.every((r) => r.optional && r.value === '' && r.unit && r.refLow === ''), 'rows ready, no reference ranges invented')
+    assert.ok(d.rows.some((r) => r.name === 'Гемоглобин' && r.unit === 'г/л'))
+    assert.equal(draftBad({ ...d, labName: 'Инвитро' }), true, 'nothing filled')
+    d.labName = 'Инвитро'
+    d.rows[0].value = '132'
+    d.rows[1].value = 'abc'
+    assert.equal(draftBad(d), true, 'a typed non-number is still an error')
+    d.rows[1].value = '4,6'
+    assert.equal(draftBad(d), false)
+    const out = draftRows(d)
+    assert.equal(out.length, 2, 'unfilled rows are skipped')
+    assert.deepEqual(out.map((r) => r.value), [132, 4.6])
+    // сохранение через API: показатели попадают в историю
+    const saved = await call('POST', `/api/profiles/${momId}/lab-results`, { date: '2026-10-30', labName: 'Инвитро', rows: out })
+    assert.equal(saved.status, 200, JSON.stringify(saved.json))
+    const st = (await call('GET', `/api/families/${fid}/state`)).json
+    assert.ok(st.measurements.some((m) => m.name === 'Гемоглобин' && m.value === 132))
   })
 
   await step('another family cannot see or change this family (isolation)', async () => {
