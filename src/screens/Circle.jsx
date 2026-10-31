@@ -264,6 +264,23 @@ export default function Circle({ state, profile }) {
             </Button>
             {link && <CopyLink link={link} />}
           </Card>
+          {(state.shareLinks || []).filter((l) => l.profileId === profile.id).length > 0 && (
+            <>
+              <H className="!mt-8">Действующие ссылки</H>
+              <ul className="divide-y divide-line border-y border-line">
+                {state.shareLinks.filter((l) => l.profileId === profile.id).map((l) => (
+                  <li key={l.token} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                    <p className="text-[0.95rem]">
+                      Создана {fmtDateTime(l.createdAt)}, действует до {fmtDateTime(l.expiresAt)}
+                    </p>
+                    <Button variant="danger" disabled={busy} onClick={() => run(() => actions.revokeShareLink(l.token))}>
+                      Отозвать
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
 
         </div>
       </div>

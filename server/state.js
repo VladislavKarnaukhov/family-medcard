@@ -100,6 +100,7 @@ export function buildState(familyId, a) {
     })),
     ...careState(profiles, a, family),
     emergency: {},
+    shareLinks: [],
     requests: [],
     messages: [],
     members: [],
@@ -157,6 +158,7 @@ export function buildState(familyId, a) {
       action: l.action,
       profileId: l.profile_id,
     }))
+    state.shareLinks = all('SELECT token, profile_id, expires_at, created_at FROM share_links WHERE family_id = ? AND revoked_at IS NULL AND expires_at > ? ORDER BY created_at DESC', familyId, new Date().toISOString()).map((l) => ({ token: l.token, profileId: l.profile_id, expiresAt: l.expires_at, createdAt: l.created_at }))
     for (const l of all('SELECT * FROM emergency_links WHERE family_id = ? AND revoked_at IS NULL', familyId)) state.emergency[l.profile_id] = { token: l.token, createdAt: l.created_at }
   }
 

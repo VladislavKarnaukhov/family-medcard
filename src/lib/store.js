@@ -229,6 +229,8 @@ export const actions = {
   revokeInvite: act((token) => api('DELETE', `/api/invites/${token}`)),
   removeMember: act((id) => api('DELETE', `/api/families/${state.familyId}/members/${id}`)),
 
+  revokeShareLink: act((token) => api('DELETE', `/api/share/${token}`)),
+
   async createShareLink(profileId, days) {
     const { token } = await api('POST', `/api/profiles/${profileId}/share`, { days, consentConfirmed: true })
     await refresh()

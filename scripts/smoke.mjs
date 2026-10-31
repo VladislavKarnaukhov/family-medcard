@@ -417,6 +417,19 @@ try {
     assert.equal(j.profiles[0].emergencyContacts, undefined)
   })
 
+  await step('doctor link can be revoked by the owner only, then gives 410 (M-23)', async () => {
+    const t = (await call('POST', `/api/profiles/${momId}/share`, { days: 7, consentConfirmed: true })).json.token
+    assert.ok(t)
+    const own = (await call('GET', `/api/families/${fid}/state`)).json
+    assert.ok(own.shareLinks.some((l) => l.token === t))
+    assert.equal((await call('GET', `/api/share/${t}`)).status, 200)
+    await asUser(viewerJar, async () => assert.ok([403, 404].includes((await call('DELETE', `/api/share/${t}`)).status)))
+    assert.equal((await call('GET', `/api/share/${t}`)).status, 200, 'non-owner cannot revoke')
+    assert.equal((await call('DELETE', `/api/share/${t}`)).status, 200)
+    assert.equal((await call('GET', `/api/share/${t}`)).status, 410)
+    assert.ok(!(await call('GET', `/api/families/${fid}/state`)).json.shareLinks.some((l) => l.token === t))
+  })
+
   await step('after consent revoked, new care writes return 423', async () => {
     const r = await call('POST', '/api/consents/health/revoke', {})
     assert.equal(r.status, 200)
