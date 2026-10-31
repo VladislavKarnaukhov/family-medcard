@@ -215,6 +215,18 @@ try {
     await call('DELETE', `/api/medications/${ownerAdd.json.id}`)
   })
 
+  await step('adherence summary for 7 and 30 days: only closed slots after the medication was added', async () => {
+    db.prepare('UPDATE medications SET created_at = ? WHERE id = ?').run(`${addDays(today, -10)}T00:00:00.000Z`, medId)
+    const st = (await call('GET', `/api/families/${fid}/state`)).json
+    const a = st.adherence[momId]
+    assert.equal(a.d7.planned, 4, 'start_date is three days ago, slot 00:00 every day through today')
+    assert.equal(a.d7.taken + a.d7.skipped + a.d7.unmarked, a.d7.planned)
+    assert.ok(a.d7.taken >= 1)
+    assert.equal(a.d7.percent, Math.round(((a.d7.taken + a.d7.skipped) / a.d7.planned) * 100))
+    assert.equal(a.d30.planned, a.d7.planned)
+    assert.equal(a.d7.missed.length, a.d7.unmarked)
+  })
+
   await step('state carries 90 days of diary notes and intakes for the diary screen', async () => {
     const old = `${addDays(today, -60)}T09:00`
     db.prepare("INSERT INTO care_notes (id, profile_id, at, kind, text, author_id, author_name, author_role, by_self, created_at) VALUES ('old-note', ?, ?, 'other', 'давняя запись', 'x', 'Тест', 'owner', 0, ?)").run(momId, old, old)

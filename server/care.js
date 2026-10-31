@@ -3,7 +3,7 @@
 import { all, get, inList, log, nowIso, plusDays, ruDate, run, safeJson, str, token, uuid } from './util.js'
 import { recordConsent } from './consent.js'
 import { consentOk, isOwner } from './state.js'
-import { DEFAULT_TZ, addDays, isDate, isDt, isTime, isoWeekday, medActiveOn, tzNow, validTz } from './timeutil.js'
+import { DEFAULT_TZ, addDays, addMinutes, isDate, isDt, isTime, isoWeekday, medActiveOn, tzNow, validTz } from './timeutil.js'
 import { notify } from './notify.js'
 
 const FORMS = ['таблетка', 'капсула', 'капли', 'укол', 'мазь', 'ингаляция', 'другое']
@@ -373,6 +373,44 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
 export const notifView = (n) => ({ id: n.id, kind: n.kind, title: n.title, link: n.link, profileId: n.profile_id, at: n.created_at, read: !!n.read_at })
 
 // Состояние ухода для buildState. share = ссылка для врача: только лекарства и аллергии.
+// Сводка по приёмам за 7 и 30 дней: сколько плановых приёмов закрыто, принято, пропущено, не отмечено.
+// Считаются только приёмы, у которых прошёл час отметки, и только после добавления лекарства.
+export function adherence(profileIds, meds, tz) {
+  const local = tzNow(tz)
+  const res = {}
+  for (const pid of profileIds) {
+    const mine = meds.filter((m) => m.profile_id === pid && JSON.parse(m.times || '[]').length)
+    const marks = new Map(all('SELECT medication_id, scheduled_at, status FROM intakes WHERE profile_id = ? AND scheduled_at >= ?', pid, `${addDays(local.date, -29)}T00:00`).map((i) => [`${i.medication_id}|${i.scheduled_at}`, i.status]))
+    res[pid] = {}
+    for (const span of [7, 30]) {
+      const r = { days: span, planned: 0, taken: 0, skipped: 0, unmarked: 0, percent: null, missed: [] }
+      for (let k = span - 1; k >= 0; k--) {
+        const date = addDays(local.date, -k)
+        for (const m of mine) {
+          if (!medActiveOn(m, date)) continue
+          const createdLocal = tzNow(tz, new Date(m.created_at)).dt
+          for (const t of JSON.parse(m.times)) {
+            const at = `${date}T${t}`
+            if (at < createdLocal || addMinutes(at, 60) > local.dt) continue
+            const st = marks.get(`${m.id}|${at}`)
+            r.planned++
+            if (st === 'taken') r.taken++
+            else if (st === 'skipped') r.skipped++
+            else {
+              r.unmarked++
+              r.missed.push({ at, medication: m.name })
+            }
+          }
+        }
+      }
+      r.percent = r.planned ? Math.round(((r.taken + r.skipped) / r.planned) * 100) : null
+      r.missed = r.missed.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20)
+      res[pid]['d' + span] = r
+    }
+  }
+  return res
+}
+
 export function careState(profiles, a, family) {
   const pids = profiles.map((p) => p.id)
   const inP = inList(pids)
@@ -388,6 +426,7 @@ export function careState(profiles, a, family) {
     intakes: [],
     careNotes: [],
     appointments: [],
+    adherence: adherence(pids, meds, tz),
   }
   if (share) return out
   out.intakes = all(`SELECT * FROM intakes WHERE profile_id IN ${inP} AND (scheduled_at >= ? OR marked_at >= ?) ORDER BY scheduled_at`, ...pids, since, `${since}T00:00`).map((i) => ({ id: i.id, medicationId: i.medication_id, profileId: i.profile_id, scheduledAt: i.scheduled_at, status: i.status, reason: i.reason, by: i.marked_by_name, bySelf: !!i.marked_by_self, markedAt: i.marked_at }))
