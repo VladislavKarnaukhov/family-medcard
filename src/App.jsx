@@ -22,7 +22,6 @@ import SubjectConsent from './screens/SubjectConsent'
 import Today, { DueBanner, TodayContent } from './screens/Today'
 import Diary from './screens/Diary'
 import Feedback from './screens/Feedback'
-import ProfileOrder from './screens/ProfileOrder'
 import More from './screens/More'
 import { MedForm, MedsList } from './screens/Meds'
 import { VisitForm, VisitsList } from './screens/Visits'
@@ -198,9 +197,6 @@ export default function App() {
       break
     case 'more':
       screen = <More items={moreItems(state)} badges={{ assistant: state.unread, notifications: state.unreadNotifications }} />
-      break
-    case 'profiles':
-      screen = owner ? <ProfileOrder key={state.profiles.map((p) => p.id).join()} state={state} /> : <Dashboard {...props} />
       break
     case 'circle':
       screen = owner ? <Circle {...props} /> : <Dashboard {...props} />
