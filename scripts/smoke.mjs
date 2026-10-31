@@ -532,6 +532,24 @@ try {
     assert.ok(/<ProfileTabs key=\{route\.join\("\/"\)\}/.test(readFileSync('src/components/Layout.jsx', 'utf8')), 'profile switcher closes on navigation')
   })
 
+  await step('drag-and-drop helpers: drop position by pointer, move to index; menus sit above the page and close on navigation', async () => {
+    const { dropIndex, moveTo } = await import('../src/lib/nav.js')
+    assert.equal(dropIndex([100, 200], 50), 0, 'above everything')
+    assert.equal(dropIndex([100, 200], 150), 1, 'between')
+    assert.equal(dropIndex([100, 200], 300), 2, 'below everything')
+    assert.deepEqual(moveTo(['a', 'b', 'c'], 'a', 2), ['b', 'c', 'a'])
+    assert.deepEqual(moveTo(['a', 'b', 'c'], 'c', 0), ['c', 'a', 'b'])
+    assert.deepEqual(moveTo(['a', 'b', 'c'], 'b', 1), ['a', 'b', 'c'], 'same place returns the same array')
+    assert.deepEqual(moveTo(['a', 'b', 'c'], 'b', 99), ['a', 'c', 'b'], 'clamped')
+    assert.deepEqual(moveTo(['a', 'b'], 'zz', 0), ['a', 'b'])
+    const layout = readFileSync('src/components/Layout.jsx', 'utf8')
+    assert.match(layout, /<header className="no-print relative z-30 /, 'mobile header forms its own layer above the animated page')
+    assert.ok(layout.includes('<UserMenu key={route.join("/")}'), 'user menu closes on navigation')
+    assert.ok(!/<details className="relative">/.test(layout.slice(layout.indexOf('function UserMenu'), layout.indexOf('function UserMenu') + 400)), 'menu is state-driven, not a details element')
+    const order = readFileSync('src/screens/ProfileOrder.jsx', 'utf8')
+    assert.ok(/onPointerDown/.test(order) && /setPointerCapture/.test(order) && /touchAction: 'none'/.test(order), 'press-and-drag is wired')
+  })
+
   await step('owner orders profiles manually: persists, new profile goes last, strangers and bad ids rejected', async () => {
     const mk = async (name) => (await call('POST', `/api/families/${fid}/profiles`, { name, basis: 'adult', attest: true, birthYear: 1950, sex: 'f' })).json.id
     const names = async () => (await call('GET', `/api/families/${fid}/state`)).json.profiles.filter((p) => !p.peer).map((p) => p.name)

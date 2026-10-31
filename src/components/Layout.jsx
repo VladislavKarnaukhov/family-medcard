@@ -154,13 +154,17 @@ function ProfileTabs({ state }) {
 }
 
 function UserMenu({ state }) {
+  const [open, setOpen] = useState(false)
   return (
-    <details className="relative">
-      <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 text-sm">
+    <div className="relative">
+      <button type="button" aria-expanded={open} aria-haspopup="menu" onClick={() => setOpen(!open)} className="flex min-h-12 cursor-pointer items-center gap-2 text-sm">
         <Avatar name={state.user.name} size={32} />
         <span className="max-w-[8rem] truncate">{state.user.name}</span>
-      </summary>
-      <div className="absolute right-0 z-30 mt-2 w-72 space-y-1 rounded-2xl bg-card shadow-sheet p-3 shadow-pop">
+      </button>
+      {open && (
+        <>
+          <button type="button" aria-label="Закрыть меню" tabIndex={-1} className="fixed inset-0 z-20 cursor-default" onClick={() => setOpen(false)} />
+      <div role="menu" className="absolute right-0 z-30 mt-2 w-72 space-y-1 rounded-2xl bg-card p-3 shadow-pop ring-1 ring-line">
         {state.families.length > 1 && (
           <label className="mb-2 block text-sm">
             <span className="mb-1 block text-muted">Семья</span>
@@ -185,7 +189,9 @@ function UserMenu({ state }) {
           Выйти
         </button>
       </div>
-    </details>
+        </>
+      )}
+    </div>
   )
 }
 
@@ -341,14 +347,14 @@ export default function Layout({ route = [], state, bare, children }) {
     <div className="min-h-screen lg:flex">
       <Rail state={state} active={active} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="no-print flex items-center justify-between gap-3 border-b border-line bg-paper/90 px-4 py-2.5 backdrop-blur lg:hidden">
+        <header className="no-print relative z-30 flex items-center justify-between gap-3 border-b border-line bg-paper/90 px-4 py-2.5 backdrop-blur lg:hidden">
           <Wordmark />
           <div className="flex items-center gap-1">
             <a href="#/notifications" aria-label="События" className="relative flex h-12 w-12 items-center justify-center rounded-full hover:bg-sunken">
               <Icon name="bell" size={22} />
               {state.unreadNotifications > 0 && <span className="absolute right-1 top-1 min-w-4 rounded-full bg-accent px-1 text-center text-[0.65rem] font-semibold text-white">{state.unreadNotifications}</span>}
             </a>
-            <UserMenu state={state} />
+            <UserMenu key={route.join("/")} state={state} />
           </div>
         </header>
         <main className="flex-1 px-4 pb-28 pt-5 lg:px-14 lg:pb-14 lg:pt-12 print:p-0">
