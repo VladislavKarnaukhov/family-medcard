@@ -5,6 +5,7 @@ import { Avatar, go } from './ui'
 import { Icon } from './icons'
 import { hasMeds } from '../lib/care'
 import { splitMobileNav, splitNav } from '../lib/nav'
+import { useReorder } from '../lib/useReorder'
 
 const NAV = [
   ['', 'Главная', 'home'],
@@ -18,7 +19,7 @@ const NAV_MORE = [
   ['circle', 'Круг заботы', 'users', 'owner'],
   ['privacy', 'Мои данные', 'shield'],
 ]
-const ALIAS = { more: 'more', profiles: '', feedback: 'more', add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '', meds: 'today', visits: 'today', care: 'today', diary: 'today', emergency: '' }
+const ALIAS = { more: 'more', feedback: 'more', add: 'dossier', edit: '', indicator: 'indicators', profile: '', legal: '', meds: 'today', visits: 'today', care: 'today', diary: 'today', emergency: '' }
 const TODAY = ['today', 'Сегодня', 'heart']
 const careLinks = (state) => {
   const id = state.activeProfileId
@@ -36,12 +37,10 @@ export function navItems(state) {
   return [...mainNav(state), ...careLinks(state).filter((i) => !i[3] || owner), ...NAV_MORE.filter((i) => !i[3] || owner), ['notifications', 'События', 'bell']]
 }
 
-// Страница «Ещё» на телефоне: то, чего нет в нижних вкладках, плюс «Написать нам» и порядок профилей.
+// Страница «Ещё» на телефоне: то, чего нет в нижних вкладках, плюс «Написать нам».
 export function moreItems(state) {
   const { rest } = splitMobileNav(navItems(state))
-  const extra = [['feedback', 'Написать нам', 'chat']]
-  if (can(state).owner && state.profiles.filter((p) => !p.peer).length > 1) extra.unshift(['profiles', 'Порядок профилей', 'users'])
-  return [...rest, ...extra]
+  return [...rest, ['feedback', 'Написать нам', 'chat']]
 }
 
 export function Wordmark() {
@@ -104,13 +103,19 @@ export function Footer({ className = '' }) {
 }
 
 // Переключатель профилей на телефоне: текущий профиль целиком, список раскрывается по нажатию.
+// Переключатель профилей на телефоне: текущий профиль целиком, список раскрывается по нажатию.
+// Порядок меняется тут же: зажмите профиль и перетащите.
 function ProfileTabs({ state }) {
   const [open, setOpen] = useState(false)
   const owner = can(state).owner
   const own = state.profiles.filter((p) => !p.peer)
+  const peers = state.profiles.filter((p) => p.peer)
+  const re = useReorder({ ids: own.map((p) => p.id), enabled: owner, onCommit: actions.reorderProfiles })
   const cur = state.profiles.find((p) => p.id === state.activeProfileId) || state.profiles[0]
   if (!cur) return null
+  const shown = [...re.order.map((id) => own.find((p) => p.id === id)).filter(Boolean), ...peers]
   const pick = (fn) => () => {
+    if (re.suppressClick()) return
     setOpen(false)
     fn()
   }
@@ -122,9 +127,9 @@ function ProfileTabs({ state }) {
         <Icon name="chevD" size={18} className={`text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <ul className="mt-2 overflow-hidden rounded-2xl bg-card shadow-pop" role="listbox" aria-label="Профили">
-          {state.profiles.map((p) => (
-            <li key={p.id}>
+        <ul className="mt-2 overflow-hidden rounded-2xl bg-card shadow-pop" role="listbox" aria-label="Профили" {...re.listProps}>
+          {shown.map((p) => (
+            <li key={p.id} {...(p.peer ? {} : re.rowProps(p.id))} className={`select-none ${re.dragId === p.id ? 'relative z-10 bg-card shadow-pop ring-1 ring-accent-mid' : ''}`}>
               <button type="button" role="option" aria-selected={p.id === cur.id} onClick={pick(() => actions.setActive(p.id))} className={`flex min-h-12 w-full items-center gap-3 px-4 text-left hover:bg-sunken ${p.id === cur.id ? 'font-semibold text-accent-dark' : ''}`}>
                 <span className="min-w-0 flex-1 truncate">{p.name}</span>
                 {p.id === cur.id && <Icon name="check" size={16} />}
@@ -139,14 +144,7 @@ function ProfileTabs({ state }) {
               </button>
             </li>
           )}
-          {owner && own.length > 1 && (
-            <li>
-              <button type="button" onClick={pick(() => go('profiles'))} className="flex min-h-12 w-full items-center gap-3 px-4 text-left text-muted hover:bg-sunken">
-                <Icon name="chevD" size={16} />
-                Порядок профилей
-              </button>
-            </li>
-          )}
+          {owner && own.length > 1 && <li className="px-4 pb-3 pt-1 text-xs text-muted">Зажмите профиль и перетащите, чтобы изменить порядок</li>}
         </ul>
       )}
     </div>
@@ -214,6 +212,9 @@ function RailLink({ to, label, icon, active, badge }) {
 function Rail({ state, active }) {
   const owner = can(state).owner
   const items = navItems(state)
+  const own = state.profiles.filter((p) => !p.peer)
+  const re = useReorder({ ids: own.map((p) => p.id), enabled: owner, onCommit: actions.reorderProfiles })
+  const shown = [...re.order.map((id) => own.find((p) => p.id === id)).filter(Boolean), ...state.profiles.filter((p) => p.peer)]
   const { primary, rest } = splitNav(items)
   const moreBadge = (rest.some((i) => i[0] === 'assistant') ? state.unread : 0) + (state.unreadNotifications || 0)
   return (
@@ -224,15 +225,16 @@ function Rail({ state, active }) {
       {state.profiles.length > 0 && (
         <div className="mt-6 max-h-48 shrink-0 overflow-y-auto">
           <p className="mb-1 px-3 text-sm text-muted">Профили</p>
-          <ul role="tablist" aria-label="Профили семьи">
-            {state.profiles.map((p) => {
+          <ul role="tablist" aria-label="Профили семьи" {...re.listProps}>
+            {shown.map((p) => {
               const on = p.id === state.activeProfileId
               return (
-                <li key={p.id}>
+                <li key={p.id} {...(p.peer ? {} : re.rowProps(p.id))} className={`select-none rounded-xl ${re.dragId === p.id ? 'relative z-10 shadow-pop ring-1 ring-accent-mid' : ''}`}>
                   <button
                     role="tab"
                     aria-selected={on}
-                    onClick={() => actions.setActive(p.id)}
+                    title={owner && own.length > 1 ? 'Зажмите и перетащите, чтобы изменить порядок' : undefined}
+                    onClick={() => !re.suppressClick() && actions.setActive(p.id)}
                     className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[0.95rem] transition-colors ${on ? 'bg-card font-semibold text-accent-dark shadow-sheet' : 'hover:bg-card/60'}`}
                   >
                     <span className="truncate">{p.name}</span>
@@ -246,14 +248,6 @@ function Rail({ state, active }) {
                   <Icon name="plus" size={16} />
                   Добавить профиль
                 </button>
-              </li>
-            )}
-            {owner && state.profiles.filter((p) => !p.peer).length > 1 && (
-              <li>
-                <a href="#/profiles" className="flex min-h-12 w-full items-center gap-3 rounded-xl px-3 text-[0.95rem] text-muted hover:bg-card/60 hover:text-ink">
-                  <Icon name="chevD" size={16} />
-                  Порядок профилей
-                </a>
               </li>
             )}
           </ul>

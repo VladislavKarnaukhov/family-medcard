@@ -546,8 +546,10 @@ try {
     assert.match(layout, /<header className="no-print relative z-30 /, 'mobile header forms its own layer above the animated page')
     assert.ok(layout.includes('<UserMenu key={route.join("/")}'), 'user menu closes on navigation')
     assert.ok(!/<details className="relative">/.test(layout.slice(layout.indexOf('function UserMenu'), layout.indexOf('function UserMenu') + 400)), 'menu is state-driven, not a details element')
-    const order = readFileSync('src/screens/ProfileOrder.jsx', 'utf8')
-    assert.ok(/onPointerDown/.test(order) && /setPointerCapture/.test(order) && /touchAction: 'none'/.test(order), 'press-and-drag is wired')
+    const hook = readFileSync('src/lib/useReorder.js', 'utf8')
+    assert.ok(/onPointerDown/.test(hook) && /setPointerCapture/.test(hook) && /touchAction: 'none'/.test(hook), 'press-and-drag is wired')
+    assert.equal((layout.match(/useReorder\(/g) || []).length, 2, 'both the desktop sidebar and the phone switcher reorder in place')
+    assert.ok(!existsSync('src/screens/ProfileOrder.jsx') && !/#\/profiles|go\('profiles'\)|case 'profiles'/.test(layout + readFileSync('src/App.jsx', 'utf8')), 'no separate order screen')
   })
 
   await step('owner orders profiles manually: persists, new profile goes last, strangers and bad ids rejected', async () => {
