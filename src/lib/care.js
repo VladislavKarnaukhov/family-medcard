@@ -96,6 +96,9 @@ export function firstSteps(state, summarySeen = false) {
   return { steps, done: steps.filter((s) => s.done).length, next: steps.find((s) => !s.done) || null }
 }
 
+// Плашка не нужна там, где приёмы и так на экране: на «Сегодня» и в простом режиме на главной.
+export const bannerOnScreen = (hash, simple) => /^#\/today(\/|$)/.test(hash) || (simple && (hash === '' || hash === '#' || hash === '#/'))
+
 export const marked = (rows) => rows.filter((r) => r.state === 'taken' || r.state === 'skipped').length
 
 export function nextAppointment(state, profileId) {

@@ -419,6 +419,15 @@ try {
     assert.match(ageText(1950), /лет|год|года/)
   })
 
+  await step('reminder banner is hidden where the intakes are already on screen', async () => {
+    const { bannerOnScreen } = await import('../src/lib/care.js')
+    assert.equal(bannerOnScreen('#/today', false), true)
+    assert.equal(bannerOnScreen('#/meds/x', false), false)
+    assert.equal(bannerOnScreen('#/', false), false)
+    assert.equal(bannerOnScreen('#/', true), true, 'simple mode home is Today')
+    assert.equal(bannerOnScreen('', true), true)
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
