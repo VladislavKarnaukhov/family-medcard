@@ -38,9 +38,9 @@ export default function EditResult({ state, id }) {
   return (
     <div>
       <PageHeader title="Исправить анализ" subtitle={`${lab.labName}. Изменения сразу попадут в графики и сводку.`} back={{ href: '#/', label: 'Главная' }} />
-      <div className={`grid gap-8 ${doc ? 'lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]' : ''}`}>
+      <div className={`grid grid-cols-1 gap-8 ${doc ? 'xl:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]' : ''}`}>
         {doc && (
-          <div className="lg:sticky lg:top-8 lg:self-start">
+          <div className="xl:sticky xl:top-8 xl:self-start">
             <Preview url={doc.fileUrl} name={doc.fileName} />
           </div>
         )}

@@ -83,7 +83,7 @@ export default function Circle({ state, profile }) {
     <div>
       <PageHeader title="Круг заботы" subtitle={`Кто видит данные профиля «${profile.name}» и что с ними делает. Любой доступ можно закрыть.`} />
 
-      <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,380px)]">
         <div className="min-w-0 space-y-2">
           <H>Кто имеет доступ</H>
           <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-card shadow-sheet ">

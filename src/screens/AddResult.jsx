@@ -254,9 +254,9 @@ export default function AddResult({ state, profile }) {
       )}
       {drafts.length > 1 && <Tabs className="mb-5" value={String(cur)} onChange={(k) => setCur(Number(k))} items={drafts.map((x, i) => [String(i), `Бланк ${i + 1}${issues[i] ? ' •' : ''}`])} />}
 
-      <div className={`grid gap-8 ${files[cur] ? 'lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]' : ''}`}>
+      <div className={`grid grid-cols-1 gap-8 ${files[cur] ? 'xl:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]' : ''}`}>
         {files[cur] && (
-          <div className="lg:sticky lg:top-8 lg:self-start">
+          <div className="xl:sticky xl:top-8 xl:self-start">
             <Preview file={files[cur]} />
           </div>
         )}

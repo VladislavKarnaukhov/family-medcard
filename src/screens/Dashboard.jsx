@@ -83,8 +83,8 @@ function Timeline({ events, write }) {
     <div>
       <ol className="divide-y divide-line border-y border-line">
         {shown.map((e) => (
-          <li key={e.id} className="grid grid-cols-[5rem_minmax(0,1fr)] gap-x-4 py-3 lg:grid-cols-[6.5rem_minmax(0,1fr)]">
-            <p className="pt-3 text-sm text-muted">
+          <li key={e.id} className="grid grid-cols-1 gap-x-4 py-3 sm:grid-cols-[5rem_minmax(0,1fr)] xl:grid-cols-[6.5rem_minmax(0,1fr)]">
+            <p className="pt-3 text-sm text-muted sm:pt-3">
               {fmtDate(e.date)}
             </p>
             <div className="min-w-0">{e.body}</div>
@@ -130,16 +130,20 @@ export default function Dashboard({ state, profile }) {
                 <Icon name="chevD" size={16} className="transition-transform group-open:rotate-180" />
               </span>
             </summary>
-            <table className="mt-2 w-full text-left text-[0.95rem]">
+            <table className="mt-2 w-full table-fixed text-left text-[0.95rem]">
+              <colgroup>
+                <col />
+                <col className="w-[8.5rem]" />
+              </colgroup>
               <tbody>
                 {ms.map((m) => (
                   <tr key={m.id} className="border-t border-line">
-                    <td className="py-2 pr-3">
+                    <td className="break-words py-2 pr-3 [overflow-wrap:anywhere]">
                       <a className="font-medium text-accent-dark hover:underline" href={'#/indicator/' + encodeURIComponent(m.indicatorKey)}>
                         {m.name}
                       </a>
                     </td>
-                    <td className="whitespace-nowrap py-2 text-right">
+                    <td className="py-2 text-right [overflow-wrap:anywhere]">
                       {fmtNum(m.value)} <span className="text-muted">{m.unit}</span>
                     </td>
                   </tr>
@@ -147,7 +151,7 @@ export default function Dashboard({ state, profile }) {
               </tbody>
             </table>
             {write && (
-              <div className="mt-2 flex gap-2 border-t border-line pt-3">
+              <div className="mt-2 flex flex-wrap gap-2 border-t border-line pt-3">
                 <Button variant="ghost" icon="edit" className="!min-h-12 text-sm" onClick={() => go('edit/' + r.id)}>
                   Исправить
                 </Button>
@@ -247,8 +251,8 @@ export default function Dashboard({ state, profile }) {
         </p>
       )}
 
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="order-2 min-w-0 lg:order-1">
+            <div className="grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="order-2 min-w-0 xl:order-1">
           <H plain>История</H>
           <Timeline events={events} write={write} />
           <nav className="mt-8 grid gap-2 lg:hidden" aria-label="Быстрые действия">
@@ -266,7 +270,7 @@ export default function Dashboard({ state, profile }) {
           </nav>
         </div>
 
-        <aside className="order-1 space-y-6 lg:order-2 lg:sticky lg:top-8 lg:self-start">
+        <aside className="order-1 space-y-6 xl:order-2 xl:sticky xl:top-8 xl:self-start">
           <section aria-labelledby="attn">
             <h2 id="attn" className="mb-4 text-[1.375rem]">
               Вне диапазона лаборатории

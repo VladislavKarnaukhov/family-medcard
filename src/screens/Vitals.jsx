@@ -84,9 +84,9 @@ export default function Vitals({ state, profile }) {
     <div>
       <PageHeader title="Замеры" subtitle={`Давление и пульс, профиль «${profile.name}». Дата и время подставятся автоматически.`} />
 
-      <div className="grid gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
         {write && (
-          <Card className="space-y-4 lg:sticky lg:top-8 lg:self-start">
+          <Card className="space-y-4 xl:sticky xl:top-8 xl:self-start">
             <Field label="Давление (верхнее/нижнее)" hint={touched && !p ? 'Введите, например, 120/80' : undefined}>
               <input inputMode="numeric" placeholder="120/80" value={bp} onChange={(e) => setBp(e.target.value)} className="!text-2xl !font-semibold" />
             </Field>
@@ -100,7 +100,7 @@ export default function Vitals({ state, profile }) {
           </Card>
         )}
 
-        <div className={`min-w-0 ${write ? '' : 'lg:col-span-2'}`}>
+        <div className={`min-w-0 ${write ? '' : 'xl:col-span-2'}`}>
           <H>Давление за 30 дней</H>
           {items.length === 0 ? (
             <Empty icon="pulse">За последние 30 дней замеров нет.</Empty>
