@@ -412,6 +412,50 @@ try {
     assert.ok(st.measurements.some((m) => m.name === 'Гемоглобин' && m.value === 132))
   })
 
+  await step('lab text parser: names, values, units, references, OCR slips flagged, noise skipped', async () => {
+    const { parseLabText } = await import('../src/lib/labparse.js')
+    const text = [
+      'ИНВИТРО', 'Дата взятия биоматериала: 28.10.2026', 'Исследование  Результат  Единицы  Референсные значения',
+      'Гемоглобин (Hb)  132  г/л  117 - 155', 'Эритроциты (RBC)  4,52  10^12/л  3,8 - 5,1', 'Лейкоциты (WBC) 6.1 х10^9/л 4.0 - 9.0',
+      'Тромбоциты 2O5 10 9/л 150 - 400', 'СОЭ 12 мм/ч 2 - 20', 'Глюкоза | 5,4 | ммоль/л | 4,1 - 5,9', 'Холестерин общий 6,3 ммоль/л до 5,2',
+      'Холестерин ЛПНП 3,9 ммоль/л < 3,4', 'Гликированный гемоглобин 5,6 % 4,0 - 6,0', 'Кальций общий 2,31 ммоль/л 2,15 - 2,55',
+      'Креатинин 1O1 мкмоль/л 59 - 104', 'Страница 1 из 2', 'Врач Иванов 12.03.1980',
+    ].join('\n')
+    const r = parseLabText(text)
+    assert.equal(r.date, '2026-10-28')
+    assert.equal(r.labName, 'Инвитро')
+    assert.equal(r.rows.length, 11)
+    const by = (n) => r.rows.find((x) => x.name === n)
+    assert.deepEqual([by('Гемоглобин').value, by('Гемоглобин').unit, by('Гемоглобин').refLow, by('Гемоглобин').refHigh], [132, 'г/л', 117, 155])
+    assert.equal(by('Эритроциты').value, 4.52, 'decimal comma')
+    assert.equal(by('Лейкоциты').unit, '10^9/л', 'leading «х» before the exponent is dropped')
+    assert.equal(by('Гликированный гемоглобин').value, 5.6, 'longest alias wins over plain hemoglobin')
+    assert.equal(by('Гемоглобин').value, 132)
+    assert.deepEqual([by('Холестерин общий').refLow, by('Холестерин общий').refHigh], [null, 5.2], '«до 5,2»')
+    assert.equal(by('Холестерин ЛПНП').refHigh, 3.4, '«< 3,4»')
+    assert.equal(by('Тромбоциты').value, 205)
+    assert.equal(by('Тромбоциты').confidence, 'low', 'letter O fixed in a number is flagged')
+    assert.equal(by('Креатинин').value, 101)
+    assert.equal(by('Креатинин').confidence, 'low')
+    assert.equal(by('Кальций общий').confidence, 'low', 'not in the reference list: kept but flagged')
+    assert.equal(by('Гемоглобин').confidence, 'high')
+    assert.ok(!r.rows.some((x) => /Врач|Страница/.test(x.name)), 'noise lines are skipped')
+    assert.equal(parseLabText('просто текст без показателей').rows.length, 0)
+    assert.equal(parseLabText('Гемоглобин 1320 г/л 117 - 155').rows[0].confidence, 'low', 'implausible value is flagged, not fixed')
+  })
+
+  await step('on-device OCR assets are served and CSP allows only the worker and wasm they need', async () => {
+    for (const f of ['worker.min.js', 'lang/rus.traineddata.gz', 'lang/eng.traineddata.gz', 'tesseract-core-simd-lstm.wasm']) {
+      const r = await fetch(`${base}/ocr/${f}`)
+      assert.equal(r.status, 200, f)
+    }
+    const src = readFileSync('server/index.js', 'utf8')
+    const csp = src.match(/Content-Security-Policy', "(default-src 'self'[^"]*)"/)[1]
+    assert.match(csp, /script-src 'self' 'wasm-unsafe-eval'/)
+    assert.match(csp, /worker-src 'self' blob:/)
+    assert.ok(!/script-src[^;]*unsafe-inline/.test(csp) && !/https?:\/\//.test(csp), 'no inline scripts, no outside hosts')
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {

@@ -4,6 +4,8 @@ import { Icon } from '../components/icons'
 import { Preview, ResultForm } from '../components/ResultForm'
 import { actions, can } from '../lib/store'
 import { recognize, getFeatures } from '../lib/recognize'
+import { ocrImage, stopOcr } from '../lib/ocr'
+import { parseLabText } from '../lib/labparse'
 import { BLOOD_PANELS, draftBad, draftRows, emptyDraft, panelDraft, toDraft } from '../lib/draft'
 import { fmtDate, localISO } from '../lib/format'
 import { DocLink } from './Legal'
@@ -20,6 +22,8 @@ export default function AddResult({ state, profile }) {
   const [usedAi, setUsedAi] = useState(false)
   const [warnings, setWarnings] = useState([])
   const [drag, setDrag] = useState(false)
+  const [local, setLocal] = useState(false)
+  const [progress, setProgress] = useState('')
   const cam = useRef(null)
   const pick = useRef(null)
 
@@ -55,9 +59,40 @@ export default function AddResult({ state, profile }) {
     setError('')
     // Без ИИ показатели вносит человек: бланк показывается рядом с пустой таблицей.
     if (!(ai && features.aiRecognition)) {
+      // Чтение на устройстве: фото никуда не уходит. Всё, что не получилось, остаётся для ручного ввода.
       setUsedAi(false)
-      setWarnings([])
-      setDrafts(files.map((f) => ({ ...emptyDraft(localISO()), sourceFile: f.name })))
+      setBusy(true)
+      const notes = []
+      const out = []
+      let got = 0
+      for (const [i, f] of files.entries()) {
+        const blank = { ...emptyDraft(localISO()), sourceFile: f.name }
+        if (!f.type.startsWith('image/')) {
+          notes.push(`${f.name}: PDF вносится вручную, чтение на устройстве работает для фото`)
+          out.push(blank)
+          continue
+        }
+        try {
+          setProgress(`Читаем бланк ${i + 1} из ${files.length} на вашем устройстве…`)
+          const parsed = parseLabText(await ocrImage(f, (m) => m.status === 'recognizing text' && setProgress(`Читаем бланк ${i + 1} из ${files.length}: ${Math.round((m.progress || 0) * 100)}%`)))
+          if (parsed.rows.length) {
+            got += parsed.rows.length
+            out.push({ ...toDraft({ sourceFile: f.name, date: parsed.date || localISO(), labName: parsed.labName || '', rows: parsed.rows }) })
+          } else {
+            notes.push(`${f.name}: показатели не найдены, внесите вручную`)
+            out.push(blank)
+          }
+        } catch {
+          notes.push(`${f.name}: не удалось прочитать фото на устройстве, внесите вручную`)
+          out.push(blank)
+        }
+      }
+      await stopOcr()
+      setProgress('')
+      setBusy(false)
+      setLocal(got > 0)
+      setWarnings(notes)
+      setDrafts(out)
       setCur(0)
       return
     }
@@ -76,6 +111,7 @@ export default function AddResult({ state, profile }) {
   }
 
   const manual = () => {
+    setLocal(false)
     setFiles([])
     setUsedAi(false)
     setDrafts([emptyDraft(localISO())])
@@ -83,6 +119,7 @@ export default function AddResult({ state, profile }) {
   }
 
   const panel = (group) => {
+    setLocal(false)
     setFiles([])
     setUsedAi(false)
     setDrafts([panelDraft(group, localISO())])
@@ -135,6 +172,7 @@ export default function AddResult({ state, profile }) {
 
         <div className="mt-5 space-y-4">
           <ErrorText>{error}</ErrorText>
+          {busy && progress && <p role="status" className="text-sm text-muted">{progress}</p>}
           {features.aiRecognition && (
             <div className="rounded-xl bg-paper p-4">
               <Toggle checked={ai} onChange={setAi}>
@@ -149,7 +187,7 @@ export default function AddResult({ state, profile }) {
               </Button>
             )}
             <Button big variant={can(state).owner ? 'ghost' : 'primary'} disabled={!files.length || busy || saving} onClick={run}>
-              {busy ? 'Распознаём…' : `Внести самому${files.length ? ` (${files.length})` : ''}`}
+              {busy ? 'Читаем…' : `Прочитать и внести${files.length ? ` (${files.length})` : ''}`}
             </Button>
           </div>
           <p className="text-sm text-muted">
@@ -200,6 +238,12 @@ export default function AddResult({ state, profile }) {
   return (
     <div>
       <PageHeader title="Проверьте данные" subtitle="Сверьте каждое значение, единицу и референс с бланком. Исправьте любое поле и только потом сохраняйте." />
+      {local && !usedAi && (
+        <Notice className="mb-5">
+          Бланк прочитан на вашем устройстве, фото никуда не отправлялось. Программа могла ошибиться в цифрах: сверьте каждое значение с бланком, особенно строки с пометкой «Проверьте».
+        </Notice>
+      )}
+      {!usedAi && warnings.length > 0 && <Notice className="mb-5">{warnings.join('; ')}.</Notice>}
       {usedAi && (
         <Notice className="mb-5">
           Бланк распознан ИИ-сервисом, он может ошибаться. Строки с низкой уверенностью помечены «(проверьте)».
