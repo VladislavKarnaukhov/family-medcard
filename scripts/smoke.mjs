@@ -337,6 +337,33 @@ try {
     })
   })
 
+  await step('another family cannot see or change this family (isolation)', async () => {
+    const stranger = await register('Чужой Тестов', 'stranger@example.test')
+    await asUser(stranger, async () => {
+      const st = await call('POST', '/api/consents/health/start', {})
+      await call('POST', '/api/consents/health/sign', { agree: true, code: st.json.devCode })
+      assert.equal((await call('GET', `/api/families/${fid}/state`)).status, 404)
+      assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken' })).status, 404)
+      assert.equal((await call('PUT', `/api/medications/${medId}`, { name: 'Чужое', times: ['09:00'] })).status, 404)
+      assert.equal((await call('POST', `/api/profiles/${momId}/care-notes`, { kind: 'other', text: 'x' })).status, 404)
+      assert.equal((await call('POST', `/api/profiles/${momId}/appointments`, { at: `${addDays(today, 2)}T10:00`, specialist: 'x' })).status, 404)
+      assert.equal((await call('POST', `/api/profiles/${momId}/emergency`, {})).status, 404)
+      assert.equal((await call('POST', `/api/profiles/${momId}/share`, { days: 7, consentConfirmed: true })).status, 404)
+      assert.equal((await call('DELETE', '/api/me/account', { password: 'long-enough-1' })).status, 200)
+    })
+    assert.equal(count('medications', "name = 'Чужое'"), 0)
+  })
+
+  await step('revoking access takes effect on the next request', async () => {
+    const gid = db.prepare("SELECT g.id FROM grants g JOIN users u ON u.id = g.user_id WHERE u.email = 'bro@example.test'").get().id
+    await asUser(viewerJar, async () => assert.equal((await call('GET', `/api/families/${fid}/state`)).status, 200))
+    assert.equal((await call('DELETE', `/api/families/${fid}/members/${gid}`)).status, 200)
+    await asUser(viewerJar, async () => {
+      assert.equal((await call('GET', `/api/families/${fid}/state`)).status, 404)
+      assert.equal((await call('POST', `/api/medications/${medId}/intakes`, { scheduledAt: intakeAt, status: 'taken' })).status, 404)
+    })
+  })
+
   await step('appointment and request to the assistant', async () => {
     const at = `${addDays(today, 1)}T12:00`
     const a = await call('POST', `/api/profiles/${momId}/appointments`, { at, specialist: 'Кардиолог', purpose: 'Планово' })
