@@ -37,6 +37,16 @@ export function Wordmark() {
   )
 }
 
+function SurveyBanner({ state }) {
+  if (!state.user?.surveyDue || window.location.hash.startsWith('#/feedback')) return null
+  return (
+    <a href="#/feedback" className="lift mb-5 flex items-center justify-between gap-3 rounded-2xl bg-card px-5 py-3 text-[0.95rem] shadow-sheet">
+      <span>Вы пользуетесь сервисом две недели. Ответьте на три коротких вопроса?</span>
+      <Icon name="chevR" size={18} />
+    </a>
+  )
+}
+
 function VerifyBanner({ state }) {
   const [sent, setSent] = useState(false)
   if (!state.user || state.user.emailVerified) return null
@@ -63,6 +73,9 @@ export function Footer({ className = '' }) {
       <p className="no-print mt-1.5 flex flex-wrap justify-center gap-x-5 gap-y-1">
         <a className="underline-offset-2 hover:text-ink hover:underline" href="#/legal/privacy" target="_blank" rel="noreferrer">
           Политика обработки данных
+        </a>
+        <a className="underline-offset-2 hover:text-ink hover:underline" href="#/feedback">
+          Написать нам
         </a>
         <a className="underline-offset-2 hover:text-ink hover:underline" href="#/legal/terms" target="_blank" rel="noreferrer">
           Соглашение
@@ -267,6 +280,7 @@ export default function Layout({ route = [], state, bare, children }) {
         </header>
         <main className="flex-1 px-4 pb-28 pt-5 lg:px-14 lg:pb-14 lg:pt-12 print:p-0">
           <VerifyBanner state={state} />
+          <SurveyBanner state={state} />
           {state.profiles.length > 0 && route[0] !== 'profile' && (
             <div className="mb-5 lg:hidden">
               <ProfileTabs state={state} />

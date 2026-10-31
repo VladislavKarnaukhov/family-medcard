@@ -21,6 +21,7 @@ import Privacy, { Stopped } from './screens/Privacy'
 import SubjectConsent from './screens/SubjectConsent'
 import Today, { DueBanner, TodayContent } from './screens/Today'
 import Diary from './screens/Diary'
+import Feedback from './screens/Feedback'
 import { MedForm, MedsList } from './screens/Meds'
 import { VisitForm, VisitsList } from './screens/Visits'
 import CareNote from './screens/CareNote'
@@ -165,6 +166,9 @@ export default function App() {
       break
     case 'notifications':
       screen = <Notifications state={state} />
+      break
+    case 'feedback':
+      screen = <Feedback state={state} />
       break
     case 'emergency':
       screen = <Emergency state={state} profile={profileById(route[1])} />
