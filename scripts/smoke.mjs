@@ -268,6 +268,23 @@ try {
     db.prepare("DELETE FROM care_notes WHERE id = 'old-note'").run()
   })
 
+  await step('intake reminder emails: at most one per 15 minutes per person, in-app reminders for every slot (M-48)', async () => {
+    db.prepare("UPDATE users SET email_intake = 1 WHERE email = 'mom@example.test'").run()
+    const ids = []
+    for (const [name, time] of [['Лимит А', '14:50'], ['Лимит Б', '14:55']]) {
+      const r = await call('POST', `/api/profiles/${momId}/medications`, { name, times: [time], startDate: addDays(today, -2) })
+      assert.equal(r.status, 200, JSON.stringify(r.json))
+      db.prepare('UPDATE medications SET created_at = ? WHERE id = ?').run(`${addDays(today, -2)}T00:00:00.000Z`, r.json.id)
+      ids.push(r.json.id)
+    }
+    const mails = () => (readFileSync(join(dir, 'outbox.log'), 'utf8').match(/subject=Время принять лекарство/g) || []).length
+    const before = mails()
+    tick(new Date(`${today}T12:00:00Z`))
+    assert.equal(mails() - before, 1, 'one email for two slots')
+    assert.equal(db.prepare("SELECT COUNT(*) c FROM notifications WHERE kind = 'intake_due' AND ref_id LIKE ?").get(`${momId}|${today}T14:5%`).c, 2, 'both in-app reminders exist')
+    for (const id of ids) db.prepare('DELETE FROM medications WHERE id = ?').run(id)
+  })
+
   await step('fall note notifies the owner; bad mood only if allowed', async () => {
     const before = count('notifications', "kind = 'fall'")
     await asUser(momJar, async () => {
