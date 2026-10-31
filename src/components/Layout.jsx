@@ -4,6 +4,7 @@ import { actions, can } from '../lib/store'
 import { Avatar, Tabs, go } from './ui'
 import { Icon } from './icons'
 import { hasMeds } from '../lib/care'
+import { splitNav } from '../lib/nav'
 
 const NAV = [
   ['', 'Главная', 'home'],
@@ -159,6 +160,8 @@ function RailLink({ to, label, icon, active, badge }) {
 function Rail({ state, active }) {
   const owner = can(state).owner
   const items = [...mainNav(state), ...careLinks(state).filter((i) => !i[3] || owner), ...NAV_MORE.filter((i) => !i[3] || owner), ['notifications', 'События', 'bell']]
+  const { primary, rest } = splitNav(items)
+  const moreBadge = (rest.some((i) => i[0] === 'assistant') ? state.unread : 0) + (state.unreadNotifications || 0)
   return (
     <aside className="no-print sticky top-0 hidden h-screen w-[252px] shrink-0 flex-col bg-sunken px-4 py-7 lg:flex">
       <div className="px-3">
@@ -196,9 +199,21 @@ function Rail({ state, active }) {
       )}
 
       <nav className="mt-6 min-h-0 flex-1 space-y-0.5 overflow-y-auto" aria-label="Основная навигация">
-        {items.map(([r, label, icon]) => (
-          <RailLink key={r} to={r} label={label} icon={icon} active={active === r.split('/')[0]} badge={r === 'assistant' ? state.unread : r === 'notifications' ? state.unreadNotifications : 0} />
+        {primary.map(([r, label, icon]) => (
+          <RailLink key={r} to={r} label={label} icon={icon} active={active === r.split('/')[0]} badge={0} />
         ))}
+        <details className="group pt-2" open={rest.some(([r]) => active === r.split('/')[0])}>
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-xl px-3 text-[0.95rem] text-muted hover:bg-card/60 hover:text-ink">
+            <Icon name="chevD" size={16} className="transition-transform group-open:rotate-180" />
+            <span className="flex-1">Ещё</span>
+            {moreBadge > 0 && <span className="rounded-full bg-accent px-1.5 text-xs font-semibold text-white">{moreBadge}</span>}
+          </summary>
+          <div className="space-y-0.5 pt-0.5">
+            {rest.map(([r, label, icon]) => (
+              <RailLink key={r} to={r} label={label} icon={icon} active={active === r.split('/')[0]} badge={r === 'assistant' ? state.unread : r === 'notifications' ? state.unreadNotifications : 0} />
+            ))}
+          </div>
+        </details>
       </nav>
 
       <div className="mt-4 border-t border-line-strong/60 pt-4">

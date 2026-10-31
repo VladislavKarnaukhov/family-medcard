@@ -473,6 +473,17 @@ try {
     assert.ok(/overflow-y-auto" aria-label="Основная навигация"/.test(rl), 'nav scrolls instead of hiding the profile list')
   })
 
+  await step('rail menu: six main sections, the rest under «Ещё» (simpler interface)', async () => {
+    const { splitNav, PRIMARY } = await import('../src/lib/nav.js')
+    const items = [['today', 'Сегодня'], ['', 'Главная'], ['dossier', 'Документы'], ['indicators', 'Показатели'], ['assistant', 'Помощник'], ['summary', 'Сводка'], ['meds/p1', 'Лекарства'], ['visits/p1', 'Визиты'], ['diary/p1', 'Дневник'], ['emergency/p1', 'Экстренная'], ['vitals', 'Замеры'], ['circle', 'Круг'], ['privacy', 'Мои данные'], ['notifications', 'События']]
+    const { primary, rest } = splitNav(items)
+    assert.deepEqual(primary.map((i) => i[1]), ['Сегодня', 'Главная', 'Лекарства', 'Дневник', 'Сводка', 'Документы'])
+    assert.equal(primary.length, PRIMARY.length)
+    assert.equal(rest.length, items.length - 6)
+    assert.ok(rest.some((i) => i[1] === 'Помощник'))
+    assert.equal(splitNav(items.slice(1, 3)).primary.length, 2, 'missing sections are skipped, not crashed on')
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {

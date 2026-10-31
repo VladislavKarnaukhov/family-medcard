@@ -95,26 +95,30 @@ function FirstSteps({ state }) {
     }
   }
   return (
-    <section className="mb-8 rounded-2xl bg-card p-5 shadow-sheet" aria-label="Первые шаги">
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-semibold">Первые шаги: {done} из {steps.length}</h2>
+    <section className="mb-8 rounded-2xl bg-card px-5 py-3 shadow-sheet" aria-label="Первые шаги">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <p className="min-w-0 flex-1 basis-60">
+          <span className="text-sm text-muted">Первые шаги, {done} из {steps.length}</span>
+          <span className="block font-medium">{next.title}</span>
+        </p>
+        <Button className="shrink-0" onClick={() => go(next.href)}>
+          Сделать
+        </Button>
         <button className="min-h-12 text-sm text-muted hover:underline" onClick={hide}>Скрыть</button>
       </div>
-      <ol className="divide-y divide-line">
-        {steps.map((s) => (
-          <li key={s.key} className="flex items-center gap-3 py-2">
-            <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${s.done ? 'bg-accent text-white' : 'border border-line-strong'}`} aria-hidden="true">
-              {s.done && <Icon name="check" size={15} />}
-            </span>
-            <span className={`flex-1 ${s.done ? 'text-muted line-through' : ''}`}>{s.title}</span>
-            {s === next && (
-              <Button className="shrink-0" onClick={() => go(s.href)}>
-                Сделать
-              </Button>
-            )}
-          </li>
-        ))}
-      </ol>
+      <details className="border-t border-line">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center text-sm text-accent-dark">Все шаги</summary>
+        <ol className="divide-y divide-line pb-2">
+          {steps.map((s) => (
+            <li key={s.key} className="flex items-center gap-3 py-2">
+              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${s.done ? 'bg-accent text-white' : 'border border-line-strong'}`} aria-hidden="true">
+                {s.done && <Icon name="check" size={14} />}
+              </span>
+              <span className={s.done ? 'text-muted line-through' : ''}>{s.title}</span>
+            </li>
+          ))}
+        </ol>
+      </details>
     </section>
   )
 }
