@@ -106,7 +106,7 @@ export default function App() {
         <Stopped state={state} />
       </Layout>
     )
-  if (owner && !state.consent.ok) return <ConsentGate />
+  if (owner && !state.consent.ok) return <ConsentGate outdated={!!state.consent.outdated} />
 
   const profileById = (id) => state.profiles.find((p) => p.id === id) || profile
   const carePage = () => {

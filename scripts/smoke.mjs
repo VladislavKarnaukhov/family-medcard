@@ -322,6 +322,24 @@ try {
     await call('POST', '/api/consents/health/sign', { agree: true, code: st.json.devCode })
   })
 
+  await step('new LEGAL_VERSION blocks writes until the owner signs again', async () => {
+    const { DatabaseSync } = await import('node:sqlite')
+    const h = new DatabaseSync(join(dir, 'blizkie.db'))
+    const fid2 = (await call('GET', '/api/me')).json.families[0].id
+    h.prepare("UPDATE consents SET doc_version = 'старая-версия' WHERE doc_id = 'consent_health'").run()
+    const w = await call('POST', `/api/families/${fid2}/profiles`, { name: 'Папа', basis: 'self', birthYear: 1955, sex: 'm' })
+    assert.equal(w.status, 403)
+    assert.equal(w.json.code, 'consent_outdated')
+    const st = await call('GET', `/api/families/${fid2}/state`)
+    assert.equal(st.status, 200)
+    assert.equal(st.json.consent.outdated, true)
+    const s1 = await call('POST', '/api/consents/health/start', {})
+    assert.equal((await call('POST', '/api/consents/health/sign', { agree: true, code: s1.json.devCode })).status, 200)
+    const ok = await call('POST', `/api/families/${fid2}/profiles`, { name: 'Папа', basis: 'self', birthYear: 1955, sex: 'm' })
+    assert.equal(ok.status, 200)
+    h.close()
+  })
+
   await step('wrong password rejected', async () => {
     cookie = ''
     assert.equal((await call('POST', '/api/auth/login', { email: 't@example.test', password: 'nope-nope-1' })).status, 401)

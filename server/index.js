@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { db, tx, UPLOAD_DIR } from './db.js'
 import { ruDate, all, checkPassword, get, hashPassword, inList, log, nowIso, numOrNull, plusDays, run, safeJson, str, today, token, uuid } from './util.js'
-import { buildState, canWrite, consentOk, familyAccess, isOwner, profileAllowed } from './state.js'
+import { buildState, canWrite, consentOk, consentStatus, familyAccess, isOwner, profileAllowed } from './state.js'
 import { mountConsent, recordConsent } from './consent.js'
 import { aiEnabled, recognizeWithClaude } from './recognize.js'
 import { ensureStaff } from './seed.js'
@@ -235,9 +235,15 @@ app.post('/api/invites/:token/accept', needUser, (req, res) => {
 // Любая запись данных требует действующего согласия владельца на обработку данных о здоровье.
 function gate(req, res, familyId, need, opts) {
   if (need === 'read' || req.method === 'DELETE' || opts?.consent === false) return true
-  if (!consentOk(familyId)) {
-    const stopped = get('SELECT processing_stopped s FROM families WHERE id = ?', familyId)?.s
-    res.status(stopped ? 423 : 403).json({ error: stopped ? 'Обработка остановлена: согласие отозвано' : 'Сначала подпишите согласие на обработку данных о здоровье', code: stopped ? 'stopped' : 'consent_required' })
+  const st = consentStatus(familyId)
+  if (st !== 'ok') {
+    const M = {
+      stopped: [423, 'Обработка остановлена: согласие отозвано'],
+      outdated: [403, 'Документы обновились. Подпишите согласие в новой редакции, чтобы продолжить'],
+      none: [403, 'Сначала подпишите согласие на обработку данных о здоровье'],
+    }
+    const [status, error] = M[st]
+    res.status(status).json({ error, code: st === 'stopped' ? 'stopped' : st === 'outdated' ? 'consent_outdated' : 'consent_required' })
     return false
   }
   return true
