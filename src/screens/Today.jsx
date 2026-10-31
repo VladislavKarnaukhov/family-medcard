@@ -75,7 +75,7 @@ export function IntakeRow({ row, write, simple, onDone }) {
             {simple ? 'Пропустил(а)' : 'Пропустил'}
           </Button>
           {done && !simple && (
-            <Button className={btn} variant="quiet" disabled={busy} onClick={undo}>
+            <Button className={`${btn} !justify-start !px-2`} variant="quiet" disabled={busy} onClick={undo}>
               Отменить отметку
             </Button>
           )}
@@ -137,7 +137,7 @@ export function MoodRow({ profile, simple }) {
       <p className={`mb-3 font-medium ${simple ? 'text-2xl' : 'text-lg'}`}>{simple ? 'Как вы себя чувствуете?' : 'Самочувствие сегодня'}</p>
       <div className="grid grid-cols-3 gap-3">
         {Object.entries(MOOD_LABEL).map(([k, v]) => (
-          <Button key={k} variant={sent === k ? 'primary' : 'ghost'} className={simple ? '!min-h-16 !text-xl' : ''} onClick={() => send(k)}>
+          <Button key={k} variant={sent === k ? 'primary' : 'ghost'} className={`!px-2 ${simple ? '!min-h-16 !text-xl' : ''}`} onClick={() => send(k)}>
             {v}
           </Button>
         ))}

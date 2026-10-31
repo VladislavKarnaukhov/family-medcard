@@ -238,6 +238,7 @@ export const actions = {
     await api('POST', '/api/survey/dismiss', {})
     commit({ user: { ...state.user, surveyDue: false } })
   },
+  reorderProfiles: act((ids) => api('PUT', `/api/families/${state.familyId}/profiles-order`, { ids })),
   revokeShareLink: act((token) => api('DELETE', `/api/share/${token}`)),
 
   async createShareLink(profileId, days) {

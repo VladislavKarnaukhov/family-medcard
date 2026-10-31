@@ -45,7 +45,7 @@ export function buildState(familyId, a) {
   const staff = a.access === 'staff'
   const owner = a.access === 'owner'
   const family = get('SELECT * FROM families WHERE id = ?', familyId)
-  const everyone = all('SELECT * FROM profiles WHERE family_id = ? ORDER BY rowid', familyId)
+  const everyone = all('SELECT * FROM profiles WHERE family_id = ? ORDER BY sort_order, rowid', familyId)
   const profiles = everyone.filter((p) => profileAllowed(a, p.id))
   const peers = everyone.filter((p) => !profileAllowed(a, p.id) && a.peerIds?.includes(p.id))
   const pids = profiles.map((p) => p.id)

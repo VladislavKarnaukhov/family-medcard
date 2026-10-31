@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { actions, can, init, startPolling, useStore } from './lib/store'
 import { Spinner, useRoute } from './components/ui'
-import Layout from './components/Layout'
+import Layout, { moreItems } from './components/Layout'
 import AuthScreen, { AuthShell, InviteScreen, ResetScreen, VerifyScreen } from './screens/Auth'
 import ShareView from './screens/ShareView'
 import Dashboard from './screens/Dashboard'
@@ -22,6 +22,8 @@ import SubjectConsent from './screens/SubjectConsent'
 import Today, { DueBanner, TodayContent } from './screens/Today'
 import Diary from './screens/Diary'
 import Feedback from './screens/Feedback'
+import ProfileOrder from './screens/ProfileOrder'
+import More from './screens/More'
 import { MedForm, MedsList } from './screens/Meds'
 import { VisitForm, VisitsList } from './screens/Visits'
 import CareNote from './screens/CareNote'
@@ -193,6 +195,12 @@ export default function App() {
       break
     case 'dossier':
       screen = <Dossier {...props} />
+      break
+    case 'more':
+      screen = <More items={moreItems(state)} badges={{ assistant: state.unread, notifications: state.unreadNotifications }} />
+      break
+    case 'profiles':
+      screen = owner ? <ProfileOrder key={state.profiles.map((p) => p.id).join()} state={state} /> : <Dashboard {...props} />
       break
     case 'circle':
       screen = owner ? <Circle {...props} /> : <Dashboard {...props} />

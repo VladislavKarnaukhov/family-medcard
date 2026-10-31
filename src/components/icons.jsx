@@ -8,6 +8,7 @@ import {
 
 const MAP = {
   home: House,
+  list: DotsThree,
   folder: FolderSimple,
   chart: ChartLineUp,
   chat: ChatCircleText,

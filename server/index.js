@@ -404,12 +404,24 @@ app.post('/api/families/:fid/profiles', needUser, (req, res) => {
   if (basis !== 'self' && req.body.attest !== true) return fail(res, 400, 'Подтвердите согласие или полномочия')
   const id = uuid()
   tx(() => {
-    run('INSERT INTO profiles (id, family_id, name, birth_year, birth_date, sex, notes, basis, consent_status) VALUES (?,?,?,?,?,?,?,?,?)', id, req.params.fid, name, by, birth.date, sex(req.body.sex), str(req.body.notes, 4000), basis, basis === 'self' ? 'self' : 'attested')
+    run('INSERT INTO profiles (id, family_id, name, birth_year, birth_date, sex, notes, basis, consent_status, sort_order) VALUES (?,?,?,?,?,?,?,?,?,?)', id, req.params.fid, name, by, birth.date, sex(req.body.sex), str(req.body.notes, 4000), basis, basis === 'self' ? 'self' : 'attested', (get('SELECT MAX(sort_order) m FROM profiles WHERE family_id = ?', req.params.fid)?.m || 0) + 1)
     if (basis !== 'self') recordConsent(req, { userId: req.user.id, familyId: req.params.fid, profileId: id, docId: basis === 'adult' ? 'consent_adult' : 'consent_guardian', method: 'attestation', subjectName: name })
   })
   log(req.params.fid, req.user, id, `Создан профиль «${name}»`)
   track('profile_created', { userId: req.user.id, familyId: req.params.fid, role: 'owner' })
   res.json({ id })
+})
+
+// Порядок профилей задаёт владелец: так он виден и ему, и тем, кому открыты эти профили.
+app.put('/api/families/:fid/profiles-order', needUser, (req, res) => {
+  if (!ctxFamily(req, res, 'owner', { consent: false })) return
+  const ids = Array.isArray(req.body.ids) ? req.body.ids.map(String) : []
+  const mine = all('SELECT id FROM profiles WHERE family_id = ? ORDER BY sort_order, rowid', req.params.fid).map((p) => p.id)
+  if (new Set(ids).size !== ids.length || ids.some((i) => !mine.includes(i))) return fail(res, 400, 'Неверный список профилей')
+  const order = [...ids, ...mine.filter((i) => !ids.includes(i))]
+  tx(() => order.forEach((id, i) => run('UPDATE profiles SET sort_order = ? WHERE id = ?', i + 1, id)))
+  log(req.params.fid, req.user, null, 'Изменён порядок профилей')
+  res.json({ ok: true })
 })
 
 app.put('/api/profiles/:id', needUser, (req, res) => {
