@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button, Chip, Empty, ErrorText, H, PageHeader, go } from '../components/ui'
 import { Icon } from '../components/icons'
 import { actions, can } from '../lib/store'
-import { KIND_LABEL, MOOD_LABEL, NEEDS, bannerOnScreen, bannerRows, daySchedule, fmtDt, isMarker, localNow, marked, nextAppointment } from '../lib/care'
+import { KIND_LABEL, MOOD_LABEL, NEEDS, bannerOnScreen, bannerRows, daySchedule, simpleSplit, fmtDt, isMarker, localNow, marked, nextAppointment } from '../lib/care'
 
 export function useNow(ms = 30000) {
   const [n, setN] = useState(Date.now())
@@ -74,7 +74,7 @@ export function IntakeRow({ row, write, simple, onDone }) {
           <Button className={`${btn} flex-1 sm:flex-none sm:min-w-40`} variant="ghost" disabled={busy} onClick={() => setSkip(true)}>
             {simple ? 'Пропустил(а)' : 'Пропустил'}
           </Button>
-          {done && (
+          {done && !simple && (
             <Button className={btn} variant="quiet" disabled={busy} onClick={undo}>
               Отменить отметку
             </Button>
@@ -206,7 +206,7 @@ export function TodayContent({ state, profile, simple = false }) {
   const { rows, prn } = daySchedule(state, profile.id, now.date)
   const next = nextAppointment(state, profile.id)
   const self = state.me?.selfProfileId === profile.id
-  const first = rows.find((r) => r.state === 'due' || r.state === 'unmarked') || rows.find((r) => r.state === 'later')
+  const { first, rest } = simpleSplit(rows)
   const sizeH = simple ? 'text-2xl' : 'text-[1.375rem]'
 
   return (
@@ -223,9 +223,20 @@ export function TodayContent({ state, profile, simple = false }) {
         ) : (
           <ul className="divide-y divide-line border-y border-line">
             {simple && first ? <IntakeRow key={first.at + first.med.id} row={first} write={write} simple /> : null}
-            {rows.filter((r) => !(simple && r === first)).map((r) => (
-              <IntakeRow key={r.at + r.med.id} row={r} write={write} simple={simple} />
-            ))}
+            {simple && rest.length > 0 ? (
+              <li className="py-4">
+                <details>
+                  <summary className="flex min-h-14 cursor-pointer list-none items-center text-xl font-medium text-accent-dark">Остальные приёмы сегодня: {rest.length}</summary>
+                  <ul className="divide-y divide-line">
+                    {rest.map((r) => (
+                      <IntakeRow key={r.at + r.med.id} row={r} write={write} simple />
+                    ))}
+                  </ul>
+                </details>
+              </li>
+            ) : (
+              !simple && rows.map((r) => <IntakeRow key={r.at + r.med.id} row={r} write={write} />)
+            )}
             {prn.map((p) => (
               <PrnRow key={p.med.id} item={p} write={write} simple={simple} tz={tz} />
             ))}

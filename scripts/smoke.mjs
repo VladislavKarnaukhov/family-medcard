@@ -441,6 +441,18 @@ try {
     assert.ok(ratio('#ffffff', c.accent) >= 4.5, 'white on accent button')
   })
 
+  await step('simple mode shows one main intake, the rest are folded (M-14)', async () => {
+    const { simpleSplit } = await import('../src/lib/care.js')
+    const r = (state, id) => ({ state, id })
+    const rows = [r('taken', 1), r('due', 2), r('later', 3)]
+    const s = simpleSplit(rows)
+    assert.equal(s.first.id, 2)
+    assert.deepEqual(s.rest.map((x) => x.id), [1, 3])
+    assert.equal(simpleSplit([r('taken', 1), r('later', 2)]).first.id, 2)
+    assert.equal(simpleSplit([r('taken', 1)]).first, null)
+    assert.equal(simpleSplit([r('taken', 1)]).rest.length, 1)
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
