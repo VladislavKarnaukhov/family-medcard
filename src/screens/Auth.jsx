@@ -10,7 +10,7 @@ import { OtpSign } from './ConsentGate'
 const ACCESS_TEXT = { view: 'только просмотр', add: 'просмотр и добавление документов' }
 
 // Вход и регистрация: на компьютере слева текстовая колонка с примером строки результата, справа форма.
-export function AuthShell({ children, wide = false, headline = 'Заведите маму за 5 минут', sentence = 'Лекарства, отметки приёма и сводка для врача. Вы видите, что принято сегодня, а доступ остаётся у вас.', brand = '', sample = true }) {
+export function AuthShell({ children, wide = false, headline = 'Лекарства близких под спокойным присмотром', sentence = 'Расписание приёма, отметки и сводка для врача в одном месте. Вы видите, что принято сегодня, а доступ остаётся у вас.', brand = '', sample = true }) {
   return (
     <div className="flex min-h-screen flex-col">
       <div className="flex flex-1 flex-col lg:flex-row">
