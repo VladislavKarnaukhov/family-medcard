@@ -1,6 +1,6 @@
 // Уход за близким: лекарства, отметки приёма, дневник, визиты, уведомления, экстренная карточка.
 // Все маршруты записи идут через ctxProfile/ctxFamily (шлюз согласия). Наружу camelCase, в базе snake_case.
-import { all, get, inList, log, nowIso, plusDays, ruDate, run, safeJson, str, token, uuid } from './util.js'
+import { all, track, get, inList, log, nowIso, plusDays, ruDate, run, safeJson, str, token, uuid } from './util.js'
 import { recordConsent } from './consent.js'
 import { consentOk, isOwner } from './state.js'
 import { DEFAULT_TZ, addDays, addMinutes, isDate, isDt, isTime, isoWeekday, medActiveOn, tzNow, validTz } from './timeutil.js'
@@ -61,6 +61,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
     const id = uuid()
     run("INSERT INTO medications (id, profile_id, name, form, dose, times, days, start_date, end_date, prescribed_by, note, status, created_at, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,'active',?,?)", id, c.p.id, v.name, v.form, v.dose, v.times, v.days, v.start, v.end, v.prescribedBy, v.note, nowIso(), req.user.id)
     log(c.p.family_id, req.user, c.p.id, `Добавлено лекарство: ${v.name}`)
+    track('medication_created', { userId: req.user.id, familyId: c.p.family_id, role: actorRole(c.a, c.p.id).role })
     res.json({ id })
   })
 
@@ -128,6 +129,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
       id = uuid()
       run('INSERT INTO intakes (id, medication_id, profile_id, scheduled_at, status, reason, marked_by_id, marked_by_name, marked_by_self, marked_at) VALUES (?,?,?,?,?,?,?,?,?,?)', id, m.id, m.profile_id, at, status, reason, req.user.id, req.user.name, who.self, nowIso())
     }
+    track('intake_marked', { userId: req.user.id, familyId: m.fid, role: actorRole(c.a, m.profile_id).role })
     res.json(intakeView(get('SELECT * FROM intakes WHERE id = ?', id)))
   })
 
@@ -159,6 +161,7 @@ export function mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAc
     const who = actorRole(c.a, c.p.id)
     const id = uuid()
     run('INSERT INTO care_notes (id, profile_id, at, kind, text, mood, needs_doctor, author_id, author_name, author_role, by_self, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)', id, c.p.id, at, kind, text, mood, needs, req.user.id, req.user.name, who.role, who.self, nowIso())
+    track('care_note_created', { userId: req.user.id, familyId: c.p.family_id, role: who.role })
     if (kind === 'fall') {
       notify({ familyId: c.p.family_id, profileId: c.p.id, kind: 'fall', title: `Запись о падении (${c.p.name})`, link: '#/today', refId: id })
       log(c.p.family_id, req.user, c.p.id, 'Запись в дневнике: падение')
