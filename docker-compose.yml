@@ -1,0 +1,34 @@
+# Запуск на сервере: docker compose up -d --build
+# Нужны файлы .env (настройки приложения) и переменная DOMAIN (адрес сайта) в том же каталоге.
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATA_DIR: /data
+      TRUST_PROXY: "1"
+    volumes:
+      - blizkie-data:/data
+    # Порт приложения наружу не открываем: к нему ходит только прокси внутри сети.
+    expose:
+      - "3000"
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN:?укажите DOMAIN, например DOMAIN=blizkie.example.ru}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+volumes:
+  blizkie-data:
+  caddy-data:
+  caddy-config:

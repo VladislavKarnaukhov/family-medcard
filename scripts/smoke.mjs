@@ -608,6 +608,36 @@ try {
     assert.match(readFileSync('src/lib/store.js', 'utf8'), /!state\.user\.emailVerified[\s\S]{0,160}\/api\/me/, 'verification banner refreshes itself')
   })
 
+  await step('deploy kit: the container layout boots in production, compose does not publish the app port, proxy and backup files exist', async () => {
+    const docker = readFileSync('Dockerfile', 'utf8')
+    const compose = readFileSync('docker-compose.yml', 'utf8')
+    assert.match(docker, /COPY src\/legal \.\/src\/legal/, 'server imports ../src/legal, so the image must carry it')
+    assert.match(compose, /expose:\s*\n\s*- "3000"/)
+    assert.ok(!/ports:\s*\n\s*- "3000/.test(compose), 'app port is not published')
+    assert.match(readFileSync('deploy/Caddyfile', 'utf8'), /reverse_proxy app:3000/)
+    assert.ok(statSync('deploy/backup-offsite.sh').mode & 0o100, 'script is executable')
+    // Повторяем состав файлов из Dockerfile (server, src/legal, dist, production-зависимости) и запускаем как в контейнере.
+    const root = mkdtempSync(join(tmpdir(), 'blizkie-image-'))
+    const { cpSync, symlinkSync } = await import('node:fs')
+    try {
+      cpSync('server', join(root, 'server'), { recursive: true, filter: (p) => !/server[\\/]data/.test(p) })
+      cpSync('src/legal', join(root, 'src/legal'), { recursive: true })
+      cpSync('dist', join(root, 'dist'), { recursive: true })
+      cpSync('package.json', join(root, 'package.json'))
+      symlinkSync(join(process.cwd(), 'node_modules'), join(root, 'node_modules'))
+      const p2 = port + 950
+      const proc = spawn(process.execPath, ['server/index.js'], { cwd: root, env: { ...process.env, DATA_DIR: join(root, 'data'), PORT: String(p2), NODE_ENV: 'production', SMTP_HOST: 'smtp.invalid', SMTP_USER: 'x', SMTP_PASS: 'x', BACKUP: '0', TRUST_PROXY: '1' }, stdio: 'ignore' })
+      try {
+        let ok = false
+        for (let i = 0; i < 50 && !ok; i++) { try { ok = (await fetch(`http://127.0.0.1:${p2}/health`)).ok } catch {} if (!ok) await wait(200) }
+        assert.ok(ok, 'server starts with only the files the image contains')
+        const home = await fetch(`http://127.0.0.1:${p2}/`)
+        assert.match(home.headers.get('strict-transport-security') || '', /max-age/)
+        assert.match(home.headers.get('content-security-policy') || '', /wasm-unsafe-eval/)
+      } finally { proc.kill('SIGTERM'); await wait(300) }
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {

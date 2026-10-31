@@ -1,0 +1,22 @@
+# HTTPS-сертификаты Caddy выпускает и продлевает сам (нужен домен, указывающий на сервер, и открытые порты 80 и 443).
+{$DOMAIN} {
+	encode gzip zstd
+	request_body {
+		max_size 30MB
+	}
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+	}
+
+	# Рабочее место сотрудников доступно только с ваших адресов. Впишите свои IP вместо примера
+	# и уберите «#» в трёх строках ниже. Пока не включено, /staff/ закрыт только паролем.
+	# @staff_denied {
+	# 	path /staff/* /api/staff/*
+	# 	not remote_ip 203.0.113.10
+	# }
+	# respond @staff_denied 403
+
+	reverse_proxy app:3000
+}
