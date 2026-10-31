@@ -240,6 +240,25 @@ try {
     assert.equal(m.target.families, 10)
   })
 
+  await step('daily backup exists, restore into an empty folder recovers users and files', async () => {
+    const day = new Date().toISOString().slice(0, 10)
+    assert.ok(existsSync(join(dir, 'backups', `blizkie-${day}.db`)), 'startup backup')
+    const { backupNow } = await import('../server/backup.js')
+    const r = backupNow()
+    assert.ok(existsSync(r.file))
+    const d3 = mkdtempSync(join(tmpdir(), 'blizkie-restore-'))
+    try {
+      const run = spawnSync(process.execPath, ['scripts/restore.mjs', r.file], { env: { ...process.env, DATA_DIR: d3 }, encoding: 'utf8' })
+      assert.equal(run.status, 0, run.stderr)
+      assert.match(run.stdout, /целостность ok/)
+      const { DatabaseSync } = await import('node:sqlite')
+      const h = new DatabaseSync(join(d3, 'blizkie.db'))
+      assert.ok(h.prepare('SELECT COUNT(*) c FROM users').get().c >= 1)
+      h.close()
+      assert.equal(spawnSync(process.execPath, ['scripts/restore.mjs', r.file], { env: { ...process.env, DATA_DIR: d3 }, encoding: 'utf8' }).status, 1, 'refuses to overwrite without --force')
+    } finally { rmSync(d3, { recursive: true, force: true }) }
+  })
+
   await step('state carries 90 days of diary notes and intakes for the diary screen', async () => {
     const old = `${addDays(today, -60)}T09:00`
     db.prepare("INSERT INTO care_notes (id, profile_id, at, kind, text, author_id, author_name, author_role, by_self, created_at) VALUES ('old-note', ?, ?, 'other', 'давняя запись', 'x', 'Тест', 'owner', 0, ?)").run(momId, old, old)

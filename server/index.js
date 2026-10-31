@@ -13,6 +13,7 @@ import { appUrl, assertMailConfigured, isProd, layout, sendMailSoon } from './ma
 import { mountAccount } from './account.js'
 import { mountCare, notifView } from './care.js'
 import { startScheduler } from './scheduler.js'
+import { startBackups } from './backup.js'
 
 assertMailConfigured()
 
@@ -852,6 +853,7 @@ app.use((err, req, res, next) => {
 
 ensureStaff()
 startScheduler()
+startBackups()
 const port = Number(process.env.PORT) || 3000
 const host = process.env.HOST || '127.0.0.1'
 const server = app.listen(port, host, () => console.log(`Близкие: сервер http://${host}:${port}`))
