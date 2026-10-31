@@ -230,6 +230,7 @@ addColumn('users', 'digest_date', 'TEXT')
 addColumn('profiles', 'share_peers', 'INTEGER NOT NULL DEFAULT 0')   // показывать результаты другим участникам общей карты, которые тоже разрешили
 addColumn('grants', 'self_profile_id', 'TEXT REFERENCES profiles(id) ON DELETE CASCADE')
 addColumn('invites', 'self_profile_id', 'TEXT')
+addColumn('share_links', 'revoked_at', 'TEXT')
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS medications (

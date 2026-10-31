@@ -643,9 +643,19 @@ app.post('/api/profiles/:id/share', needUser, (req, res) => {
   res.json({ token: t })
 })
 
+app.delete('/api/share/:token', needUser, (req, res) => {
+  const s = get('SELECT * FROM share_links WHERE token = ?', req.params.token)
+  const c = s && ctxProfile(req, res, s.profile_id, 'owner')
+  if (!s) return fail(res, 404, 'not_found')
+  if (!c) return
+  run('UPDATE share_links SET revoked_at = ? WHERE token = ?', nowIso(), s.token)
+  log(s.family_id, req.user, s.profile_id, 'Ссылка для врача отозвана')
+  res.json({ ok: true })
+})
+
 app.get('/api/share/:token', (req, res) => {
   const s = get('SELECT * FROM share_links WHERE token = ?', req.params.token)
-  if (!s || s.expires_at < nowIso()) return fail(res, 410, 'Ссылка недействительна или истекла')
+  if (!s || s.revoked_at || s.expires_at < nowIso()) return fail(res, 410, 'Ссылка недействительна или истекла')
   log(s.family_id, null, s.profile_id, 'Открыта ссылка для врача', 'Врач (по ссылке)')
   track('share_opened', { familyId: s.family_id, role: 'doctor' })
   const state = buildState(s.family_id, { access: 'share', profileIds: [s.profile_id] })
