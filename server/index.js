@@ -16,6 +16,7 @@ import { startScheduler } from './scheduler.js'
 import { startBackups } from './backup.js'
 import { logError } from './errlog.js'
 import { mountFeedback, surveyDue } from './feedback.js'
+import { issueLoginCode, mountStaff2fa, staff2faOn } from './staff2fa.js'
 
 assertMailConfigured()
 
@@ -193,7 +194,7 @@ app.post('/api/auth/register', (req, res) => {
   }
 })
 
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   const email = str(req.body.email, 200).toLowerCase()
   const key = `${email}|${req.ip}`
   if (tooMany(key)) return fail(res, 429, 'Слишком много попыток. Подождите 15 минут.')
@@ -201,6 +202,7 @@ app.post('/api/auth/login', (req, res) => {
   const ok = u && checkPassword(String(req.body.password || ''), u.password)
   bump(key, !!ok)
   if (!ok) return fail(res, 401, 'Неверный email или пароль')
+  if (u.role === 'staff' && staff2faOn()) return issueLoginCode(u, res)
   startSession(res, u.id)
   res.json(mePayload(u))
 })
@@ -884,6 +886,7 @@ app.post('/api/recognize', needUser, express.raw({ type: () => true, limit: '25m
 })
 
 mountAccount(app, { needUser, needStaff, fail })
+mountStaff2fa(app, { fail, startSession, mePayload })
 mountFeedback(app, { needUser, needStaff, fail })
 mountConsent(app, { needUser, needStaff, fail, ctxProfile, removeFiles, wipeFamily })
 mountCare(app, { needUser, fail, ctxProfile, ctxFamily, familyAccess, tooMany, bump })
@@ -914,6 +917,7 @@ const sweep = setInterval(() => {
   try {
     run('DELETE FROM sessions WHERE expires_at < ?', nowIso())
     run('DELETE FROM otps WHERE expires_at < ?', nowIso())
+    run('DELETE FROM login_codes WHERE expires_at < ?', nowIso())
   } catch (e) {
     console.error('sweep:', e.message)
   }
