@@ -92,7 +92,11 @@ try {
     const m = /\(администратор\): (\S+) \/ (\S+)/.exec(creds)
     const client = cookie
     cookie = ''
-    assert.equal((await call('POST', '/api/auth/login', { email: m[1], password: m[2] })).status, 200)
+    const step1 = await call('POST', '/api/auth/login', { email: m[1], password: m[2] })
+    assert.equal(step1.status, 200)
+    assert.equal(step1.json.need2fa, true, 'password alone does not open a staff session')
+    assert.equal((await call('GET', '/api/staff/documents')).status, 401, 'no session before the code')
+    assert.equal((await call('POST', '/api/auth/login/code', { challenge: step1.json.challenge, code: step1.json.devCode })).status, 200)
     const queue = (await call('GET', '/api/staff/documents')).json
     assert.ok(queue.some((x) => x.title === 'Бланк теста' && x.fileUrl), 'file in queue')
     const all = (await call('GET', '/api/staff/documents?all=1')).json
@@ -118,7 +122,7 @@ try {
   process.env.DATA_DIR = dir
   const { tick } = await import('../server/scheduler.js')
   const { db } = await import('../server/db.js')
-  const { tzNow, addDays } = await import('../server/timeutil.js')
+  const { tzNow, addDays, addMinutes } = await import('../server/timeutil.js')
   const count = (t, where = '1=1') => db.prepare(`SELECT COUNT(*) c FROM ${t} WHERE ${where}`).get().c
   let momId, medId, intakeAt, momJar, viewerJar, emergencyToken
   const today = tzNow('Europe/Moscow').date
@@ -638,6 +642,35 @@ try {
     } finally { rmSync(root, { recursive: true, force: true }) }
   })
 
+  await step('staff second factor: wrong code, expiry, attempts limit, resend delay, clients unaffected (STAFF_2FA)', async () => {
+    const creds = readFileSync(join(dir, 'staff-credentials.txt'), 'utf8')
+    const [, email, password] = /\(администратор\): (\S+) \/ (\S+)/.exec(creds)
+    const saved = cookie
+    cookie = ''
+    await wait(16000)
+    const a = await call('POST', '/api/auth/login', { email, password })
+    assert.equal(a.json.need2fa, true)
+    assert.match(a.json.to, /^.\*\*\*@/, 'address is masked')
+    assert.equal(cookie, '', 'no cookie issued after the password')
+    assert.equal((await call('POST', '/api/auth/login', { email, password })).status, 429, 'resend is rate limited')
+    assert.equal((await call('POST', '/api/auth/login/code', { challenge: a.json.challenge, code: '000000' })).status, 401)
+    assert.equal(cookie, '')
+    for (let i = 0; i < 4; i++) await call('POST', '/api/auth/login/code', { challenge: a.json.challenge, code: '111111' })
+    const locked = await call('POST', '/api/auth/login/code', { challenge: a.json.challenge, code: a.json.devCode })
+    assert.equal(locked.status, 429, 'five wrong codes burn the challenge, even the right code fails afterwards')
+    assert.equal((await call('POST', '/api/auth/login/code', { challenge: a.json.challenge, code: a.json.devCode })).status, 401)
+    db.prepare('DELETE FROM login_codes').run()
+    const b = await call('POST', '/api/auth/login', { email, password })
+    db.prepare("UPDATE login_codes SET expires_at = '2000-01-01T00:00:00.000Z'").run()
+    assert.equal((await call('POST', '/api/auth/login/code', { challenge: b.json.challenge, code: b.json.devCode })).status, 401, 'expired code')
+    assert.equal((await call('POST', '/api/auth/login/code', { challenge: 'nope', code: '123456' })).status, 401)
+    // клиенты входят по паролю как раньше
+    const client = await call('POST', '/api/auth/login', { email: 'fb@example.test', password: 'long-enough-1' })
+    assert.ok(client.status === 200 || client.status === 401)
+    assert.ok(!client.json?.need2fa)
+    cookie = saved
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
@@ -694,7 +727,7 @@ try {
   })
 
   await step('visit reminder works; the concierge is off by default: no chat, no requests, no greeting, no unread badge', async () => {
-    const at = `${addDays(today, 1)}T12:00`
+    const at = addMinutes(tzNow('Europe/Moscow').dt, 10 * 60) // всегда в пределах суток, в любое время дня
     const a = await call('POST', `/api/profiles/${momId}/appointments`, { at, specialist: 'Кардиолог', purpose: 'Планово' })
     assert.equal(a.status, 200)
     const r = await call('POST', `/api/appointments/${a.json.id}/request`, {})

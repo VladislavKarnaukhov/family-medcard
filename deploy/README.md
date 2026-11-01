@@ -74,7 +74,7 @@ curl -s https://blizkie.ваш-домен.ru/health        # {"ok":true,...}
 docker compose exec app cat /data/staff-credentials.txt
 ```
 
-Войдите в `https://blizkie.ваш-домен.ru/staff/`, сразу смените пароль (раздел профиля), затем удалите файл:
+Вход для сотрудников двухфакторный: после пароля приходит код на почту сотрудника (10 минут, 5 попыток). Поэтому почта администратора должна быть рабочей и защищённой. Войдите в `https://blizkie.ваш-домен.ru/staff/`, сразу смените пароль (раздел профиля), затем удалите файл:
 
 ```bash
 docker compose exec app rm /data/staff-credentials.txt

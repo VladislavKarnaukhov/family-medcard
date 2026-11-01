@@ -16,6 +16,16 @@ function Login({ onDone }) {
   const [busy, setBusy] = useState(false)
   const [forgot, setForgot] = useState(false)
   const [sent, setSent] = useState(false)
+  const [step, setStep] = useState(null) // { challenge, to, devCode } после пароля, пока не введён код
+  const [code, setCode] = useState('')
+
+  const finish = async (me) => {
+    if (me.user.role !== 'staff') {
+      await api('POST', '/api/auth/logout', {})
+      throw new Error('Эта учётная запись не относится к сотрудникам')
+    }
+    onDone(me.user)
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -25,13 +35,14 @@ function Login({ onDone }) {
       if (forgot) {
         await api('POST', '/api/auth/forgot', { email: f.email })
         setSent(true)
+      } else if (step) {
+        await finish(await api('POST', '/api/auth/login/code', { challenge: step.challenge, code }))
       } else {
-        const me = await api('POST', '/api/auth/login', f)
-        if (me.user.role !== 'staff') {
-          await api('POST', '/api/auth/logout', {})
-          throw new Error('Эта учётная запись не относится к сотрудникам')
-        }
-        onDone(me.user)
+        const r = await api('POST', '/api/auth/login', f)
+        if (r.need2fa) {
+          setStep(r)
+          setCode('')
+        } else await finish(r)
       }
     } catch (e2) {
       setErr(e2.message)
@@ -44,19 +55,35 @@ function Login({ onDone }) {
       <h1 className="mb-1 text-[1.75rem]">{forgot ? 'Восстановление пароля' : 'Вход для сотрудников'}</h1>
       <p className="mb-6 text-muted">{forgot ? 'Мы пришлём ссылку для нового пароля на рабочую почту.' : 'Используйте рабочую почту и пароль.'}</p>
       <form onSubmit={submit} className="space-y-4 rounded-2xl bg-card shadow-sheet p-6 ">
+        {step && (
+          <>
+            <p className="text-[0.95rem] text-muted">Мы отправили код на {step.to}. Он действует 10 минут.</p>
+            {step.devCode && <p className="rounded-xl bg-accent-soft px-4 py-3 text-[0.95rem]">Почта на сервере не настроена, код для проверки: <strong>{step.devCode}</strong></p>}
+            <Field label="Код из письма">
+              <input inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))} autoFocus required />
+            </Field>
+          </>
+        )}
+        {!step && (
         <Field label="Email">
           <input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} autoComplete="username" required />
         </Field>
-        {!forgot && (
+        )}
+        {!forgot && !step && (
           <Field label="Пароль">
             <input type="password" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} autoComplete="current-password" required />
           </Field>
         )}
         <ErrorText>{err}</ErrorText>
         {sent && <p className="rounded-xl bg-accent-soft px-4 py-3 text-[0.95rem]">Если адрес зарегистрирован, письмо отправлено.</p>}
-        <Button type="submit" big disabled={busy}>
-          {forgot ? 'Отправить ссылку' : 'Войти'}
+        <Button type="submit" big disabled={busy || (step && code.length !== 6)}>
+          {forgot ? 'Отправить ссылку' : step ? 'Подтвердить' : 'Войти'}
         </Button>
+        {step && (
+          <button type="button" onClick={() => (setStep(null), setCode(''), setErr(''))} className="block min-h-12 w-full text-center text-[0.95rem] font-medium text-accent-dark">
+            Назад
+          </button>
+        )}
         <button type="button" onClick={() => (setForgot(!forgot), setSent(false), setErr(''))} className="block min-h-12 w-full text-center text-[0.95rem] font-medium text-accent-dark hover:underline">
           {forgot ? 'Вернуться ко входу' : 'Забыли пароль?'}
         </button>
