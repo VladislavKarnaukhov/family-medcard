@@ -671,6 +671,17 @@ try {
     cookie = saved
   })
 
+  await step('code layout: staff routes live in server/staff.js, index.js stays the wiring file', async () => {
+    const idx = readFileSync('server/index.js', 'utf8')
+    const staff = readFileSync('server/staff.js', 'utf8')
+    assert.ok(!/app\.(get|post|patch|put|delete)\('\/api\/staff\//.test(idx), 'no staff routes left in index.js')
+    assert.match(idx, /mountStaff\(app, \{ needStaff, fail \}\)/)
+    const routes = [...staff.matchAll(/app\.(get|post|patch|put|delete)\('\/api\/staff\/[^']*', needStaff/g)].length
+    assert.ok(routes >= 9, `staff routes all behind needStaff (${routes})`)
+    assert.ok(!/app\.(get|post|patch|put|delete)\('\/api\/staff\/[^']*', (?!needStaff)/.test(staff), 'every staff route checks needStaff')
+    assert.ok(idx.split('\n').length < 800, 'index.js keeps shrinking, not growing')
+  })
+
   await step('another family cannot see or change this family (isolation)', async () => {
     const stranger = await register('Чужой Тестов', 'stranger@example.test')
     await asUser(stranger, async () => {
